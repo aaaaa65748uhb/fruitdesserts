@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>FridgeTok 🧊 - המקרר החכם של ישראל</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{font-family:'Heebo',Arial,sans-serif;direction:rtl;background:linear-gradient(135deg,#e0f2fe,#d1fae5);min-height:100vh;overflow-x:hidden}
+#app{max-width:430px;margin:0 auto;min-height:100vh;background:#f0f9ff;box-shadow:0 0 40px rgba(0,0,0,.15);position:relative}
+.page{display:none;padding-bottom:5rem;min-height:100vh}
+.page.active{display:block}
+.gh{background:linear-gradient(135deg,#0052CC,#0099B0,#00B894);color:#fff;padding:1.25rem 1rem 1.5rem;position:relative;overflow:hidden}
+.gh h1{font-size:1.4rem;font-weight:800;margin:0}
+.gh p{font-size:.82rem;opacity:.85;margin:.2rem 0 0}
+.card{background:#fff;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:1rem}
+.btn{border:none;cursor:pointer;font-family:inherit;border-radius:10px;padding:.65rem 1rem;font-weight:700}
+.btn-primary{background:linear-gradient(135deg,#0052CC,#0099B0);color:#fff}
+.btn-success{background:linear-gradient(135deg,#16A34A,#0D9488);color:#fff}
+input,select,textarea{font-family:inherit;direction:rtl;text-align:right;outline:none}
+input:focus{border-color:#0052CC!important}
+.badge{position:absolute;top:-4px;left:-4px;background:#ef4444;color:#fff;font-size:10px;font-weight:700;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+/* Bottom Nav */
+#bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;border-top:1px solid #e5e7eb;box-shadow:0 -4px 20px rgba(0,0,0,.1);z-index:50;display:flex}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:.5rem .25rem;gap:2px;cursor:pointer;border:none;background:none;font-family:inherit;color:#6b7280;text-decoration:none;transition:color .2s;position:relative}
+.nav-btn.active{color:#0052CC}
+.nav-btn span.icon{font-size:1.3rem}
+.nav-btn span.label{font-size:.62rem;font-weight:600}
+/* Pills */
+.pill{padding:.3rem .75rem;border-radius:999px;font-size:.78rem;font-weight:600;cursor:pointer;border:1.5px solid #E5E7EB;background:#fff;color:#374151;white-space:nowrap;font-family:inherit}
+.pill.active{background:#0052CC;color:#fff;border-color:#0052CC}
+/* Tabs */
+.tabs{display:flex;background:#fff;border-bottom:1px solid #e5e7eb}
+.tab{flex:1;padding:.7rem .5rem;border:none;background:none;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;color:#6b7280}
+.tab.active{color:#0052CC;border-bottom-color:#0052CC}
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:flex-end;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:1.5rem 1.5rem 0 0;width:100%;max-width:430px;max-height:85vh;overflow-y:auto;padding:1.5rem;animation:slideUp .3s}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scanLine{0%{top:10%}50%{top:85%}100%{top:10%}}
+.fade-in{animation:fadeIn .3s}
+.scan-line{position:absolute;left:5%;right:5%;height:3px;background:linear-gradient(90deg,transparent,#00ff88,transparent);box-shadow:0 0 10px #00ff88;animation:scanLine 2s ease-in-out infinite}
+/* Expiry */
+.expiry-critical{background:linear-gradient(135deg,#FEE2E2,#FECACA);border:1px solid #EF4444;border-radius:12px;padding:.65rem .85rem}
+.expiry-soon{background:linear-gradient(135deg,#FEF3C7,#FDE68A);border:1px solid #F59E0B;border-radius:12px;padding:.65rem .85rem}
+/* progress */
+.prog-bar{height:8px;border-radius:999px;background:#E5E7EB;overflow:hidden}
+.prog-fill{height:100%;border-radius:999px;transition:width .6s}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Pages -->
+  <div id="page-home" class="page active"></div>
+  <div id="page-fridge" class="page"></div>
+  <div id="page-scanner" class="page"></div>
+  <div id="page-recipes" class="page"></div>
+  <div id="page-shopping" class="page"></div>
+  <div id="page-prices" class="page"></div>
+  <div id="page-tiktok" class="page"></div>
+  <div id="page-stats" class="page"></div>
+
+  <!-- Bottom Nav -->
+  <nav id="bottom-nav">
+    <button class="nav-btn active" data-page="home"><span class="icon">🏠</span><span class="label">בית</span></button>
+    <button class="nav-btn" data-page="fridge" id="nav-fridge"><span class="icon">🧊</span><span class="label">מקרר</span></button>
+    <button class="nav-btn" data-page="scanner"><span class="icon">📷</span><span class="label">סריקה</span></button>
+    <button class="nav-btn" data-page="recipes"><span class="icon">🍳</span><span class="label">מתכונים</span></button>
+    <button class="nav-btn" data-page="shopping" id="nav-shopping"><span class="icon">🛒</span><span class="label">קניות</span></button>
+    <button class="nav-btn" data-page="prices"><span class="icon">💰</span><span class="label">מחירים</span></button>
+  </nav>
+
+  <!-- Modals -->
+  <div id="modal-add" class="modal-bg"><div class="modal" id="modal-add-content"></div></div>
+  <div id="modal-recipe" class="modal-bg"><div class="modal" id="modal-recipe-content"></div></div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const STORES=[
+  {id:'shufersal',name:'שופרסל',logo:'🔵',color:'#0052CC'},
+  {id:'ramiLevy',name:'רמי לוי',logo:'🔴',color:'#CC0000'},
+  {id:'yochananof',name:'יוחננוף',logo:'🟢',color:'#006400'},
+  {id:'victory',name:'ויקטורי',logo:'🟡',color:'#B8860B'},
+  {id:'carrefour',name:'קרפור',logo:'🔷',color:'#003399'},
+  {id:'osherAd',name:'אושר עד',logo:'🟠',color:'#E8691C'},
+  {id:'tivTaam',name:'טיב טעם',logo:'🟣',color:'#6B21A8'},
+  {id:'haziHinam',name:'חצי חינם',logo:'⚫',color:'#1F2937'},
+];
+const PRODUCTS=[
+  {id:'1',barcode:'7290000066614',name:'חלב תנובה 3%',brand:'תנובה',cat:'חלב וגבינות',w:1000,unit:'מ"ל',img:'🥛',kosher:'חלק',cal:61,prices:{shufersal:5.90,ramiLevy:5.20,yochananof:5.60,victory:5.50,carrefour:5.80,osherAd:5.40,tivTaam:5.70,haziHinam:5.30}},
+  {id:'2',barcode:'7290000066621',name:'גבינה לבנה 5%',brand:'תנובה',cat:'חלב וגבינות',w:250,unit:'גרם',img:'🧀',kosher:'חלק',cal:105,prices:{shufersal:6.90,ramiLevy:5.90,yochananof:6.50,victory:6.30,carrefour:6.70,osherAd:6.10,tivTaam:6.80,haziHinam:5.80}},
+  {id:'3',barcode:'7290002443582',name:'ביצים גדולות',brand:'תנובה',cat:'ביצים',w:720,unit:'גרם(12)',img:'🥚',kosher:'חלק',cal:155,prices:{shufersal:18.90,ramiLevy:15.90,yochananof:17.50,victory:16.90,carrefour:18.50,osherAd:16.50,tivTaam:17.90,haziHinam:15.50}},
+  {id:'4',barcode:'7290000652191',name:'לחם אחיד פרוס',brand:'אנגל',cat:'לחם ומאפים',w:700,unit:'גרם',img:'🍞',kosher:'פרווה',cal:265,prices:{shufersal:7.90,ramiLevy:6.90,yochananof:7.50,victory:7.20,carrefour:7.80,osherAd:7.00,tivTaam:7.60,haziHinam:6.80}},
+  {id:'5',barcode:'7290110597643',name:'שמן זית כתית',brand:'יד מרדכי',cat:'שמנים',w:750,unit:'מ"ל',img:'🫒',kosher:'פרווה',cal:884,prices:{shufersal:39.90,ramiLevy:32.90,yochananof:37.50,victory:36.00,carrefour:38.50,osherAd:34.90,tivTaam:38.00,haziHinam:32.00}},
+  {id:'6',barcode:'7290000228716',name:'פסטה ספגטי',brand:'ברילה',cat:'פסטה ואורז',w:500,unit:'גרם',img:'🍝',kosher:'פרווה',cal:352,prices:{shufersal:8.90,ramiLevy:7.20,yochananof:8.50,victory:8.00,carrefour:8.70,osherAd:7.50,tivTaam:8.30,haziHinam:7.00}},
+  {id:'7',barcode:'7290000236223',name:'אורז בסמטי',brand:'אמא',cat:'פסטה ואורז',w:1000,unit:'גרם',img:'🍚',kosher:'פרווה',cal:350,prices:{shufersal:12.90,ramiLevy:10.50,yochananof:12.00,victory:11.50,carrefour:12.50,osherAd:11.00,tivTaam:12.20,haziHinam:10.20}},
+  {id:'8',barcode:'7290105758015',name:'עגבניות שרי',brand:'גינות עדן',cat:'ירקות',w:250,unit:'גרם',img:'🍅',kosher:'פרווה',cal:18,prices:{shufersal:8.90,ramiLevy:7.50,yochananof:8.50,victory:8.00,carrefour:9.00,osherAd:7.90,tivTaam:8.70,haziHinam:7.30}},
+  {id:'9',barcode:'7290108500000',name:'מלפפון',brand:'טרי',cat:'ירקות',w:500,unit:'גרם',img:'🥒',kosher:'פרווה',cal:16,prices:{shufersal:4.90,ramiLevy:3.90,yochananof:4.50,victory:4.20,carrefour:4.80,osherAd:4.00,tivTaam:4.60,haziHinam:3.80}},
+  {id:'10',barcode:'7290000162034',name:'גבינה צהובה 28%',brand:'מחלבות גד',cat:'חלב וגבינות',w:200,unit:'גרם',img:'🧀',kosher:'חלק',cal:320,prices:{shufersal:16.90,ramiLevy:13.90,yochananof:15.50,victory:15.00,carrefour:16.50,osherAd:14.50,tivTaam:16.00,haziHinam:13.50}},
+  {id:'11',barcode:'7290000652801',name:'חזה עוף טרי',brand:'עוף טוב',cat:'בשר ועוף',w:1000,unit:'גרם',img:'🍗',kosher:'גלאט',cal:165,prices:{shufersal:29.90,ramiLevy:24.90,yochananof:27.50,victory:26.90,carrefour:29.00,osherAd:25.90,tivTaam:28.50,haziHinam:24.50}},
+  {id:'12',barcode:'7290000228259',name:'שוקולד מריר 70%',brand:'עלית',cat:'חטיפים',w:100,unit:'גרם',img:'🍫',kosher:'פרווה',cal:598,prices:{shufersal:9.90,ramiLevy:7.90,yochananof:9.20,victory:8.70,carrefour:9.50,osherAd:8.20,tivTaam:9.30,haziHinam:7.70}},
+  {id:'13',barcode:'7290000098395',name:'קפה נס',brand:'קפה עלית',cat:'קפה ותה',w:200,unit:'גרם',img:'☕',kosher:'פרווה',cal:2,prices:{shufersal:24.90,ramiLevy:19.90,yochananof:22.50,victory:21.90,carrefour:23.90,osherAd:20.90,tivTaam:23.50,haziHinam:19.50}},
+  {id:'14',barcode:'7290000098401',name:'תה ויסוצקי',brand:'ויסוצקי',cat:'קפה ותה',w:50,unit:'שקיות',img:'🍵',kosher:'פרווה',cal:1,prices:{shufersal:12.90,ramiLevy:9.90,yochananof:11.50,victory:11.00,carrefour:12.50,osherAd:10.50,tivTaam:12.00,haziHinam:9.50}},
+  {id:'15',barcode:'7290000162065',name:'יוגורט תות',brand:'דנונה',cat:'חלב וגבינות',w:150,unit:'גרם',img:'🍓',kosher:'חלק',cal:99,prices:{shufersal:4.50,ramiLevy:3.50,yochananof:4.20,victory:4.00,carrefour:4.40,osherAd:3.70,tivTaam:4.30,haziHinam:3.40}},
+  {id:'16',barcode:'7290000228921',name:'חמאה מתוקה',brand:'תנובה',cat:'חלב וגבינות',w:200,unit:'גרם',img:'🧈',kosher:'חלק',cal:717,prices:{shufersal:14.90,ramiLevy:11.90,yochananof:13.50,victory:13.00,carrefour:14.50,osherAd:12.50,tivTaam:14.00,haziHinam:11.50}},
+  {id:'17',barcode:'7290000121031',name:'מיץ תפוזים',brand:'פריגת',cat:'משקאות',w:1000,unit:'מ"ל',img:'🍊',kosher:'פרווה',cal:45,prices:{shufersal:12.90,ramiLevy:9.90,yochananof:11.50,victory:11.00,carrefour:12.50,osherAd:10.50,tivTaam:12.00,haziHinam:9.70}},
+  {id:'18',barcode:'7290000234081',name:'קוטג׳ 5%',brand:'תנובה',cat:'חלב וגבינות',w:250,unit:'גרם',img:'🥛',kosher:'חלק',cal:98,prices:{shufersal:7.90,ramiLevy:6.50,yochananof:7.50,victory:7.00,carrefour:7.70,osherAd:6.80,tivTaam:7.60,haziHinam:6.30}},
+  {id:'19',barcode:'7290000662175',name:'נקניקיות פרנקפורטר',brand:'זוגלובק',cat:'בשר ועוף',w:360,unit:'גרם',img:'🌭',kosher:'גלאט',cal:290,prices:{shufersal:24.90,ramiLevy:19.90,yochananof:22.50,victory:21.50,carrefour:24.00,osherAd:20.90,tivTaam:23.50,haziHinam:19.50}},
+  {id:'20',barcode:'7290000234197',name:'שמנת מתוקה 38%',brand:'תנובה',cat:'חלב וגבינות',w:250,unit:'מ"ל',img:'🥛',kosher:'חלק',cal:345,prices:{shufersal:11.90,ramiLevy:9.50,yochananof:11.00,victory:10.50,carrefour:11.50,osherAd:9.90,tivTaam:11.20,haziHinam:9.30}},
+  {id:'21',barcode:'7290005902735',name:'חומוס מבושל',brand:'אסם',cat:'שימורים',w:400,unit:'גרם',img:'🫘',kosher:'פרווה',cal:164,prices:{shufersal:5.90,ramiLevy:4.50,yochananof:5.50,victory:5.20,carrefour:5.80,osherAd:4.70,tivTaam:5.60,haziHinam:4.40}},
+  {id:'22',barcode:'7290000236285',name:'טונה בשמן',brand:'דל מונטה',cat:'שימורים',w:160,unit:'גרם',img:'🐟',kosher:'דגים',cal:198,prices:{shufersal:7.90,ramiLevy:6.20,yochananof:7.50,victory:7.00,carrefour:7.70,osherAd:6.50,tivTaam:7.50,haziHinam:6.00}},
+  {id:'23',barcode:'7290000228525',name:'רסק עגבניות',brand:'אסם',cat:'שימורים',w:570,unit:'גרם',img:'🍅',kosher:'פרווה',cal:82,prices:{shufersal:8.90,ramiLevy:6.90,yochananof:8.20,victory:7.80,carrefour:8.70,osherAd:7.20,tivTaam:8.50,haziHinam:6.70}},
+  {id:'24',barcode:'7290000162140',name:'קמח לבן',brand:'שיבולת',cat:'אפייה',w:1000,unit:'גרם',img:'🌾',kosher:'פרווה',cal:364,prices:{shufersal:7.90,ramiLevy:6.20,yochananof:7.50,victory:7.00,carrefour:7.70,osherAd:6.50,tivTaam:7.50,haziHinam:6.00}},
+  {id:'25',barcode:'7290000228396',name:'סוכר לבן',brand:'שוגר',cat:'אפייה',w:1000,unit:'גרם',img:'🍬',kosher:'פרווה',cal:400,prices:{shufersal:6.90,ramiLevy:5.50,yochananof:6.50,victory:6.20,carrefour:6.70,osherAd:5.70,tivTaam:6.50,haziHinam:5.30}},
+  {id:'26',barcode:'7290000138022',name:'פיתות',brand:'אחלה',cat:'לחם ומאפים',w:400,unit:'גרם',img:'🫓',kosher:'פרווה',cal:275,prices:{shufersal:7.90,ramiLevy:6.50,yochananof:7.50,victory:7.20,carrefour:7.70,osherAd:6.70,tivTaam:7.50,haziHinam:6.30}},
+  {id:'27',barcode:'7290000234043',name:'גלידת וניל',brand:'עלית',cat:'קפואים',w:750,unit:'מ"ל',img:'🍦',kosher:'חלק',cal:197,prices:{shufersal:24.90,ramiLevy:19.90,yochananof:22.50,victory:21.50,carrefour:24.00,osherAd:20.90,tivTaam:23.50,haziHinam:19.50}},
+  {id:'28',barcode:'7290000228334',name:'גזר',brand:'טרי',cat:'ירקות',w:1000,unit:'גרם',img:'🥕',kosher:'פרווה',cal:41,prices:{shufersal:4.90,ramiLevy:3.50,yochananof:4.50,victory:4.20,carrefour:4.70,osherAd:3.70,tivTaam:4.50,haziHinam:3.40}},
+  {id:'29',barcode:'7290000652610',name:'בצל סגול',brand:'ישראלי',cat:'ירקות',w:1000,unit:'גרם',img:'🧅',kosher:'פרווה',cal:40,prices:{shufersal:5.90,ramiLevy:4.20,yochananof:5.50,victory:5.00,carrefour:5.70,osherAd:4.50,tivTaam:5.50,haziHinam:4.00}},
+  {id:'30',barcode:'7290000121000',name:'שום טרי',brand:'ישראלי',cat:'ירקות',w:200,unit:'גרם',img:'🧄',kosher:'פרווה',cal:149,prices:{shufersal:7.90,ramiLevy:5.90,yochananof:7.20,victory:6.70,carrefour:7.70,osherAd:6.20,tivTaam:7.50,haziHinam:5.70}},
+];
+const RECIPES=[
+  {id:'r1',name:'שקשוקה קלאסית',emoji:'🍳',cat:'ארוחת בוקר',desc:'ביצים ברוטב עגבניות עשיר',time:25,servings:2,diff:1,pids:['3','8','30','5'],ingredients:[{n:'ביצים',a:'4',u:'יחידות'},{n:'עגבניות שרי',a:'250',u:'גרם'},{n:'שמן זית',a:'3',u:'כפות'},{n:'שום',a:'3',u:'שיניים'},{n:'פפריקה',a:'1',u:'כפית'}],steps:['מחממים שמן זית.','מוסיפים שום קצוץ.','מוסיפים עגבניות ומבשלים 10 דקות.','שוברים ביצים לרוטב.','מבשלים 8 דקות.','מגישים עם לחם.'],cal:280,pro:18,carb:12,fat:18},
+  {id:'r2',name:'חומוס ביתי',emoji:'🫘',cat:'ממרחים',desc:'חומוס קרמי כמו ממסעדה',time:20,servings:6,diff:2,pids:['21','5','30'],ingredients:[{n:'חומוס מבושל',a:'400',u:'גרם'},{n:'שמן זית',a:'4',u:'כפות'},{n:'שום',a:'2',u:'שיניים'},{n:'לימון',a:'1',u:'יחידה'},{n:'טחינה',a:'3',u:'כפות'}],steps:['שמים חומוס בבלנדר.','מוסיפים טחינה, שמן זית, שום ולימון.','טוחנים 3 דקות.','מתבלים במלח.','מגישים עם שמן זית.'],cal:180,pro:9,carb:22,fat:7},
+  {id:'r3',name:'סלט ישראלי',emoji:'🥗',cat:'סלטים',desc:'סלט עגבניות מלפפון קלאסי',time:10,servings:4,diff:1,pids:['8','9','29','5'],ingredients:[{n:'עגבניות שרי',a:'300',u:'גרם'},{n:'מלפפון',a:'2',u:'יחידות'},{n:'בצל סגול',a:'0.5',u:'יחידה'},{n:'שמן זית',a:'3',u:'כפות'}],steps:['קוצצים עגבניות ומלפפונים.','קוצצים בצל.','מערבבים הכל.','מוסיפים שמן זית ולימון.'],cal:85,pro:2,carb:8,fat:6},
+  {id:'r4',name:'פסטה שמנת',emoji:'🍝',cat:'ארוחת ערב',desc:'פסטה עשירה ברוטב שמנת',time:20,servings:4,diff:1,pids:['6','20','10','30','16'],ingredients:[{n:'פסטה ספגטי',a:'500',u:'גרם'},{n:'שמנת מתוקה',a:'250',u:'מ"ל'},{n:'גבינה צהובה',a:'100',u:'גרם'},{n:'שום',a:'3',u:'שיניים'},{n:'חמאה',a:'30',u:'גרם'}],steps:['מבשלים פסטה.','מטגנים שום בחמאה.','מוסיפים שמנת וגבינה.','מערבבים עם פסטה.'],cal:520,pro:16,carb:62,fat:24},
+  {id:'r5',name:'שניצל עוף',emoji:'🍗',cat:'ארוחת ערב',desc:'שניצל פריך וזהוב',time:25,servings:4,diff:1,pids:['11','3','24'],ingredients:[{n:'חזה עוף',a:'600',u:'גרם'},{n:'ביצים',a:'2',u:'יחידות'},{n:'פירורי לחם',a:'150',u:'גרם'},{n:'קמח',a:'50',u:'גרם'}],steps:['מרדדים עוף.','מציפים בקמח, ביצה, פירורי לחם.','מטגנים 4-5 דקות מכל צד.','מגישים עם לימון.'],cal:320,pro:38,carb:18,fat:12},
+  {id:'r6',name:'עוגת שוקולד',emoji:'🎂',cat:'קינוח',desc:'עוגה עשירה ולחה',time:45,servings:10,diff:2,pids:['12','16','3','25','24'],ingredients:[{n:'שוקולד מריר',a:'200',u:'גרם'},{n:'חמאה',a:'150',u:'גרם'},{n:'ביצים',a:'4',u:'יחידות'},{n:'סוכר',a:'200',u:'גרם'},{n:'קמח',a:'100',u:'גרם'}],steps:['ממיסים שוקולד וחמאה.','מקציפים ביצים וסוכר.','מאחדים הכל.','אופים 35 דקות ב-180°.'],cal:380,pro:5,carb:42,fat:22},
+  {id:'r7',name:'מרק ירקות',emoji:'🍲',cat:'ארוחת ערב',desc:'מרק חם ומזין לחורף',time:50,servings:6,diff:1,pids:['28','29','5'],ingredients:[{n:'גזר',a:'3',u:'יחידות'},{n:'תפוחי אדמה',a:'3',u:'יחידות'},{n:'בצל',a:'1',u:'יחידה'},{n:'שמן זית',a:'2',u:'כפות'}],steps:['מחממים שמן ומטגנים בצל.','מוסיפים ירקות חתוכים.','מוסיפים מים ומבשלים 35 דקות.','מתבלים ומגישים.'],cal:120,pro:4,carb:22,fat:3},
+  {id:'r8',name:'לביבות גבינה',emoji:'🥞',cat:'ארוחת בוקר',desc:'לביבות רכות לבוקר חגיגי',time:20,servings:4,diff:1,pids:['2','3','24','25'],ingredients:[{n:'גבינה לבנה',a:'250',u:'גרם'},{n:'ביצים',a:'2',u:'יחידות'},{n:'קמח',a:'4',u:'כפות'},{n:'סוכר',a:'2',u:'כפות'}],steps:['מערבבים גבינה, ביצים, קמח וסוכר.','מחממים שמן.','מטגנים 3 דקות מכל צד.','מגישים עם ריבה.'],cal:220,pro:12,carb:20,fat:10},
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+const now=Date.now();
+let STATE={
+  fridge:[
+    {id:'f1',pid:'1',loc:'fridge',qty:2,exp:new Date(now+4*864e5).toISOString()},
+    {id:'f2',pid:'3',loc:'fridge',qty:12,exp:new Date(now+8*864e5).toISOString()},
+    {id:'f3',pid:'8',loc:'fridge',qty:1,exp:new Date(now+1*864e5).toISOString()},
+    {id:'f4',pid:'9',loc:'fridge',qty:3,exp:new Date(now+5*864e5).toISOString()},
+    {id:'f5',pid:'10',loc:'fridge',qty:1,exp:new Date(now+2*864e5).toISOString()},
+    {id:'f6',pid:'2',loc:'fridge',qty:1,exp:new Date(now+10*864e5).toISOString()},
+    {id:'f7',pid:'6',loc:'pantry',qty:2,exp:new Date(now+365*864e5).toISOString()},
+    {id:'f8',pid:'7',loc:'pantry',qty:1,exp:new Date(now+365*864e5).toISOString()},
+    {id:'f9',pid:'5',loc:'pantry',qty:1,exp:new Date(now+180*864e5).toISOString()},
+    {id:'f10',pid:'24',loc:'pantry',qty:1,exp:new Date(now+200*864e5).toISOString()},
+    {id:'f11',pid:'27',loc:'freezer',qty:1,exp:new Date(now+60*864e5).toISOString()},
+    {id:'f12',pid:'29',loc:'pantry',qty:2,exp:new Date(now+14*864e5).toISOString()},
+    {id:'f13',pid:'30',loc:'pantry',qty:1,exp:new Date(now+30*864e5).toISOString()},
+  ],
+  shopping:[
+    {id:'s1',pid:'4',qty:1,checked:false},
+    {id:'s2',pid:'11',qty:1,checked:false},
+    {id:'s3',pid:'21',qty:2,checked:false},
+    {id:'s4',pid:'17',qty:1,checked:true},
+  ],
+  expenses:[
+    {date:new Date(now-2*864e5).toISOString(),store:'שופרסל',total:187.50},
+    {date:new Date(now-5*864e5).toISOString(),store:'רמי לוי',total:142.30},
+    {date:new Date(now-10*864e5).toISOString(),store:'יוחננוף',total:215.80},
+    {date:new Date(now-14*864e5).toISOString(),store:'שופרסל',total:98.40},
+  ],
+  currentPage:'home',
+  fridgeTab:'fridge',
+  fridgeSearch:'',
+  priceSearch:'',
+  basket:[],
+  scanBarcode:'',
+  scanResult:null,
+  scanNotFound:false,
+  scanScanning:false,
+};
+
+function getP(pid){return PRODUCTS.find(p=>p.id===pid)}
+function minPrice(p){return Math.min(...Object.values(p.prices))}
+function minStore(p){const e=Object.entries(p.prices).reduce((a,b)=>b[1]<a[1]?b:a);return STORES.find(s=>s.id===e[0])?.name||''}
+function daysUntil(d){return Math.ceil((new Date(d)-Date.now())/864e5)}
+function uid(){return 'x'+Math.random().toString(36).slice(2)}
+
+function load(){try{const s=localStorage.getItem('ft');if(s)STATE={...STATE,...JSON.parse(s)}}catch(e){}}
+function save(){try{localStorage.setItem('ft',JSON.stringify({fridge:STATE.fridge,shopping:STATE.shopping,expenses:STATE.expenses}))}catch(e){}}
+load();
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+function navigate(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page)?.classList.add('active');
+  document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+  STATE.currentPage=page;
+  renderPage(page);
+  updateNavBadges();
+}
+
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>navigate(btn.dataset.page));
+});
+
+function updateNavBadges(){
+  // shopping badge
+  const navShop=document.getElementById('nav-shopping');
+  if(navShop){
+    navShop.querySelector('.badge')?.remove();
+    const unchecked=STATE.shopping.filter(i=>!i.checked).length;
+    if(unchecked>0){
+      const b=document.createElement('span');b.className='badge';b.textContent=unchecked>9?'9+':unchecked;
+      navShop.querySelector('.icon').style.position='relative';
+      const wrap=navShop.querySelector('.icon');
+      const existing=wrap.querySelector('.badge');if(!existing)wrap.appendChild(b);
+    }
+  }
+  // fridge badge (expiring)
+  const navFridge=document.getElementById('nav-fridge');
+  if(navFridge){
+    navFridge.querySelector('.badge')?.remove();
+    const expiring=STATE.fridge.filter(i=>daysUntil(i.exp)<=3).length;
+    if(expiring>0){
+      const b=document.createElement('span');b.className='badge';b.style.background='#f59e0b';b.textContent=expiring;
+      const wrap=navFridge.querySelector('.icon');wrap.style.position='relative';
+      const existing=wrap.querySelector('.badge');if(!existing)wrap.appendChild(b);
+    }
+  }
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function renderPage(page){
+  const el=document.getElementById('page-'+page);
+  if(!el)return;
+  const renders={home:renderHome,fridge:renderFridge,scanner:renderScanner,recipes:renderRecipes,shopping:renderShopping,prices:renderPrices,tiktok:renderTikTok,stats:renderStats};
+  if(renders[page])el.innerHTML=renders[page]();
+  bindPage(page);
+}
+
+function h(s){return s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// ─── HOME ─────────────────────────────────────────────────────────────────────
+function renderHome(){
+  const expiring=STATE.fridge.filter(i=>daysUntil(i.exp)<=3);
+  const unchecked=STATE.shopping.filter(i=>!i.checked).length;
+  const monthExp=STATE.expenses.filter(e=>new Date(e.date).getMonth()===new Date().getMonth()).reduce((s,e)=>s+e.total,0);
+  const fridgeIds=new Set(STATE.fridge.map(i=>i.pid));
+  const suggestions=RECIPES.map(r=>{
+    const missing=r.pids.filter(id=>!fridgeIds.has(id));
+    return{...r,missing:missing.length};
+  }).sort((a,b)=>a.missing-b.missing).slice(0,3);
+
+  let expiringHtml='';
+  if(expiring.length){
+    expiringHtml=`<div style="margin-bottom:.75rem" class="fade-in">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+        <strong style="font-size:.88rem">⏰ עומדים לפוג</strong>
+        <button onclick="navigate('fridge')" style="background:none;border:none;color:#0052CC;font-family:inherit;font-size:.8rem;cursor:pointer;font-weight:600">כולם ›</button>
+      </div>
+      ${expiring.map(item=>{
+        const p=getP(item.pid);const d=daysUntil(item.exp);
+        return`<div class="${d<=1?'expiry-critical':'expiry-soon'}" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+          <div style="display:flex;align-items:center;gap:8px"><span style="font-size:1.3rem">${h(p?.img)}</span><div><div style="font-size:.85rem;font-weight:700">${h(p?.name)}</div><div style="font-size:.72rem;color:#6b7280">כמות: ${item.qty}</div></div></div>
+          <div style="font-size:.8rem;font-weight:800;color:${d<=1?'#DC2626':'#D97706'}">${d<=0?'פג תוקף!':d===1?'מחר!':d+' ימים'}</div>
+        </div>`
+      }).join('')}
+    </div>`;
+  }
+
+  return`<div class="gh" style="padding:1.5rem 1rem 2.5rem;overflow:hidden;position:relative">
+    <div style="position:absolute;top:-30px;left:-30px;font-size:120px;opacity:.07;pointer-events:none">🧊</div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div><h1 style="font-size:1.9rem;font-weight:900;letter-spacing:-.5px">FridgeTok 🧊</h1><p>המקרר החכם של ישראל</p></div>
+      <button onclick="navigate('stats')" style="background:rgba(255,255,255,.2);border:none;border-radius:12px;padding:.5rem .75rem;color:#fff;cursor:pointer;font-size:.8rem;font-family:inherit;font-weight:600">📊 סטטיסטיקות</button>
+    </div>
+  </div>
+  <div style="padding:0 .75rem;margin-top:-1.25rem">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem" class="fade-in">
+      ${[
+        ['',STATE.fridge.length,'מוצרים בבית','#0052CC','white'],
+        [expiring.length>0?'background:#FEF3C7':'','',expiring.length>0?expiring.length+' עומדים לפוג':' ','עומדים לפוג',expiring.length>0?'#D97706':'#10B981','white'],
+        ['',unchecked,'לרשימת הקניות','#6366F1','white'],
+        ['',`₪${monthExp.toFixed(0)}`,'הוצאה החודש','#10B981','white'],
+      ].map(([s,v,l,c])=>`<div class="card" style="text-align:center;padding:.85rem;${s}"><div style="font-size:1.8rem;font-weight:800;color:${c}">${v}</div><div style="font-size:.75rem;color:#6b7280;margin-top:.1rem">${l}</div></div>`).join('')}
+    </div>
+
+    <div class="card fade-in" style="margin-bottom:.75rem;padding:.85rem">
+      <h3 style="margin:0 0 .65rem;font-size:.88rem;font-weight:700;color:#374151">⚡ פעולות מהירות</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.45rem">
+        ${[['📷','סרוק מוצר','scanner','#EEF2FF','#4F46E5'],['🧊','הוסף למקרר','fridge','#E0F2FE','#0369A1'],['🍳','מצא מתכון','recipes','#FEF3C7','#D97706'],['🛒','רשימת קניות','shopping','#DCFCE7','#16A34A']].map(([e,l,p,bg,c])=>
+          `<button onclick="navigate('${p}')" style="background:${bg};border:none;border-radius:12px;padding:.75rem .65rem;cursor:pointer;display:flex;align-items:center;gap:8px;color:${c};font-family:inherit;font-weight:700;font-size:.83rem"><span style="font-size:1.2rem">${e}</span>${l}</button>`
+        ).join('')}
+      </div>
+    </div>
+
+    <div style="margin-bottom:.75rem" class="fade-in">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+        <strong style="font-size:.88rem;color:#374151">🍳 מה לבשל היום?</strong>
+        <button onclick="navigate('recipes')" style="background:none;border:none;color:#0052CC;font-family:inherit;font-size:.8rem;cursor:pointer;font-weight:600">כל המתכונים ›</button>
+      </div>
+      <div style="display:flex;gap:.5rem;overflow-x:auto;padding-bottom:.25rem">
+        ${suggestions.map(r=>`
+          <div onclick="navigate('recipes')" class="card" style="min-width:140px;cursor:pointer;padding:.75rem;flex-shrink:0;text-align:center">
+            <div style="font-size:2rem;margin-bottom:.25rem">${r.emoji}</div>
+            <div style="font-size:.78rem;font-weight:700;margin-bottom:.3rem;line-height:1.2">${h(r.name)}</div>
+            <div style="font-size:.68rem;padding:.2rem .5rem;border-radius:999px;background:${r.missing===0?'#DCFCE7':r.missing<=2?'#FEF3C7':'#FEE2E2'};color:${r.missing===0?'#16A34A':r.missing<=2?'#D97706':'#DC2626'}">${r.missing===0?'✓ יש הכל':'חסר '+r.missing}</div>
+            <div style="font-size:.68rem;color:#9ca3af;margin-top:.3rem">⏱ ${r.time} דק׳</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    ${expiringHtml}
+
+    <div style="margin-bottom:.75rem" class="fade-in">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+        <strong style="font-size:.88rem;color:#374151">🏷️ מבצעים השבוע</strong>
+        <button onclick="navigate('prices')" style="background:none;border:none;color:#0052CC;font-family:inherit;font-size:.8rem;cursor:pointer;font-weight:600">כל המחירים ›</button>
+      </div>
+      ${[['🥛','חלב תנובה 3%','רמי לוי','5.20','5.90'],['🥚','ביצים גדולות','אושר עד','15.90','18.90'],['🍝','פסטה ספגטי','חצי חינם','7.00','8.90']].map(([e,n,s,p,w])=>`
+        <div class="card" style="margin-bottom:.4rem;padding:.65rem .85rem;display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:center;gap:8px"><span style="font-size:1.3rem">${e}</span><div><div style="font-size:.82rem;font-weight:700">${n}</div><div style="font-size:.72rem;color:#6b7280">${s}</div></div></div>
+          <div style="text-align:left"><div style="font-size:1rem;font-weight:800;color:#16A34A">₪${p}</div><div style="font-size:.7rem;color:#9ca3af;text-decoration:line-through">₪${w}</div></div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="card fade-in" onclick="navigate('tiktok')" style="margin-bottom:.75rem;cursor:pointer;background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;padding:1rem">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:2.5rem">🎥</span>
+        <div><div style="font-weight:800;font-size:1rem">TikTok AI</div><div style="font-size:.8rem;opacity:.8">הדבק קישור טיקטוק וקבל מתכון מיידי</div></div>
+        <span style="margin-right:auto;opacity:.6;font-size:1.2rem">›</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── FRIDGE ──────────────────────────────────────────────────────────────────
+function renderFridge(){
+  const tab=STATE.fridgeTab||'fridge';
+  const search=STATE.fridgeSearch||'';
+  const counts={fridge:0,pantry:0,freezer:0};
+  STATE.fridge.forEach(i=>counts[i.loc]=(counts[i.loc]||0)+1);
+
+  let items=STATE.fridge.filter(i=>{
+    if(i.loc!==tab)return false;
+    if(search){const p=getP(i.pid);return p&&(p.name.includes(search)||p.brand.includes(search))}
+    return true;
+  });
+
+  const tabLabels={fridge:'🧊 מקרר',pantry:'🗄️ מזווה',freezer:'❄️ מקפיא'};
+
+  return`<div class="gh" style="padding:1rem 1rem 1.5rem">
+    <h1>🧊 המקרר שלי</h1><p>${STATE.fridge.length} מוצרים בסך הכל</p>
+  </div>
+  <div class="tabs">
+    ${Object.keys(tabLabels).map(t=>`<button class="tab ${tab===t?'active':''}" onclick="setFridgeTab('${t}')">${tabLabels[t]} <span style="background:${tab===t?'#0052CC':'#e5e7eb'};color:${tab===t?'#fff':'#6b7280'};border-radius:999px;padding:0 5px;font-size:.7rem">${counts[t]||0}</span></button>`).join('')}
+  </div>
+  <div style="padding:.75rem">
+    <input value="${h(search)}" oninput="STATE.fridgeSearch=this.value;renderPage('fridge')" placeholder="🔍 חפש מוצר..." style="width:100%;padding:.65rem .85rem;border-radius:12px;border:1.5px solid #E5E7EB;font-size:.88rem;margin-bottom:.75rem"/>
+    ${items.length===0?`<div style="text-align:center;padding:3rem 1rem;color:#9ca3af"><div style="font-size:3rem;margin-bottom:.75rem">${tab==='fridge'?'🧊':tab==='pantry'?'🗄️':'❄️'}</div><div style="font-weight:600">${search?'לא נמצאו מוצרים':tabLabels[tab].split(' ')[1]+' ריק'}</div><div style="font-size:.82rem;margin-top:.25rem">לחץ + להוסיף</div></div>`:
+    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;padding-bottom:4rem">
+      ${items.map(item=>{
+        const p=getP(item.pid);if(!p)return'';
+        const d=daysUntil(item.exp);
+        const bg=d<=0?'#FEE2E2':d<=3?'#FEF3C7':'#fff';
+        const bc=d<=0?'#EF4444':d<=3?'#F59E0B':'#e5e7eb';
+        return`<div style="background:${bg};border:1px solid ${bc};border-radius:1rem;padding:.75rem;position:relative">
+          ${d<=3?`<div style="position:absolute;top:6px;left:6px;background:${d<=0?'#FEE2E2':'#FEF3C7'};border:1px solid ${d<=0?'#EF4444':'#F59E0B'};border-radius:999px;padding:1px 6px;font-size:.62rem;font-weight:700;color:${d<=0?'#DC2626':'#D97706'}">${d<=0?'פג!':d===1?'מחר':d+'ד'}</div>`:''}
+          <button onclick="removeFridge('${item.id}')" style="position:absolute;top:6px;right:6px;background:none;border:none;cursor:pointer;color:#d1d5db;font-size:.75rem;padding:2px">✕</button>
+          <div style="text-align:center;font-size:2.2rem;margin-bottom:.25rem">${p.img}</div>
+          <div style="font-size:.78rem;font-weight:700;text-align:center;margin-bottom:.15rem;line-height:1.3">${h(p.name)}</div>
+          <div style="font-size:.68rem;color:#9ca3af;text-align:center;margin-bottom:.5rem">${h(p.brand)}</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+            <button onclick="updateFridgeQty('${item.id}',-1)" style="width:28px;height:28px;border-radius:50%;border:1.5px solid #e5e7eb;background:#fff;cursor:pointer;font-size:1rem;font-weight:700;display:flex;align-items:center;justify-content:center">−</button>
+            <span style="font-weight:800;font-size:1rem;min-width:20px;text-align:center">${item.qty}</span>
+            <button onclick="updateFridgeQty('${item.id}',1)" style="width:28px;height:28px;border-radius:50%;border:1.5px solid #0052CC;background:#EEF2FF;cursor:pointer;font-size:1rem;font-weight:700;color:#0052CC;display:flex;align-items:center;justify-content:center">+</button>
+          </div>
+          <div style="font-size:.62rem;color:#9ca3af;text-align:center;margin-top:.35rem">${new Date(item.exp).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'})}</div>
+        </div>`
+      }).join('')}
+    </div>`}
+  </div>
+  <button onclick="openAddModal()" style="position:fixed;bottom:5.5rem;left:1.25rem;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#0052CC,#0099B0);border:none;color:#fff;font-size:1.5rem;cursor:pointer;box-shadow:0 4px 16px rgba(0,82,204,.4);display:flex;align-items:center;justify-content:center;z-index:40;font-weight:300">+</button>`;
+}
+
+// ─── SCANNER ─────────────────────────────────────────────────────────────────
+function renderScanner(){
+  const {scanScanning,scanResult,scanNotFound,scanBarcode}=STATE;
+  const demos=[{bc:'7290000066614',n:'חלב תנובה 3%'},{bc:'7290002443582',n:'ביצים גדולות'},{bc:'7290000652191',n:'לחם אחיד פרוס'}];
+  return`<div class="gh" style="padding:1rem 1rem 1.5rem"><h1>📷 סריקת ברקוד</h1><p>סרוק מוצר להוספה מהירה</p></div>
+  <div style="padding:0 .75rem;margin-top:-.75rem">
+    <div class="card" style="margin-bottom:.75rem;padding:0;overflow:hidden">
+      <div style="background:#0f172a;height:200px;position:relative;display:flex;align-items:center;justify-content:center">
+        <div style="width:180px;height:140px;border:2px solid rgba(255,255,255,.4);border-radius:8px;position:relative">
+          <div style="position:absolute;top:0;right:0;width:20px;height:20px;border-top:3px solid #00ff88;border-right:3px solid #00ff88;border-radius:2px"></div>
+          <div style="position:absolute;top:0;left:0;width:20px;height:20px;border-top:3px solid #00ff88;border-left:3px solid #00ff88;border-radius:2px"></div>
+          <div style="position:absolute;bottom:0;right:0;width:20px;height:20px;border-bottom:3px solid #00ff88;border-right:3px solid #00ff88;border-radius:2px"></div>
+          <div style="position:absolute;bottom:0;left:0;width:20px;height:20px;border-bottom:3px solid #00ff88;border-left:3px solid #00ff88;border-radius:2px"></div>
+          ${scanScanning?'<div class="scan-line"></div>':''}
+        </div>
+        <div style="position:absolute;bottom:12px;color:rgba(255,255,255,.7);font-size:.75rem">${scanScanning?'⏳ סורק...':'📷 מצלמה (הדגמה)'}</div>
+      </div>
+    </div>
+    <div class="card fade-in" style="margin-bottom:.75rem">
+      <div style="font-size:.82rem;font-weight:700;margin-bottom:.5rem;color:#374151">הזן ברקוד ידנית</div>
+      <div style="display:flex;gap:.5rem">
+        <input id="scan-input" value="${h(scanBarcode)}" oninput="STATE.scanBarcode=this.value" onkeydown="if(event.key==='Enter')doScan()" placeholder="הזן ברקוד..." style="flex:1;padding:.65rem;border-radius:10px;border:1.5px solid #E5E7EB;font-size:.9rem"/>
+        <button onclick="doScan()" class="btn btn-primary" ${scanScanning?'disabled':''}>סרוק</button>
+      </div>
+    </div>
+    <div class="card fade-in" style="margin-bottom:.75rem">
+      <div style="font-size:.82rem;font-weight:700;margin-bottom:.5rem;color:#374151">ברקודים לדוגמה</div>
+      ${demos.map(d=>`<button onclick="scanDemo('${d.bc}')" style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:.6rem .85rem;margin-bottom:.3rem;border-radius:10px;border:1.5px solid #E5E7EB;background:#F9FAFB;cursor:pointer;font-family:inherit"><span style="font-size:.82rem;font-weight:600">${d.n}</span><span style="font-size:.7rem;color:#6b7280;font-family:monospace">${d.bc}</span></button>`).join('')}
+    </div>
+    ${scanScanning?`<div class="card fade-in" style="margin-bottom:.75rem;text-align:center;padding:1.5rem"><div style="font-size:2rem;margin-bottom:.5rem">🔍</div><div style="font-weight:700;color:#0052CC">מחפש מוצר...</div></div>`:''}
+    ${scanResult&&!scanScanning?renderScanResult(scanResult):''}
+    ${scanNotFound&&!scanScanning?`<div class="card fade-in" style="margin-bottom:.75rem;text-align:center;padding:1.25rem"><div style="font-size:2rem;margin-bottom:.5rem">🔎</div><div style="font-weight:700;margin-bottom:.25rem">מוצר לא נמצא</div><div style="font-size:.82rem;color:#6b7280;margin-bottom:.85rem">ברקוד לא קיים במאגר</div><button style="padding:.65rem 1.25rem;border-radius:10px;border:1.5px solid #E5E7EB;background:#F9FAFB;font-family:inherit;cursor:pointer;font-weight:600">📷 צלם אריזה לזיהוי AI</button></div>`:''}
+  </div>`;
+}
+function renderScanResult(p){
+  return`<div class="card slide-up" style="margin-bottom:.75rem">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+      <span style="font-size:3rem">${p.img}</span>
+      <div><div style="font-weight:800;font-size:1rem">${h(p.name)}</div><div style="font-size:.82rem;color:#6b7280">${h(p.brand)} · ${h(p.cat)}</div>${p.kosher?`<div style="font-size:.72rem;color:#16A34A;font-weight:600">✓ ${p.kosher}</div>`:''}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:.6rem;background:#F0F9FF;border-radius:8px;margin-bottom:.75rem">
+      <span style="font-size:.8rem;color:#0052CC;font-weight:600">💰 מחיר זול ביותר:</span>
+      <span style="font-size:.85rem;font-weight:800;color:#16A34A">₪${minPrice(p)} ב${minStore(p)}</span>
+    </div>
+    <div style="display:flex;gap:.4rem">
+      ${[['fridge','🧊 מקרר'],['pantry','🗄️ מזווה'],['freezer','❄️ מקפיא']].map(([loc,lbl])=>
+        `<button onclick="addScannedToFridge('${p.id}','${loc}')" style="flex:1;padding:.6rem;border-radius:10px;border:none;background:linear-gradient(135deg,#0052CC,#0099B0);color:#fff;font-family:inherit;font-weight:600;font-size:.78rem;cursor:pointer">${lbl}</button>`
+      ).join('')}
+    </div>
+    <button onclick="addScannedToShopping('${p.id}')" style="width:100%;margin-top:.4rem;padding:.6rem;border-radius:10px;border:1.5px solid #16A34A;background:#fff;color:#16A34A;font-family:inherit;font-weight:600;font-size:.82rem;cursor:pointer">🛒 הוסף לרשימת קניות</button>
+  </div>`;
+}
+
+// ─── RECIPES ─────────────────────────────────────────────────────────────────
+function renderRecipes(){
+  const fridgeIds=new Set(STATE.fridge.map(i=>i.pid));
+  const suggestions=RECIPES.map(r=>({...r,missing:r.pids.filter(id=>!fridgeIds.has(id)).length})).sort((a,b)=>a.missing-b.missing);
+  return`<div class="gh" style="padding:1rem 1rem 1.5rem;background:linear-gradient(135deg,#FF6B6B,#FF8E53)"><h1>🍳 Fridge Chef AI</h1><p>מתכונים לפי מה שיש לך</p></div>
+  <div style="padding:.75rem">
+    <div class="card fade-in" style="margin-bottom:.75rem;background:#FEF3C7;padding:.75rem">
+      <div style="font-size:.82rem;font-weight:700;color:#92400E;margin-bottom:.25rem">🧊 זיהוי מרכיבים אוטומטי</div>
+      <div style="font-size:.78rem;color:#78350F">${suggestions.filter(r=>r.missing===0).length} מתכונים שאפשר להכין עכשיו · ${suggestions.filter(r=>r.missing>0&&r.missing<=2).length} שחסרים 1-2 מרכיבים</div>
+    </div>
+    <div style="padding-bottom:5rem">
+      ${suggestions.map(r=>`
+        <div class="card fade-in" onclick="openRecipeModal('${r.id}')" style="margin-bottom:.5rem;padding:.85rem;cursor:pointer;border-right:4px solid ${r.missing===0?'#16A34A':r.missing<=2?'#D97706':'#E5E7EB'}">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span style="font-size:2rem;flex-shrink:0">${r.emoji}</span>
+            <div style="flex:1">
+              <div style="font-weight:800;font-size:.92rem;margin-bottom:.2rem">${h(r.name)}</div>
+              <div style="font-size:.75rem;color:#6b7280;margin-bottom:.4rem">${h(r.desc)}</div>
+              <div style="display:flex;gap:.4rem;align-items:center">
+                <span style="font-size:.72rem;color:#6b7280">⏱ ${r.time} דק׳</span>
+                <span style="font-size:.72rem;color:#6b7280">👥 ${r.servings}</span>
+                <span style="font-size:.72rem">${'⭐'.repeat(r.diff)}</span>
+              </div>
+            </div>
+            <div style="flex-shrink:0;font-size:.7rem;font-weight:700;padding:.25rem .5rem;border-radius:999px;background:${r.missing===0?'#DCFCE7':r.missing<=2?'#FEF3C7':'#F3F4F6'};color:${r.missing===0?'#16A34A':r.missing<=2?'#D97706':'#6b7280'}">${r.missing===0?'✓ יש הכל':'חסר '+r.missing}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  </div>`;
+}
+
+// ─── SHOPPING ────────────────────────────────────────────────────────────────
+function renderShopping(){
+  const unchecked=STATE.shopping.filter(i=>!i.checked);
+  const checked=STATE.shopping.filter(i=>i.checked);
+  const minTotal=unchecked.reduce((s,i)=>{const p=getP(i.pid);return s+(p?minPrice(p)*i.qty:0)},0);
+  const groups={};
+  unchecked.forEach(item=>{const p=getP(item.pid);if(p){const c=p.cat;if(!groups[c])groups[c]=[];groups[c].push(item)}});
+
+  return`<div class="gh" style="padding:1rem 1rem 1.5rem;background:linear-gradient(135deg,#16A34A,#0D9488)">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><h1>🛒 רשימת קניות</h1><p>${unchecked.length} פריטים · ₪${minTotal.toFixed(2)} מינימלי</p></div>
+      ${checked.length>0?`<button onclick="clearChecked()" style="background:rgba(255,255,255,.2);border:none;border-radius:10px;padding:.45rem .75rem;color:#fff;font-family:inherit;font-size:.78rem;font-weight:600;cursor:pointer">נקה שהושלמו</button>`:''}
+    </div>
+  </div>
+  <div style="padding:.75rem">
+    <div class="card" style="margin-bottom:.75rem;position:relative">
+      <input id="shop-search" oninput="shopSearch(this.value)" placeholder="🔍 הוסף מוצר..." style="width:100%;padding:.65rem .85rem;border:1.5px solid #E5E7EB;border-radius:10px;font-size:.88rem"/>
+      <div id="shop-results" style="display:none;position:absolute;top:100%;right:0;left:0;z-index:50;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);border:1px solid #E5E7EB;margin-top:4px"></div>
+    </div>
+    ${unchecked.length===0&&checked.length===0?`<div style="text-align:center;padding:3rem 1rem;color:#9ca3af"><div style="font-size:3rem;margin-bottom:.75rem">🛒</div><div style="font-weight:700">הרשימה ריקה</div></div>`:''}
+    ${Object.entries(groups).map(([cat,items])=>`
+      <div style="margin-bottom:.75rem">
+        <div style="font-size:.78rem;font-weight:700;color:#6b7280;margin-bottom:.35rem;padding-right:.25rem">${cat}</div>
+        ${items.map(item=>{const p=getP(item.pid);if(!p)return'';const best=minStore(p);const price=minPrice(p);
+          return`<div class="card fade-in" style="margin-bottom:.4rem;padding:.65rem .85rem;display:flex;align-items:center;gap:10px">
+            <button onclick="toggleShop('${item.id}')" style="width:22px;height:22px;flex-shrink:0;border-radius:6px;border:2px solid #D1D5DB;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"></button>
+            <span style="font-size:1.4rem;flex-shrink:0">${p.img}</span>
+            <div style="flex:1"><div style="font-size:.85rem;font-weight:700">${h(p.name)}</div><div style="font-size:.72rem;color:#16A34A;font-weight:600">₪${price} ב${best}</div></div>
+            <span style="font-weight:800;font-size:.9rem">×${item.qty}</span>
+            <button onclick="removeShop('${item.id}')" style="background:none;border:none;cursor:pointer;color:#D1D5DB;font-size:.9rem">✕</button>
+          </div>`}).join('')}
+      </div>
+    `).join('')}
+    ${checked.length>0?`<div style="margin-bottom:5rem">
+      <div style="font-size:.78rem;font-weight:700;color:#9ca3af;margin-bottom:.35rem">✓ הושלמו (${checked.length})</div>
+      ${checked.map(item=>{const p=getP(item.pid);if(!p)return'';
+        return`<div class="card" style="margin-bottom:.35rem;padding:.55rem .85rem;display:flex;align-items:center;gap:10px;opacity:.55">
+          <button onclick="toggleShop('${item.id}')" style="width:22px;height:22px;flex-shrink:0;border-radius:6px;border:2px solid #16A34A;background:#DCFCE7;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#16A34A;font-size:.8rem">✓</button>
+          <span style="font-size:1.2rem">${p.img}</span><span style="font-size:.82rem;text-decoration:line-through;color:#6b7280">${h(p.name)}</span>
+          <button onclick="removeShop('${item.id}')" style="margin-right:auto;background:none;border:none;cursor:pointer;color:#D1D5DB;font-size:.85rem">✕</button>
+        </div>`}).join('')}
+    </div>`:''}
+    <div style="height:7rem"></div>
+  </div>
+  ${unchecked.length>0?`<div style="position:fixed;bottom:5rem;right:.75rem;left:.75rem;max-width:430px;margin:0 auto;background:linear-gradient(135deg,#16A34A,#0D9488);border-radius:16px;padding:.85rem 1rem;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 20px rgba(22,163,74,.4);z-index:40">
+    <div style="color:#fff"><div style="font-size:.78rem;opacity:.85">מחיר מינימלי לסל</div><div style="font-size:1.2rem;font-weight:800">₪${minTotal.toFixed(2)}</div></div>
+    <button onclick="alert('שיתוף הרשימה...')" style="background:rgba(255,255,255,.2);border:none;border-radius:10px;padding:.5rem 1rem;color:#fff;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer">שתף רשימה 📤</button>
+  </div>`:''}`;
+}
+
+// ─── PRICES ──────────────────────────────────────────────────────────────────
+function renderPrices(){
+  const search=STATE.priceSearch||'';
+  const basket=STATE.basket||[];
+  const results=search?PRODUCTS.filter(p=>p.name.includes(search)||p.brand.includes(search)).slice(0,5):PRODUCTS.slice(0,5);
+
+  const basketTotals=STORES.map(s=>({...s,total:basket.reduce((sum,pid)=>{const p=getP(pid);return sum+(p?p.prices[s.id]||0:0)},0)})).sort((a,b)=>a.total-b.total);
+
+  return`<div class="gh" style="padding:1rem 1rem 1.5rem;background:linear-gradient(135deg,#7C3AED,#0052CC)"><h1>💰 השוואת מחירים</h1><p>8 רשתות מזון בישראל</p></div>
+  <div style="padding:.75rem;padding-bottom:5rem">
+    <input value="${h(search)}" oninput="STATE.priceSearch=this.value;renderPage('prices')" placeholder="🔍 חפש מוצר להשוואה..." style="width:100%;padding:.65rem .85rem;border-radius:12px;border:1.5px solid #E5E7EB;font-size:.88rem;margin-bottom:.75rem;background:#fff"/>
+    ${results.map(p=>{
+      const prices=Object.entries(p.prices);
+      const min=Math.min(...prices.map(([,v])=>v));
+      const max=Math.max(...prices.map(([,v])=>v));
+      const inBasket=basket.includes(p.id);
+      return`<div class="card fade-in" style="margin-bottom:.5rem;padding:.75rem">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:.65rem">
+          <span style="font-size:1.5rem">${p.img}</span>
+          <div><div style="font-weight:700;font-size:.88rem">${h(p.name)}</div><div style="font-size:.72rem;color:#6b7280">${h(p.brand)} · ${p.w}${p.unit}</div></div>
+          <div style="margin-right:auto;display:flex;gap:.35rem">
+            <button onclick="toggleBasket('${p.id}')" style="padding:.3rem .6rem;border-radius:8px;border:1.5px solid ${inBasket?'#16A34A':'#0052CC'};background:${inBasket?'#DCFCE7':'#fff'};color:${inBasket?'#16A34A':'#0052CC'};font-family:inherit;font-size:.72rem;font-weight:600;cursor:pointer">${inBasket?'✓ בסל':'+ סל'}</button>
+            <button onclick="addToShopFromPrices('${p.id}')" style="padding:.3rem .6rem;border-radius:8px;border:1.5px solid #16A34A;background:#fff;color:#16A34A;font-family:inherit;font-size:.72rem;font-weight:600;cursor:pointer">🛒</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem">
+          ${STORES.slice(0,4).map(s=>{const price=p.prices[s.id];const isBest=price===min;const isWorst=price===max;
+            return`<div style="text-align:center;padding:.4rem .2rem;border-radius:8px;background:${isBest?'#DCFCE7':isWorst?'#FEE2E2':'#F9FAFB'};border:${isBest?'1.5px solid #16A34A':isWorst?'1.5px solid #EF4444':'1px solid #F3F4F6'}">
+              <div style="font-size:.65rem;color:#6b7280;margin-bottom:.15rem">${s.name}</div>
+              <div style="font-size:.85rem;font-weight:800;color:${isBest?'#16A34A':isWorst?'#DC2626':'#374151'}">₪${price}</div>
+              ${isBest?'<div style="font-size:.6rem;color:#16A34A;font-weight:700">הכי זול!</div>':''}
+            </div>`}).join('')}
+        </div>
+        <div style="font-size:.72rem;color:#6b7280;margin-top:.4rem;text-align:center">חסכון מקסימלי: <span style="color:#16A34A;font-weight:700">₪${(max-min).toFixed(2)}</span></div>
+      </div>`}).join('')}
+
+    ${basket.length>0?`<div style="margin-top:1rem">
+      <div style="font-size:.88rem;font-weight:700;color:#374151;margin-bottom:.5rem">🛒 סל קניות (${basket.length} מוצרים)</div>
+      ${basketTotals.filter(s=>s.total>0).map((s,i)=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:.65rem .85rem;border-radius:12px;margin-bottom:.4rem;background:${i===0?'#DCFCE7':'#fff'};border:${i===0?'1.5px solid #16A34A':'1px solid #F3F4F6'}">
+          <span style="font-size:1.2rem">${s.logo}</span>
+          <span style="flex:1;font-weight:${i===0?700:500};font-size:.88rem">${s.name} ${i===0?'🏆':''}</span>
+          <span style="font-weight:800;font-size:1rem;color:${i===0?'#16A34A':'#374151'}">₪${s.total.toFixed(2)}</span>
+        </div>
+      `).join('')}
+    </div>`:''}
+  </div>`;
+}
+
+// ─── TIKTOK ──────────────────────────────────────────────────────────────────
+function renderTikTok(){
+  const demos=[
+    {id:1,title:'שקשוקה מטורפת של אמא שלי',dur:'0:45',views:'2.3M',emoji:'🍳',color:'#FF6B6B'},
+    {id:2,title:'פסטה ב-10 דקות',dur:'1:02',views:'1.8M',emoji:'🍝',color:'#FF8E53'},
+    {id:3,title:'עוגת שוקולד ב-3 מרכיבים',dur:'0:38',views:'4.1M',emoji:'🎂',color:'#4F46E5'},
+  ];
+  const ttr=STATE.tiktokResult;
+  return`<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:1.25rem 1rem 1.5rem;color:#fff"><h1 style="font-size:1.4rem;font-weight:800;margin:0">🎥 TikTok AI</h1><p style="font-size:.82rem;opacity:.75;margin:.2rem 0 0">זהה מתכונים מסרטוני טיקטוק</p></div>
+  <div style="padding:0 .75rem;margin-top:-.75rem">
+    <div class="card fade-in" style="margin-bottom:.75rem">
+      <div style="font-size:.82rem;font-weight:700;margin-bottom:.5rem">הדבק קישור טיקטוק</div>
+      <div style="display:flex;gap:.5rem">
+        <input id="tt-url" placeholder="https://tiktok.com/@..." style="flex:1;padding:.65rem;border-radius:10px;border:1.5px solid #E5E7EB;font-size:.88rem"/>
+        <button onclick="analyzeTikTok()" style="padding:.65rem 1rem;border-radius:10px;border:none;background:linear-gradient(135deg,#1a1a2e,#4F46E5);color:#fff;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer">נתח</button>
+      </div>
+      <div style="text-align:center;margin:.5rem 0;font-size:.78rem;color:#9ca3af">— או —</div>
+      <button style="width:100%;padding:.65rem;border-radius:10px;border:1.5px dashed #D1D5DB;background:#F9FAFB;font-family:inherit;font-size:.85rem;cursor:pointer">📁 העלה סרטון מהמכשיר</button>
+    </div>
+
+    ${STATE.tiktokLoading?`<div class="card fade-in" style="margin-bottom:.75rem;text-align:center;padding:2rem"><div style="font-size:2.5rem;margin-bottom:.75rem">🤖</div><div style="font-weight:700;font-size:1rem;margin-bottom:.35rem">AI מנתח את הסרטון...</div><div style="font-size:.82rem;color:#6b7280">מזהה מרכיבים, כמויות והוראות</div></div>`:''}
+
+    ${ttr&&!STATE.tiktokLoading?`<div class="card slide-up" style="margin-bottom:.75rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem">
+        <div style="width:36px;height:36px;border-radius:10px;background:${ttr.color||'#4F46E5'};display:flex;align-items:center;justify-content:center;font-size:1.2rem">${ttr.emoji||'🍳'}</div>
+        <div><div style="font-weight:800;font-size:.95rem">${h(ttr.name)}</div><div style="font-size:.75rem;color:#6b7280">⏱ ${ttr.time} דקות · 🔥 ${ttr.cal} קל׳</div></div>
+        <span style="margin-right:auto;background:#DCFCE7;color:#16A34A;font-size:.72rem;font-weight:700;padding:.25rem .5rem;border-radius:999px">✓ זוהה</span>
+      </div>
+      <div style="margin-bottom:.65rem"><div style="font-size:.8rem;font-weight:700;margin-bottom:.4rem">מרכיבים</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem">${ttr.ing.map(i=>`<span style="background:#F3F4F6;border-radius:999px;padding:.25rem .6rem;font-size:.75rem">${i}</span>`).join('')}</div>
+      </div>
+      <div style="margin-bottom:.75rem"><div style="font-size:.8rem;font-weight:700;margin-bottom:.4rem">הוראות הכנה</div>
+        <ol style="margin:0;padding:0 1.25rem">${ttr.steps.map(s=>`<li style="font-size:.82rem;margin-bottom:.3rem;line-height:1.5">${s}</li>`).join('')}</ol>
+      </div>
+      <div style="display:flex;gap:.5rem">
+        <button onclick="ttAddToShopping()" style="flex:1;padding:.65rem;border-radius:10px;border:none;background:#DCFCE7;color:#16A34A;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer">🛒 הוסף לקניות</button>
+        <button style="flex:1;padding:.65rem;border-radius:10px;border:none;background:linear-gradient(135deg,#1a1a2e,#4F46E5);color:#fff;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer">💾 שמור מתכון</button>
+      </div>
+    </div>`:''}
+
+    <div style="font-size:.82rem;font-weight:700;margin-bottom:.5rem">🔥 נסה עם דוגמאות</div>
+    ${demos.map(d=>`<div class="card fade-in" style="margin-bottom:.5rem;padding:.75rem;display:flex;gap:10px;align-items:center">
+      <div style="width:60px;height:60px;border-radius:12px;background:${d.color};display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0">${d.emoji}</div>
+      <div style="flex:1"><div style="font-weight:700;font-size:.85rem;margin-bottom:.2rem">${h(d.title)}</div><div style="font-size:.72rem;color:#6b7280">⏱ ${d.dur} · 👁 ${d.views} צפיות</div></div>
+      <button onclick="analyzeTikTokDemo(${d.id})" style="padding:.4rem .75rem;border-radius:8px;border:none;background:linear-gradient(135deg,#1a1a2e,#4F46E5);color:#fff;font-family:inherit;font-weight:600;font-size:.75rem;cursor:pointer">נתח</button>
+    </div>`).join('')}
+    <div style="height:5rem"></div>
+  </div>`;
+}
+
+// ─── STATS ───────────────────────────────────────────────────────────────────
+function renderStats(){
+  const monthTotal=STATE.expenses.filter(e=>new Date(e.date).getMonth()===new Date().getMonth()).reduce((s,e)=>s+e.total,0);
+  const prevTotal=780;
+  const savings=prevTotal-monthTotal;
+  const weeks=[187.5,142.3,215.8,98.4];
+  const maxW=Math.max(...weeks);
+  const cats=[['בשר ועוף',28,'#EF4444','🥩'],['ירקות',22,'#22C55E','🥦'],['חלב',18,'#3B82F6','🥛'],['לחם',12,'#F59E0B','🍞'],['שימורים',10,'#8B5CF6','🥫'],['אחר',10,'#6B7280','📦']];
+  const top=[['חלב תנובה','🥛',8],['ביצים','🥚',6],['לחם אחיד','🍞',5],['גבינה לבנה','🧀',4],['עגבניות שרי','🍅',4]];
+  return`<div class="gh" style="padding:1rem 1rem 1.5rem;background:linear-gradient(135deg,#1D4ED8,#7C3AED)">
+    <div style="display:flex;align-items:center;gap:8px"><button onclick="navigate('home')" style="background:rgba(255,255,255,.2);border:none;border-radius:8px;padding:.35rem .6rem;color:#fff;cursor:pointer;font-size:.9rem">‹</button><div><h1>📊 סטטיסטיקות</h1><p>${['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'][new Date().getMonth()]} ${new Date().getFullYear()}</p></div></div>
+  </div>
+  <div style="padding:0 .75rem;margin-top:-.75rem">
+    <div class="card fade-in" style="margin-bottom:.65rem;background:linear-gradient(135deg,#1D4ED8,#7C3AED);color:#fff;text-align:center;padding:1.25rem">
+      <div style="font-size:.85rem;opacity:.85;margin-bottom:.25rem">הוצאת החודש</div>
+      <div style="font-size:2.5rem;font-weight:900;letter-spacing:-1px">₪${monthTotal.toFixed(0)}</div>
+      <div style="display:inline-block;margin-top:.5rem;padding:.3rem .85rem;border-radius:999px;background:${savings>0?'rgba(34,197,94,.25)':'rgba(239,68,68,.25)'};color:${savings>0?'#86EFAC':'#FCA5A5'};font-size:.82rem;font-weight:700">
+        ${savings>0?`חסכת ₪${savings.toFixed(0)} לעומת חודש שעבר`:`הוצאת ₪${Math.abs(savings).toFixed(0)} יותר`}
+      </div>
+    </div>
+
+    <div class="card fade-in" style="margin-bottom:.65rem;padding:.85rem">
+      <div style="font-size:.85rem;font-weight:700;color:#374151;margin-bottom:.65rem">הוצאות שבועיות</div>
+      <div style="display:flex;align-items:flex-end;gap:.5rem;height:100px">
+        ${weeks.map((w,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-size:.68rem;color:#6b7280;font-weight:600">₪${w}</div>
+          <div style="width:100%;border-radius:6px 6px 0 0;height:${Math.round((w/maxW)*70)}px;background:linear-gradient(180deg,#7C3AED,#1D4ED8);transition:height .5s"></div>
+          <div style="font-size:.65rem;color:#9ca3af">שבוע ${i+1}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card fade-in" style="margin-bottom:.65rem;padding:.85rem">
+      <div style="font-size:.85rem;font-weight:700;color:#374151;margin-bottom:.65rem">פילוח לפי קטגוריה</div>
+      ${cats.map(([n,p,c,e])=>`<div style="margin-bottom:.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.2rem">
+          <span style="font-size:.8rem;font-weight:600">${e} ${n}</span>
+          <span style="font-size:.8rem;font-weight:700;color:${c}">${p}%</span>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${p}%;background:${c}"></div></div>
+      </div>`).join('')}
+    </div>
+
+    <div class="card fade-in" style="margin-bottom:.65rem;padding:.85rem">
+      <div style="font-size:.85rem;font-weight:700;color:#374151;margin-bottom:.6rem">🛒 מוצרים שקנית הכי הרבה</div>
+      ${top.map(([n,e,c],i)=>`<div style="display:flex;align-items:center;gap:8px;padding:.45rem 0;border-bottom:${i<top.length-1?'1px solid #F3F4F6':'none'}">
+        <span style="font-size:.78rem;font-weight:800;color:#9ca3af;min-width:14px">${i+1}</span>
+        <span style="font-size:1.2rem">${e}</span>
+        <span style="flex:1;font-size:.85rem;font-weight:600">${n}</span>
+        <span style="font-size:.78rem;color:#6b7280;font-weight:600">×${c}</span>
+      </div>`).join('')}
+    </div>
+
+    <div class="card fade-in" style="margin-bottom:5rem;padding:.85rem;background:#FEF3C7;border:1px solid #FCD34D">
+      <div style="font-size:.85rem;font-weight:700;color:#92400E;margin-bottom:.4rem">💡 טיפ לחיסכון מה-AI</div>
+      <div style="font-size:.82rem;color:#78350F;line-height:1.55">אם תקנה בשר ועוף ברמי לוי במקום בשופרסל, תחסוך כ-₪80 בחודש. קניה בכמות גדולה של חלב ולחם חוסכת עד 15% על מוצרים בסיסיים.</div>
+    </div>
+  </div>`;
+}
+
+// ─── ACTIONS ─────────────────────────────────────────────────────────────────
+function setFridgeTab(tab){STATE.fridgeTab=tab;renderPage('fridge')}
+function removeFridge(id){STATE.fridge=STATE.fridge.filter(i=>i.id!==id);save();renderPage('fridge');updateNavBadges()}
+function updateFridgeQty(id,d){
+  const item=STATE.fridge.find(i=>i.id===id);if(!item)return;
+  item.qty+=d;if(item.qty<=0)STATE.fridge=STATE.fridge.filter(i=>i.id!==id);
+  save();renderPage('fridge');
+}
+function toggleShop(id){const i=STATE.shopping.find(x=>x.id===id);if(i){i.checked=!i.checked;save();renderPage('shopping');updateNavBadges()}}
+function removeShop(id){STATE.shopping=STATE.shopping.filter(i=>i.id!==id);save();renderPage('shopping');updateNavBadges()}
+function clearChecked(){STATE.shopping=STATE.shopping.filter(i=>!i.checked);save();renderPage('shopping');updateNavBadges()}
+function addToShopFromPrices(pid){
+  const existing=STATE.shopping.find(i=>i.pid===pid);
+  if(existing)existing.qty++;else STATE.shopping.push({id:uid(),pid,qty:1,checked:false});
+  save();updateNavBadges();alert('נוסף לרשימת הקניות!');
+}
+function toggleBasket(pid){
+  if(!STATE.basket)STATE.basket=[];
+  const idx=STATE.basket.indexOf(pid);
+  if(idx>=0)STATE.basket.splice(idx,1);else STATE.basket.push(pid);
+  renderPage('prices');
+}
+function shopSearch(q){
+  const res=document.getElementById('shop-results');if(!res)return;
+  if(!q){res.style.display='none';return}
+  const found=PRODUCTS.filter(p=>p.name.includes(q)||p.brand.includes(q)).slice(0,6);
+  if(!found.length){res.style.display='none';return}
+  res.style.display='block';
+  res.innerHTML=found.map(p=>`<div onclick="addToShoppingList('${p.id}')" style="display:flex;align-items:center;gap:10px;padding:.65rem .85rem;cursor:pointer;border-bottom:1px solid #F3F4F6">
+    <span style="font-size:1.4rem">${p.img}</span>
+    <div><div style="font-size:.85rem;font-weight:600">${h(p.name)}</div><div style="font-size:.72rem;color:#6b7280">${h(p.brand)}</div></div>
+    <div style="margin-right:auto;font-size:.82rem;font-weight:700;color:#16A34A">₪${minPrice(p)}</div>
+  </div>`).join('');
+}
+function addToShoppingList(pid){
+  const existing=STATE.shopping.find(i=>i.pid===pid);
+  if(existing)existing.qty++;else STATE.shopping.push({id:uid(),pid,qty:1,checked:false});
+  save();
+  const inp=document.getElementById('shop-search');if(inp)inp.value='';
+  const res=document.getElementById('shop-results');if(res)res.style.display='none';
+  renderPage('shopping');updateNavBadges();
+}
+
+// Scan
+function doScan(){
+  const bc=STATE.scanBarcode;if(!bc)return;
+  STATE.scanScanning=true;STATE.scanResult=null;STATE.scanNotFound=false;
+  renderPage('scanner');
+  setTimeout(()=>{
+    const p=PRODUCTS.find(p=>p.barcode===bc.trim());
+    STATE.scanScanning=false;
+    if(p){STATE.scanResult=p}else{STATE.scanNotFound=true}
+    renderPage('scanner');
+    const inp=document.getElementById('scan-input');if(inp)inp.value=bc;
+  },1200);
+}
+function scanDemo(bc){STATE.scanBarcode=bc;doScan()}
+function addScannedToFridge(pid,loc){
+  const p=getP(pid);if(!p)return;
+  const existing=STATE.fridge.find(i=>i.pid===pid&&i.loc===loc);
+  if(existing)existing.qty++;
+  else STATE.fridge.push({id:uid(),pid,loc,qty:1,exp:new Date(Date.now()+(loc==='freezer'?90:loc==='pantry'?180:7)*864e5).toISOString()});
+  save();STATE.scanResult=null;STATE.scanBarcode='';renderPage('scanner');
+  alert('✓ נוסף ל'+{fridge:'מקרר',pantry:'מזווה',freezer:'מקפיא'}[loc]+'!');
+}
+function addScannedToShopping(pid){
+  const existing=STATE.shopping.find(i=>i.pid===pid);
+  if(existing)existing.qty++;else STATE.shopping.push({id:uid(),pid,qty:1,checked:false});
+  save();updateNavBadges();alert('✓ נוסף לרשימת הקניות!');
+}
+
+// Add Modal
+function openAddModal(){
+  const modal=document.getElementById('modal-add');
+  const content=document.getElementById('modal-add-content');
+  modal.classList.add('open');
+  renderAddModal(content,'');
+}
+function renderAddModal(el,search,selected){
+  if(selected){
+    el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h2 style="margin:0;font-size:1.1rem;font-weight:800">הוסף מוצר</h2>
+      <button onclick="closeAddModal()" style="background:none;border:none;cursor:pointer;font-size:1.5rem;color:#6b7280">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;background:#F0F9FF;border-radius:12px;padding:.75rem;margin-bottom:1rem">
+      <span style="font-size:2rem">${selected.img}</span>
+      <div><div style="font-weight:700">${h(selected.name)}</div><div style="font-size:.8rem;color:#6b7280">${h(selected.brand)}</div></div>
+      <button onclick="renderAddModal(document.getElementById('modal-add-content'),'')" style="margin-right:auto;background:none;border:none;cursor:pointer;color:#6b7280;font-size:.85rem">שנה</button>
+    </div>
+    <div style="margin-bottom:.75rem">
+      <label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.4rem">מיקום</label>
+      <div style="display:flex;gap:.4rem">
+        ${[['fridge','🧊 מקרר'],['pantry','🗄️ מזווה'],['freezer','❄️ מקפיא']].map(([v,l])=>`<button id="loc-${v}" onclick="selectLoc('${v}')" style="flex:1;padding:.5rem;border-radius:10px;cursor:pointer;border:1.5px solid #e5e7eb;background:#fff;font-family:inherit;font-weight:600;font-size:.8rem;color:#374151">${l}</button>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:.75rem">
+      <label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.4rem">כמות</label>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button onclick="addModalQty.textContent=Math.max(1,+addModalQty.textContent-1)" style="width:36px;height:36px;border-radius:50%;border:1.5px solid #e5e7eb;background:#fff;cursor:pointer;font-size:1.2rem">−</button>
+        <span id="addModalQty" style="font-weight:800;font-size:1.2rem;min-width:24px;text-align:center">1</span>
+        <button onclick="addModalQty.textContent=+addModalQty.textContent+1" style="width:36px;height:36px;border-radius:50%;border:1.5px solid #0052CC;background:#EEF2FF;cursor:pointer;font-size:1.2rem;color:#0052CC">+</button>
+      </div>
+    </div>
+    <div style="margin-bottom:1rem">
+      <label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.4rem">תאריך תפוגה (אופציונלי)</label>
+      <input type="date" id="addModalExp" style="width:100%;padding:.6rem .85rem;border:1px solid #e5e7eb;border-radius:12px;font-family:inherit;font-size:.85rem"/>
+    </div>
+    <button onclick="confirmAdd('${selected.id}')" style="width:100%;padding:.85rem;background:linear-gradient(135deg,#0052CC,#0099B0);border:none;border-radius:14px;color:#fff;font-family:inherit;font-weight:700;font-size:1rem;cursor:pointer">הוסף למקרר ✓</button>`;
+    STATE._addLoc='fridge';selectLoc('fridge');
+    return;
+  }
+  const results=search?PRODUCTS.filter(p=>p.name.includes(search)||p.brand.includes(search)||p.barcode.includes(search)).slice(0,10):PRODUCTS.slice(0,8);
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <h2 style="margin:0;font-size:1.1rem;font-weight:800">הוסף מוצר</h2>
+    <button onclick="closeAddModal()" style="background:none;border:none;cursor:pointer;font-size:1.5rem;color:#6b7280">✕</button>
+  </div>
+  <input value="${h(search)}" oninput="renderAddModal(document.getElementById('modal-add-content'),this.value)" placeholder="🔍 חפש מוצר..." style="width:100%;padding:.7rem .9rem;border:1px solid #e5e7eb;border-radius:12px;font-size:.9rem;margin-bottom:.75rem" autofocus/>
+  <div style="max-height:300px;overflow-y:auto">
+    ${results.map(p=>`<div onclick="renderAddModal(document.getElementById('modal-add-content'),'',${JSON.stringify(p).replace(/"/g,'&quot;')})" style="display:flex;align-items:center;gap:10px;padding:.65rem;border-radius:10px;cursor:pointer;margin-bottom:.3rem;border:1px solid #f3f4f6" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
+      <span style="font-size:1.6rem">${p.img}</span>
+      <div><div style="font-weight:700;font-size:.85rem">${h(p.name)}</div><div style="font-size:.72rem;color:#6b7280">${h(p.brand)} · ${p.cat}</div></div>
+    </div>`).join('')}
+  </div>`;
+}
+function selectLoc(loc){
+  STATE._addLoc=loc;
+  document.querySelectorAll('[id^="loc-"]').forEach(b=>{
+    b.style.border='1.5px solid #e5e7eb';b.style.background='#fff';b.style.color='#374151';
+  });
+  const btn=document.getElementById('loc-'+loc);
+  if(btn){btn.style.border='2px solid #0052CC';btn.style.background='#EEF2FF';btn.style.color='#0052CC'}
+}
+function closeAddModal(){document.getElementById('modal-add').classList.remove('open')}
+function confirmAdd(pid){
+  const p=getP(pid);if(!p)return;
+  const loc=STATE._addLoc||'fridge';
+  const qty=parseInt(document.getElementById('addModalQty')?.textContent)||1;
+  const expEl=document.getElementById('addModalExp');
+  const exp=expEl?.value?new Date(expEl.value).toISOString():new Date(Date.now()+(loc==='freezer'?90:loc==='pantry'?180:7)*864e5).toISOString();
+  const existing=STATE.fridge.find(i=>i.pid===pid&&i.loc===loc);
+  if(existing)existing.qty+=qty;else STATE.fridge.push({id:uid(),pid,loc,qty,exp});
+  save();closeAddModal();renderPage('fridge');updateNavBadges();
+}
+
+// Recipe Modal
+function openRecipeModal(rid){
+  const r=RECIPES.find(x=>x.id===rid);if(!r)return;
+  const modal=document.getElementById('modal-recipe');
+  document.getElementById('modal-recipe-content').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem">
+      <div><div style="font-size:2rem">${r.emoji}</div><h2 style="margin:.25rem 0 0;font-size:1.1rem;font-weight:800">${h(r.name)}</h2></div>
+      <button onclick="document.getElementById('modal-recipe').classList.remove('open')" style="background:none;border:none;cursor:pointer;font-size:1.5rem;color:#6b7280">✕</button>
+    </div>
+    <div style="display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap">
+      ${[`⏱ ${r.time} דק׳`,`👥 ${r.servings} מנות`,'⭐'.repeat(r.diff)].map(t=>`<span style="background:#F3F4F6;border-radius:999px;padding:.25rem .65rem;font-size:.75rem;font-weight:600">${t}</span>`).join('')}
+    </div>
+    <div style="font-size:.85rem;font-weight:700;color:#374151;margin-bottom:.4rem">מרכיבים</div>
+    ${r.ingredients.map(ing=>`<div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid #F3F4F6">
+      <span style="font-size:.85rem;font-weight:500">${h(ing.n)}</span>
+      <span style="font-size:.82rem;color:#6b7280">${ing.a} ${ing.u}</span>
+    </div>`).join('')}
+    <div style="font-size:.85rem;font-weight:700;color:#374151;margin-top:.75rem;margin-bottom:.4rem">הוראות הכנה</div>
+    <ol style="margin:0;padding:0 1.25rem">
+      ${r.steps.map(s=>`<li style="font-size:.85rem;line-height:1.55;margin-bottom:.4rem;color:#374151">${s}</li>`).join('')}
+    </ol>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;margin-top:.75rem">
+      ${[['🔥 קל׳',r.cal,''],['💪 חלבון',r.pro,'ג'],['🌾 פחמ׳',r.carb,'ג'],['🥑 שומן',r.fat,'ג']].map(([l,v,u])=>`<div style="background:#F9FAFB;border-radius:8px;padding:.4rem;text-align:center"><div style="font-size:.85rem;font-weight:800">${v}${u}</div><div style="font-size:.62rem;color:#6b7280">${l}</div></div>`).join('')}
+    </div>`;
+  modal.classList.add('open');
+}
+document.getElementById('modal-add').addEventListener('click',e=>{if(e.target===e.currentTarget)closeAddModal()});
+document.getElementById('modal-recipe').addEventListener('click',e=>{if(e.target===e.currentTarget)document.getElementById('modal-recipe').classList.remove('open')});
+
+// TikTok
+const TT_DATA=[
+  {name:'שקשוקה מסורתית',emoji:'🍳',color:'#FF6B6B',time:25,cal:280,ing:['ביצים × 4','עגבניות שרי 250ג','שמן זית 3כ','שום 3 שיניים','פפריקה 1כ'],steps:['מחממים שמן ומטגנים שום.','מוסיפים עגבניות ומבשלים 10 דקות.','שוברים ביצים לרוטב.','מבשלים 8 דקות.']},
+  {name:'פסטה שמנת פטריות',emoji:'🍝',color:'#FF8E53',time:20,cal:480,ing:['פסטה 400ג','שמנת 200מ"ל','פטריות 200ג','גבינה 80ג','שום 2 שיניים'],steps:['מבשלים פסטה.','מטגנים פטריות ושום.','מוסיפים שמנת וגבינה.','מערבבים עם פסטה.']},
+  {name:'עוגת שוקולד 3 מרכיבים',emoji:'🎂',color:'#4F46E5',time:40,cal:420,ing:['שוקולד מריר 200ג','ביצים × 4','סוכר 150ג'],steps:['ממיסים שוקולד.','מקציפים ביצים וסוכר.','מאחדים ואופים.']},
+];
+function analyzeTikTokDemo(id){
+  STATE.tiktokLoading=true;STATE.tiktokResult=null;renderPage('tiktok');
+  setTimeout(()=>{STATE.tiktokLoading=false;STATE.tiktokResult=TT_DATA[id-1];renderPage('tiktok')},2000);
+}
+function analyzeTikTok(){
+  const url=document.getElementById('tt-url')?.value;
+  if(!url)return;
+  analyzeTikTokDemo(1);
+}
+function ttAddToShopping(){
+  const tt=STATE.tiktokResult;if(!tt)return;
+  tt.ing.forEach(ing=>{
+    const name=ing.split(' ')[0];
+    const p=PRODUCTS.find(x=>x.name.includes(name));
+    if(p){const ex=STATE.shopping.find(i=>i.pid===p.id);if(ex)ex.qty++;else STATE.shopping.push({id:uid(),pid:p.id,qty:1,checked:false});}
+  });
+  save();updateNavBadges();alert('המרכיבים נוספו לרשימת הקניות!');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+updateNavBadges();
+renderPage('home');
+</script>
+</body>
+</html>
