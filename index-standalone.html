@@ -177,6 +177,7 @@ let STATE={
   scanScanning:false,
   scanError:null,
   scanSource:null,
+  scanPhotoPreview:null,
   externalProducts:{},
   tiktokLoading:false,
   tiktokResult:null,
@@ -198,7 +199,7 @@ load();
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
 function navigate(page){
-  if(STATE.currentPage==='scanner'&&page!=='scanner') stopCamera();
+  if(page!=='scanner') STATE.scanPhotoPreview=null;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+page)?.classList.add('active');
@@ -238,139 +239,56 @@ function updateNavBadges(){
   }
 }
 
-// ─── CAMERA ──────────────────────────────────────────────────────────────────
-let _camStream=null, _camInterval=null, _camDetector=null;
+// ─── CAMERA PHOTO SCANNER ────────────────────────────────────────────────────
+// Uses <input type="file" capture="environment"> — opens native camera app,
+// no browser permission needed, works on file:// too.
 
-function _showCameraBtn(liveDiv, msg=''){
-  liveDiv.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:.75rem;padding:1rem">
-    <div style="font-size:2.5rem">📷</div>
-    ${msg?`<div style="font-size:.78rem;color:rgba(255,255,255,.65);text-align:center;max-width:240px">${msg}</div>`:''}
-    <button onclick="initCamera()" style="padding:.6rem 1.4rem;border-radius:10px;border:none;background:#00ff88;color:#0f172a;font-family:inherit;font-weight:800;font-size:.9rem;cursor:pointer">הפעל מצלמה</button>
-    <div style="font-size:.7rem;color:rgba(255,255,255,.4)">או הזן ברקוד ידנית למטה</div>
-  </div>`;
-}
+async function handleBarcodePhoto(input){
+  const file=input.files?.[0];
+  if(!file)return;
+  input.value=''; // allow re-selecting same file
 
-async function initCamera(){
-  const liveDiv=document.getElementById('camera-live');
-  if(!liveDiv)return;
+  // Show preview immediately
+  const fr=new FileReader();
+  fr.onload=e=>{STATE.scanPhotoPreview=e.target.result;};
+  fr.readAsDataURL(file);
 
-  // Re-attach if stream already active (happens on page re-render)
-  if(_camStream){_attachVideo(liveDiv);return;}
-
-  // Check environment — file:// blocks getUserMedia in some browsers
-  const isFile=location.protocol==='file:';
-
-  liveDiv.innerHTML=`<div style="color:rgba(255,255,255,.6);text-align:center;font-size:.82rem;padding:1.5rem">⏳ מבקש הרשאת מצלמה...</div>`;
+  STATE.scanScanning=true;STATE.scanResult=null;STATE.scanNotFound=false;STATE.scanError=null;
+  renderPage('scanner');
 
   try{
-    // file:// protocol blocks camera in all major browsers — must use HTTP
-    if(location.protocol==='file:'){
-      liveDiv.innerHTML=`<div style="padding:1.25rem;color:#fff;text-align:center">
-        <div style="font-size:1.8rem;margin-bottom:.5rem">🔒</div>
-        <div style="font-weight:700;font-size:.9rem;margin-bottom:.5rem">מצלמה דורשת שרת מקומי</div>
-        <div style="font-size:.78rem;opacity:.75;margin-bottom:1rem;line-height:1.5">דפדפנים חוסמים מצלמה על קבצי file://.<br>הפעל את הקובץ דרך HTTP:</div>
-        <div style="background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:.65rem;font-family:monospace;font-size:.8rem;direction:ltr;text-align:left;margin-bottom:.75rem;cursor:pointer" onclick="navigator.clipboard?.writeText('python3 -m http.server 8080');this.style.background='rgba(0,255,136,.25)'">python3 -m http.server 8080</div>
-        <div style="font-size:.72rem;opacity:.6;margin-bottom:.5rem">לאחר מכן פתח: <span style="font-family:monospace;direction:ltr">http://localhost:8080/index-standalone.html</span></div>
-        <div style="font-size:.7rem;opacity:.5">לחץ על הפקודה להעתיק ↑</div>
-      </div>`;
-      return;
-    }
+    const bitmap=await createImageBitmap(file);
+    let barcode=null;
 
-    if(!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('getUserMedia לא נתמך'),{name:'NotSupportedError'});
-
-    const stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:'environment'}}
-    }).catch(async ()=>navigator.mediaDevices.getUserMedia({video:true}));
-
-    _camStream=stream;
-
+    // Primary: BarcodeDetector (Chrome/Edge/Android — works on images too)
     if('BarcodeDetector' in window){
-      _camDetector=new BarcodeDetector({formats:['ean_13','ean_8','code_128','upc_a','upc_e','itf']});
+      const det=new BarcodeDetector({formats:['ean_13','ean_8','code_128','upc_a','upc_e','itf','codabar','qr_code']});
+      const codes=await det.detect(bitmap).catch(()=>[]);
+      if(codes.length>0) barcode=codes[0].rawValue;
     }
 
-    _attachVideo(liveDiv);
-
-    if(_camDetector){
-      _camInterval=setInterval(_scanFrame,300);
+    if(barcode){
+      STATE.scanBarcode=barcode;
+      STATE.scanPhotoPreview=null;
+      doScan();
     }else{
-      const msg=document.getElementById('cam-msg');
-      if(msg)msg.textContent='📷 פעיל — הזן ברקוד ידנית (הדפדפן לא תומך סריקה אוטומטית)';
+      STATE.scanScanning=false;
+      STATE.scanError='לא זוהה ברקוד — נסה לצלם מקרוב יותר ובאור טוב, ולוודא שהברקוד חד ומרכזי. או הזן ידנית:';
+      renderPage('scanner');
+      // Focus manual input
+      setTimeout(()=>{const i=document.getElementById('scan-input');if(i)i.focus();},100);
     }
-
   }catch(e){
-    stopCamera();
-    let hint='';
-    if(e.name==='NotAllowedError'||e.name==='PermissionDeniedError'){
-      hint='אשר גישה למצלמה בהגדרות הדפדפן ולחץ שוב';
-    }else if(isFile){
-      hint='פתח את הקובץ דרך שרת מקומי (http://localhost) — קבצי file:// חסומים בחלק מהדפדפנים';
-    }else if(e.name==='NotFoundError'){
-      hint='לא נמצאה מצלמה במכשיר';
-    }else{
-      hint=e.message||e.name||'שגיאה לא ידועה';
-    }
-    _showCameraBtn(liveDiv,hint);
+    STATE.scanScanning=false;
+    STATE.scanError='שגיאה בעיבוד התמונה: '+(e.message||e.name);
+    renderPage('scanner');
   }
 }
 
-function _attachVideo(liveDiv){
-  liveDiv.innerHTML='';
-  const vid=document.createElement('video');
-  vid.id='cam-video';vid.autoplay=true;vid.playsInline=true;vid.muted=true;
-  vid.style.cssText='width:100%;height:100%;object-fit:cover;display:block';
-  vid.srcObject=_camStream;
-  liveDiv.appendChild(vid);
-  liveDiv.insertAdjacentHTML('beforeend',`
-    <div style="position:absolute;inset:0;pointer-events:none">
-      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:120px;border:2px solid rgba(255,255,255,.35);border-radius:8px">
-        <div style="position:absolute;top:-2px;right:-2px;width:22px;height:22px;border-top:3px solid #00ff88;border-right:3px solid #00ff88;border-radius:2px"></div>
-        <div style="position:absolute;top:-2px;left:-2px;width:22px;height:22px;border-top:3px solid #00ff88;border-left:3px solid #00ff88;border-radius:2px"></div>
-        <div style="position:absolute;bottom:-2px;right:-2px;width:22px;height:22px;border-bottom:3px solid #00ff88;border-right:3px solid #00ff88;border-radius:2px"></div>
-        <div style="position:absolute;bottom:-2px;left:-2px;width:22px;height:22px;border-bottom:3px solid #00ff88;border-left:3px solid #00ff88;border-radius:2px"></div>
-      </div>
-      <div class="scan-line" style="top:calc(50% - 60px);animation-duration:1.5s"></div>
-    </div>
-    <div style="position:absolute;top:8px;left:8px">
-      <button onclick="stopCamera();bindPage('scanner')" style="padding:.3rem .6rem;border-radius:6px;border:none;background:rgba(0,0,0,.45);color:rgba(255,255,255,.8);font-size:.72rem;cursor:pointer;font-family:inherit">⏹ עצור</button>
-    </div>
-    <div id="cam-msg" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;color:rgba(255,255,255,.75);font-size:.75rem;font-weight:600">
-      ${_camDetector?'🟢 סורק ברקוד...':'📷 פעיל — הזן ברקוד ידנית'}
-    </div>
-  `);
-}
-
-async function _scanFrame(){
-  if(!_camDetector||!_camStream)return;
-  const vid=document.getElementById('cam-video');
-  if(!vid||!vid.videoWidth||vid.paused)return;
-  try{
-    const codes=await _camDetector.detect(vid);
-    if(codes.length>0){
-      const bc=codes[0].rawValue;
-      stopCamera();
-      STATE.scanBarcode=bc;
-      // Show detected barcode briefly in input then scan
-      const inp=document.getElementById('scan-input');if(inp)inp.value=bc;
-      doScan();
-    }
-  }catch(e){}
-}
-
-function stopCamera(){
-  if(_camInterval){clearInterval(_camInterval);_camInterval=null;}
-  if(_camStream){_camStream.getTracks().forEach(t=>t.stop());_camStream=null;}
-  _camDetector=null;
-}
+function stopCamera(){} // kept for backward compat with navigate()
 
 // ─── RENDER ──────────────────────────────────────────────────────────────────
-function bindPage(page){
-  if(page==='scanner'){
-    const liveDiv=document.getElementById('camera-live');
-    if(!liveDiv)return;
-    if(_camStream){_attachVideo(liveDiv);}       // already running → re-attach
-    else _showCameraBtn(liveDiv);                // not running → show start button
-  }
-}
+function bindPage(page){}
 function renderPage(page){
   const el=document.getElementById('page-'+page);
   if(!el)return;
@@ -560,15 +478,27 @@ function renderScanner(){
     {bc:'3017620422003',n:'נוטלה (Nutella)',src:'Open Food Facts'},
     {bc:'5000112637922',n:'קוקה קולה 330מ"ל',src:'Open Food Facts'},
   ];
-  return`<div class="gh" style="padding:1rem 1rem 1.5rem"><h1>📷 סריקת ברקוד</h1><p>מצלמה + Open Food Facts API</p></div>
+  const prev=STATE.scanPhotoPreview;
+  return`<div class="gh" style="padding:1rem 1rem 1.5rem"><h1>📷 סריקת ברקוד</h1><p>מאגר מקומי + Open Food Facts</p></div>
   <div style="padding:0 .75rem;margin-top:-.75rem">
     <div class="card" style="margin-bottom:.75rem;padding:0;overflow:hidden">
-      <div id="camera-live" style="background:#0f172a;height:240px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
-        <div style="text-align:center;color:rgba(255,255,255,.6)">
-          <div style="font-size:2rem;margin-bottom:.5rem">📷</div>
-          <div style="font-size:.82rem">טוען מצלמה...</div>
-        </div>
-      </div>
+      <label for="barcode-photo" style="display:block;background:#0f172a;height:210px;cursor:pointer;position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent">
+        ${prev
+          ?`<img src="${prev}" style="width:100%;height:100%;object-fit:cover;opacity:.55">
+             <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem">
+               <div style="background:rgba(0,255,136,.9);color:#0f172a;padding:.5rem 1.25rem;border-radius:20px;font-weight:800;font-size:.9rem">🔄 צלם שוב</div>
+             </div>`
+          :`<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.65rem">
+               <div style="font-size:4rem;line-height:1">📷</div>
+               <div style="color:#fff;font-weight:800;font-size:1.05rem">לחץ לצילום ברקוד</div>
+               <div style="color:rgba(255,255,255,.5);font-size:.78rem">פותח מצלמה — ללא הרשאה</div>
+               <div style="display:flex;gap:.3rem">
+                 ${['↘','↙'].map(()=>'<div style="width:14px;height:14px;border:2px solid #00ff88;border-radius:2px"></div>').join('')}
+               </div>
+             </div>`
+        }
+        <input type="file" id="barcode-photo" accept="image/*" capture="environment" style="display:none" onchange="handleBarcodePhoto(this)">
+      </label>
     </div>
 
     <div class="card fade-in" style="margin-bottom:.75rem">
