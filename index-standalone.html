@@ -263,6 +263,19 @@ async function initCamera(){
   liveDiv.innerHTML=`<div style="color:rgba(255,255,255,.6);text-align:center;font-size:.82rem;padding:1.5rem">⏳ מבקש הרשאת מצלמה...</div>`;
 
   try{
+    // file:// protocol blocks camera in all major browsers — must use HTTP
+    if(location.protocol==='file:'){
+      liveDiv.innerHTML=`<div style="padding:1.25rem;color:#fff;text-align:center">
+        <div style="font-size:1.8rem;margin-bottom:.5rem">🔒</div>
+        <div style="font-weight:700;font-size:.9rem;margin-bottom:.5rem">מצלמה דורשת שרת מקומי</div>
+        <div style="font-size:.78rem;opacity:.75;margin-bottom:1rem;line-height:1.5">דפדפנים חוסמים מצלמה על קבצי file://.<br>הפעל את הקובץ דרך HTTP:</div>
+        <div style="background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:.65rem;font-family:monospace;font-size:.8rem;direction:ltr;text-align:left;margin-bottom:.75rem;cursor:pointer" onclick="navigator.clipboard?.writeText('python3 -m http.server 8080');this.style.background='rgba(0,255,136,.25)'">python3 -m http.server 8080</div>
+        <div style="font-size:.72rem;opacity:.6;margin-bottom:.5rem">לאחר מכן פתח: <span style="font-family:monospace;direction:ltr">http://localhost:8080/index-standalone.html</span></div>
+        <div style="font-size:.7rem;opacity:.5">לחץ על הפקודה להעתיק ↑</div>
+      </div>`;
+      return;
+    }
+
     if(!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('getUserMedia לא נתמך'),{name:'NotSupportedError'});
 
     const stream=await navigator.mediaDevices.getUserMedia({
