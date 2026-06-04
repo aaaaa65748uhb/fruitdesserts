@@ -198,6 +198,7 @@ load();
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
 function navigate(page){
+  if(STATE.currentPage==='scanner'&&page!=='scanner') stopCamera();
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+page)?.classList.add('active');
@@ -237,8 +238,100 @@ function updateNavBadges(){
   }
 }
 
+// ─── CAMERA ──────────────────────────────────────────────────────────────────
+let _camStream=null, _camInterval=null, _camDetector=null;
+
+async function initCamera(){
+  const liveDiv=document.getElementById('camera-live');
+  if(!liveDiv)return;
+
+  // If stream already running, just re-attach the video element to the (re-rendered) DOM
+  if(_camStream){
+    _attachVideo(liveDiv);
+    return;
+  }
+
+  liveDiv.innerHTML=`<div style="color:rgba(255,255,255,.7);text-align:center;font-size:.82rem;padding:1rem">⏳ מבקש הרשאת מצלמה...</div>`;
+
+  try{
+    // Request back camera (environment) first, fall back to any camera
+    const stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}
+    }).catch(()=>navigator.mediaDevices.getUserMedia({video:true}));
+
+    _camStream=stream;
+
+    // BarcodeDetector (Chrome/Edge/Android WebView — iOS needs fallback)
+    if('BarcodeDetector' in window){
+      _camDetector=new BarcodeDetector({formats:['ean_13','ean_8','code_128','upc_a','upc_e','itf','codabar']});
+    }
+
+    _attachVideo(liveDiv);
+
+    if(_camDetector){
+      _camInterval=setInterval(_scanFrame,250);
+    }else{
+      const msg=document.getElementById('cam-msg');
+      if(msg)msg.textContent='⚠️ הדפדפן לא תומך בסריקה אוטומטית — הזן ברקוד ידנית';
+    }
+  }catch(e){
+    liveDiv.innerHTML=`<div style="color:rgba(255,255,255,.8);text-align:center;padding:1rem">
+      <div style="font-size:1.5rem;margin-bottom:.4rem">${e.name==='NotAllowedError'?'⛔':'📵'}</div>
+      <div style="font-size:.82rem;font-weight:700">${e.name==='NotAllowedError'?'לא אושרה גישה למצלמה':'מצלמה לא זמינה'}</div>
+      <div style="font-size:.72rem;opacity:.7;margin-top:.25rem">${e.message}</div>
+      <button onclick="initCamera()" style="margin-top:.75rem;padding:.45rem .9rem;border-radius:8px;border:none;background:rgba(255,255,255,.15);color:#fff;font-family:inherit;cursor:pointer;font-size:.8rem">נסה שוב</button>
+    </div>`;
+  }
+}
+
+function _attachVideo(liveDiv){
+  liveDiv.innerHTML='';
+  const vid=document.createElement('video');
+  vid.id='cam-video';vid.autoplay=true;vid.playsInline=true;vid.muted=true;
+  vid.style.cssText='width:100%;height:100%;object-fit:cover;display:block';
+  vid.srcObject=_camStream;
+  liveDiv.appendChild(vid);
+  liveDiv.insertAdjacentHTML('beforeend',`
+    <div style="position:absolute;inset:0;pointer-events:none">
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:120px;border:2px solid rgba(255,255,255,.35);border-radius:8px">
+        <div style="position:absolute;top:-2px;right:-2px;width:22px;height:22px;border-top:3px solid #00ff88;border-right:3px solid #00ff88;border-radius:2px"></div>
+        <div style="position:absolute;top:-2px;left:-2px;width:22px;height:22px;border-top:3px solid #00ff88;border-left:3px solid #00ff88;border-radius:2px"></div>
+        <div style="position:absolute;bottom:-2px;right:-2px;width:22px;height:22px;border-bottom:3px solid #00ff88;border-right:3px solid #00ff88;border-radius:2px"></div>
+        <div style="position:absolute;bottom:-2px;left:-2px;width:22px;height:22px;border-bottom:3px solid #00ff88;border-left:3px solid #00ff88;border-radius:2px"></div>
+      </div>
+      <div class="scan-line" style="top:calc(50% - 60px);animation-duration:1.5s"></div>
+    </div>
+    <div id="cam-msg" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;color:rgba(255,255,255,.75);font-size:.75rem;font-weight:600">
+      ${_camDetector?'🟢 סורק ברקוד...':'📷 פעיל — הזן ברקוד ידנית'}
+    </div>
+  `);
+}
+
+async function _scanFrame(){
+  if(!_camDetector||!_camStream)return;
+  const vid=document.getElementById('cam-video');
+  if(!vid||!vid.videoWidth||vid.paused)return;
+  try{
+    const codes=await _camDetector.detect(vid);
+    if(codes.length>0){
+      const bc=codes[0].rawValue;
+      stopCamera();
+      STATE.scanBarcode=bc;
+      // Show detected barcode briefly in input then scan
+      const inp=document.getElementById('scan-input');if(inp)inp.value=bc;
+      doScan();
+    }
+  }catch(e){}
+}
+
+function stopCamera(){
+  if(_camInterval){clearInterval(_camInterval);_camInterval=null;}
+  if(_camStream){_camStream.getTracks().forEach(t=>t.stop());_camStream=null;}
+  _camDetector=null;
+}
+
 // ─── RENDER ──────────────────────────────────────────────────────────────────
-function bindPage(page){}  // placeholder for any post-render DOM bindings
+function bindPage(page){if(page==='scanner')initCamera();}
 function renderPage(page){
   const el=document.getElementById('page-'+page);
   if(!el)return;
@@ -428,19 +521,13 @@ function renderScanner(){
     {bc:'3017620422003',n:'נוטלה (Nutella)',src:'Open Food Facts'},
     {bc:'5000112637922',n:'קוקה קולה 330מ"ל',src:'Open Food Facts'},
   ];
-  return`<div class="gh" style="padding:1rem 1rem 1.5rem"><h1>📷 סריקת ברקוד</h1><p>מאגר מקומי + Open Food Facts API</p></div>
+  return`<div class="gh" style="padding:1rem 1rem 1.5rem"><h1>📷 סריקת ברקוד</h1><p>מצלמה + Open Food Facts API</p></div>
   <div style="padding:0 .75rem;margin-top:-.75rem">
     <div class="card" style="margin-bottom:.75rem;padding:0;overflow:hidden">
-      <div style="background:#0f172a;height:200px;position:relative;display:flex;align-items:center;justify-content:center">
-        <div style="width:180px;height:140px;border:2px solid rgba(255,255,255,.4);border-radius:8px;position:relative">
-          <div style="position:absolute;top:0;right:0;width:20px;height:20px;border-top:3px solid #00ff88;border-right:3px solid #00ff88;border-radius:2px"></div>
-          <div style="position:absolute;top:0;left:0;width:20px;height:20px;border-top:3px solid #00ff88;border-left:3px solid #00ff88;border-radius:2px"></div>
-          <div style="position:absolute;bottom:0;right:0;width:20px;height:20px;border-bottom:3px solid #00ff88;border-right:3px solid #00ff88;border-radius:2px"></div>
-          <div style="position:absolute;bottom:0;left:0;width:20px;height:20px;border-bottom:3px solid #00ff88;border-left:3px solid #00ff88;border-radius:2px"></div>
-          ${scanScanning?'<div class="scan-line"></div>':''}
-        </div>
-        <div style="position:absolute;bottom:12px;color:rgba(255,255,255,.7);font-size:.75rem">
-          ${scanScanning?`<span id="scan-status">⏳ מחפש במאגר המקומי...</span>`:'📷 מצלמה (הדגמה)'}
+      <div id="camera-live" style="background:#0f172a;height:240px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+        <div style="text-align:center;color:rgba(255,255,255,.6)">
+          <div style="font-size:2rem;margin-bottom:.5rem">📷</div>
+          <div style="font-size:.82rem">טוען מצלמה...</div>
         </div>
       </div>
     </div>
