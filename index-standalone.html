@@ -178,6 +178,12 @@ let STATE={
   scanError:null,
   scanSource:null,
   externalProducts:{},
+  tiktokLoading:false,
+  tiktokResult:null,
+  ttUrl:'',
+  ttStep:'',
+  ttError:null,
+  savedRecipes:[],
 };
 
 function getP(pid){return PRODUCTS.find(p=>p.id===pid)||(STATE.externalProducts&&STATE.externalProducts[pid])}
@@ -187,7 +193,7 @@ function daysUntil(d){return Math.ceil((new Date(d)-Date.now())/864e5)}
 function uid(){return 'x'+Math.random().toString(36).slice(2)}
 
 function load(){try{const s=localStorage.getItem('ft');if(s)STATE={...STATE,...JSON.parse(s)}}catch(e){}}
-function save(){try{localStorage.setItem('ft',JSON.stringify({fridge:STATE.fridge,shopping:STATE.shopping,expenses:STATE.expenses,externalProducts:STATE.externalProducts||{}}))}catch(e){}}
+function save(){try{localStorage.setItem('ft',JSON.stringify({fridge:STATE.fridge,shopping:STATE.shopping,expenses:STATE.expenses,externalProducts:STATE.externalProducts||{},savedRecipes:STATE.savedRecipes||[]}))}catch(e){}}
 load();
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
@@ -665,7 +671,7 @@ function renderPrices(){
   </div>`;
 }
 
-// ─── TIKTOK ──────────────────────────────────────────────────────────────────
+// ─── TIKTOK AI ───────────────────────────────────────────────────────────────
 function renderTikTok(){
   const demos=[
     {id:1,title:'שקשוקה מטורפת של אמא שלי',dur:'0:45',views:'2.3M',emoji:'🍳',color:'#FF6B6B'},
@@ -673,43 +679,98 @@ function renderTikTok(){
     {id:3,title:'עוגת שוקולד ב-3 מרכיבים',dur:'0:38',views:'4.1M',emoji:'🎂',color:'#4F46E5'},
   ];
   const ttr=STATE.tiktokResult;
-  return`<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:1.25rem 1rem 1.5rem;color:#fff"><h1 style="font-size:1.4rem;font-weight:800;margin:0">🎥 TikTok AI</h1><p style="font-size:.82rem;opacity:.75;margin:.2rem 0 0">זהה מתכונים מסרטוני טיקטוק</p></div>
+  const apiKey=localStorage.getItem('claude_api_key')||'';
+  const isReal=ttr&&ttr.ingredients;
+  const isDemo=ttr&&ttr.ing;
+  return`<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:1.25rem 1rem 1.5rem;color:#fff">
+    <h1 style="font-size:1.4rem;font-weight:800;margin:0">🎥 AI Recipe Scanner</h1>
+    <p style="font-size:.82rem;opacity:.75;margin:.2rem 0 0">TikTok · Instagram · YouTube → מתכון מלא בעברית</p>
+  </div>
   <div style="padding:0 .75rem;margin-top:-.75rem">
-    <div class="card fade-in" style="margin-bottom:.75rem">
-      <div style="font-size:.82rem;font-weight:700;margin-bottom:.5rem">הדבק קישור טיקטוק</div>
+
+    ${!apiKey?`<div class="card fade-in" style="margin-bottom:.75rem;background:#FEF3C7;border:1px solid #FCD34D">
+      <div style="font-size:.85rem;font-weight:700;color:#92400E;margin-bottom:.4rem">🔑 חבר Claude AI</div>
+      <div style="font-size:.78rem;color:#78350F;margin-bottom:.65rem">הזן את מפתח Claude API שלך. נשמר רק בדפדפן שלך, לא נשלח לשרת.</div>
       <div style="display:flex;gap:.5rem">
-        <input id="tt-url" placeholder="https://tiktok.com/@..." style="flex:1;padding:.65rem;border-radius:10px;border:1.5px solid #E5E7EB;font-size:.88rem"/>
-        <button onclick="analyzeTikTok()" style="padding:.65rem 1rem;border-radius:10px;border:none;background:linear-gradient(135deg,#1a1a2e,#4F46E5);color:#fff;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer">נתח</button>
+        <input id="api-key-input" placeholder="sk-ant-api03-..." style="flex:1;padding:.6rem;border-radius:10px;border:1.5px solid #FCD34D;font-size:.8rem;font-family:monospace;direction:ltr;text-align:left"/>
+        <button onclick="saveApiKey()" style="padding:.6rem 1rem;border-radius:10px;border:none;background:#D97706;color:#fff;font-family:inherit;font-weight:700;cursor:pointer;white-space:nowrap">שמור</button>
       </div>
-      <div style="text-align:center;margin:.5rem 0;font-size:.78rem;color:#9ca3af">— או —</div>
-      <button style="width:100%;padding:.65rem;border-radius:10px;border:1.5px dashed #D1D5DB;background:#F9FAFB;font-family:inherit;font-size:.85rem;cursor:pointer">📁 העלה סרטון מהמכשיר</button>
+      <div style="font-size:.7rem;color:#92400E;margin-top:.5rem">משתמש ב-claude-haiku (הכי זול) — כ-$0.001 לניתוח</div>
+    </div>`:`<div class="card" style="margin-bottom:.75rem;padding:.6rem .85rem;display:flex;align-items:center;justify-content:space-between;background:#DCFCE7">
+      <span style="font-size:.8rem;font-weight:600;color:#16A34A">✓ Claude AI מחובר</span>
+      <button onclick="clearApiKey()" style="font-size:.72rem;color:#6b7280;background:none;border:none;cursor:pointer">שנה מפתח</button>
+    </div>`}
+
+    <div class="card fade-in" style="margin-bottom:.75rem">
+      <div style="font-size:.82rem;font-weight:700;margin-bottom:.5rem">הדבק קישור סרטון</div>
+      <div style="display:flex;gap:.5rem">
+        <input id="tt-url" value="${h(STATE.ttUrl)}" oninput="STATE.ttUrl=this.value" onkeydown="if(event.key==='Enter')analyzeTikTok()" placeholder="tiktok.com / instagram.com / youtube.com / כל קישור..." style="flex:1;padding:.65rem;border-radius:10px;border:1.5px solid #E5E7EB;font-size:.85rem;direction:ltr;text-align:left"/>
+        <button onclick="analyzeTikTok()" ${STATE.tiktokLoading?'disabled':''} style="padding:.65rem 1rem;border-radius:10px;border:none;background:${apiKey?'linear-gradient(135deg,#1a1a2e,#4F46E5)':'#9CA3AF'};color:#fff;font-family:inherit;font-weight:700;font-size:.85rem;cursor:${apiKey?'pointer':'not-allowed'}">נתח</button>
+      </div>
+      <div style="font-size:.7rem;color:#9ca3af;margin-top:.35rem">${apiKey?'AI יחלץ את המתכון לפי כותרת + תיאור + הקשר הסרטון':'הגדר מפתח API למעלה לניתוח אמיתי'}</div>
     </div>
 
-    ${STATE.tiktokLoading?`<div class="card fade-in" style="margin-bottom:.75rem;text-align:center;padding:2rem"><div style="font-size:2.5rem;margin-bottom:.75rem">🤖</div><div style="font-weight:700;font-size:1rem;margin-bottom:.35rem">AI מנתח את הסרטון...</div><div style="font-size:.82rem;color:#6b7280">מזהה מרכיבים, כמויות והוראות</div></div>`:''}
+    ${STATE.tiktokLoading?`<div class="card fade-in" style="margin-bottom:.75rem;padding:2rem;text-align:center">
+      <div style="font-size:2.5rem;margin-bottom:.75rem">🤖</div>
+      <div style="font-weight:700;font-size:1rem;margin-bottom:.35rem">Claude AI מנתח...</div>
+      <div id="tt-step" style="font-size:.82rem;color:#6b7280;line-height:1.5">${h(STATE.ttStep||'מאחזר מידע על הסרטון...')}</div>
+    </div>`:''}
 
-    ${ttr&&!STATE.tiktokLoading?`<div class="card slide-up" style="margin-bottom:.75rem">
+    ${STATE.ttError&&!STATE.tiktokLoading?`<div class="card fade-in" style="margin-bottom:.75rem;background:#FEE2E2;border:1px solid #FECACA;padding:.85rem">
+      <div style="font-weight:700;color:#DC2626;margin-bottom:.25rem">⚠️ שגיאה</div>
+      <div style="font-size:.82rem;color:#991B1B;word-break:break-word">${h(STATE.ttError)}</div>
+      <button onclick="STATE.ttError=null;renderPage('tiktok')" style="margin-top:.5rem;font-size:.75rem;color:#6b7280;background:none;border:none;cursor:pointer;padding:0">סגור ✕</button>
+    </div>`:''}
+
+    ${isReal&&!STATE.tiktokLoading?`<div class="card slide-up" style="margin-bottom:.75rem">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem">
-        <div style="width:36px;height:36px;border-radius:10px;background:${ttr.color||'#4F46E5'};display:flex;align-items:center;justify-content:center;font-size:1.2rem">${ttr.emoji||'🍳'}</div>
-        <div><div style="font-weight:800;font-size:.95rem">${h(ttr.name)}</div><div style="font-size:.75rem;color:#6b7280">⏱ ${ttr.time} דקות · 🔥 ${ttr.cal} קל׳</div></div>
-        <span style="margin-right:auto;background:#DCFCE7;color:#16A34A;font-size:.72rem;font-weight:700;padding:.25rem .5rem;border-radius:999px">✓ זוהה</span>
+        <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#1a1a2e,#4F46E5);display:flex;align-items:center;justify-content:center;font-size:1.3rem">🤖</div>
+        <div>
+          <div style="font-weight:800;font-size:.95rem">${h(ttr.name)}</div>
+          <div style="font-size:.75rem;color:#6b7280">⏱ ${(ttr.prepTime||0)+(ttr.cookTime||0)} דקות · 👥 ${ttr.servings||4} מנות · ${h(ttr.difficulty||'')}</div>
+        </div>
+        <span style="margin-right:auto;background:#DCFCE7;color:#16A34A;font-size:.72rem;font-weight:700;padding:.25rem .5rem;border-radius:999px">✓ AI זיהה</span>
       </div>
-      <div style="margin-bottom:.65rem"><div style="font-size:.8rem;font-weight:700;margin-bottom:.4rem">מרכיבים</div>
-        <div style="display:flex;flex-wrap:wrap;gap:.3rem">${ttr.ing.map(i=>`<span style="background:#F3F4F6;border-radius:999px;padding:.25rem .6rem;font-size:.75rem">${i}</span>`).join('')}</div>
+      <div style="margin-bottom:.65rem">
+        <div style="font-size:.8rem;font-weight:700;color:#374151;margin-bottom:.4rem">מצרכים (${ttr.ingredients.length})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem">${ttr.ingredients.map(i=>`<span style="background:#F3F4F6;border-radius:999px;padding:.25rem .65rem;font-size:.75rem;font-weight:500">${h(i.name)} · ${h(i.amount)} ${h(i.unit||'')}</span>`).join('')}</div>
       </div>
-      <div style="margin-bottom:.75rem"><div style="font-size:.8rem;font-weight:700;margin-bottom:.4rem">הוראות הכנה</div>
-        <ol style="margin:0;padding:0 1.25rem">${ttr.steps.map(s=>`<li style="font-size:.82rem;margin-bottom:.3rem;line-height:1.5">${s}</li>`).join('')}</ol>
+      <div style="margin-bottom:.65rem">
+        <div style="font-size:.8rem;font-weight:700;color:#374151;margin-bottom:.4rem">הוראות הכנה</div>
+        <ol style="margin:0;padding:0 1.25rem">${ttr.steps.map(s=>`<li style="font-size:.82rem;margin-bottom:.35rem;line-height:1.6;color:#374151">${h(s)}</li>`).join('')}</ol>
       </div>
+      ${ttr.tips?`<div style="background:#F0FDF4;border-radius:10px;padding:.65rem;margin-bottom:.65rem;font-size:.8rem;color:#15803D"><span style="font-weight:700">💡 טיפ השף: </span>${h(ttr.tips)}</div>`:''}
+      ${ttr.nutrition?`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;margin-bottom:.75rem">
+        ${[['🔥','קל׳',ttr.nutrition.calories],['💪','חלבון',ttr.nutrition.protein],['🌾','פחמ׳',ttr.nutrition.carbs],['🥑','שומן',ttr.nutrition.fat]].map(([e,l,v])=>`<div style="background:#F9FAFB;border-radius:8px;padding:.4rem;text-align:center"><div style="font-size:.88rem;font-weight:800">${v||'—'}</div><div style="font-size:.62rem;color:#6b7280">${e} ${l}</div></div>`).join('')}
+      </div>`:''}
       <div style="display:flex;gap:.5rem">
         <button onclick="ttAddToShopping()" style="flex:1;padding:.65rem;border-radius:10px;border:none;background:#DCFCE7;color:#16A34A;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer">🛒 הוסף לקניות</button>
-        <button style="flex:1;padding:.65rem;border-radius:10px;border:none;background:linear-gradient(135deg,#1a1a2e,#4F46E5);color:#fff;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer">💾 שמור מתכון</button>
+        <button onclick="ttSaveRecipe()" style="flex:1;padding:.65rem;border-radius:10px;border:none;background:linear-gradient(135deg,#1a1a2e,#4F46E5);color:#fff;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer">💾 שמור</button>
       </div>
     </div>`:''}
 
-    <div style="font-size:.82rem;font-weight:700;margin-bottom:.5rem">🔥 נסה עם דוגמאות</div>
+    ${isDemo&&!STATE.tiktokLoading?`<div class="card slide-up" style="margin-bottom:.75rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem">
+        <div style="width:36px;height:36px;border-radius:10px;background:${ttr.color||'#4F46E5'};display:flex;align-items:center;justify-content:center;font-size:1.2rem">${ttr.emoji||'🍳'}</div>
+        <div><div style="font-weight:800;font-size:.95rem">${h(ttr.name)}</div><div style="font-size:.75rem;color:#6b7280">⏱ ${ttr.time} דקות · 🔥 ${ttr.cal} קל׳</div></div>
+        <span style="margin-right:auto;background:#FEF3C7;color:#D97706;font-size:.72rem;font-weight:700;padding:.25rem .5rem;border-radius:999px">🎬 הדגמה</span>
+      </div>
+      <div style="margin-bottom:.65rem"><div style="font-size:.8rem;font-weight:700;color:#374151;margin-bottom:.4rem">מרכיבים</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem">${ttr.ing.map(i=>`<span style="background:#F3F4F6;border-radius:999px;padding:.25rem .65rem;font-size:.75rem">${h(i)}</span>`).join('')}</div>
+      </div>
+      <div style="margin-bottom:.75rem"><div style="font-size:.8rem;font-weight:700;color:#374151;margin-bottom:.4rem">הוראות הכנה</div>
+        <ol style="margin:0;padding:0 1.25rem">${ttr.steps.map(s=>`<li style="font-size:.82rem;margin-bottom:.3rem;line-height:1.5">${h(s)}</li>`).join('')}</ol>
+      </div>
+      <div style="display:flex;gap:.5rem">
+        <button onclick="ttAddToShopping()" style="flex:1;padding:.65rem;border-radius:10px;border:none;background:#DCFCE7;color:#16A34A;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer">🛒 הוסף לקניות</button>
+      </div>
+    </div>`:''}
+
+    <div style="font-size:.82rem;font-weight:700;color:#374151;margin-bottom:.5rem">🔥 דוגמאות (ללא API)</div>
     ${demos.map(d=>`<div class="card fade-in" style="margin-bottom:.5rem;padding:.75rem;display:flex;gap:10px;align-items:center">
-      <div style="width:60px;height:60px;border-radius:12px;background:${d.color};display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0">${d.emoji}</div>
+      <div style="width:56px;height:56px;border-radius:12px;background:${d.color};display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0">${d.emoji}</div>
       <div style="flex:1"><div style="font-weight:700;font-size:.85rem;margin-bottom:.2rem">${h(d.title)}</div><div style="font-size:.72rem;color:#6b7280">⏱ ${d.dur} · 👁 ${d.views} צפיות</div></div>
-      <button onclick="analyzeTikTokDemo(${d.id})" style="padding:.4rem .75rem;border-radius:8px;border:none;background:linear-gradient(135deg,#1a1a2e,#4F46E5);color:#fff;font-family:inherit;font-weight:600;font-size:.75rem;cursor:pointer">נתח</button>
+      <button onclick="analyzeTikTokDemo(${d.id})" style="padding:.4rem .75rem;border-radius:8px;border:none;background:linear-gradient(135deg,#1a1a2e,#4F46E5);color:#fff;font-family:inherit;font-weight:600;font-size:.75rem;cursor:pointer">נסה</button>
     </div>`).join('')}
     <div style="height:5rem"></div>
   </div>`;
@@ -994,22 +1055,118 @@ const TT_DATA=[
   {name:'עוגת שוקולד 3 מרכיבים',emoji:'🎂',color:'#4F46E5',time:40,cal:420,ing:['שוקולד מריר 200ג','ביצים × 4','סוכר 150ג'],steps:['ממיסים שוקולד.','מקציפים ביצים וסוכר.','מאחדים ואופים.']},
 ];
 function analyzeTikTokDemo(id){
-  STATE.tiktokLoading=true;STATE.tiktokResult=null;renderPage('tiktok');
-  setTimeout(()=>{STATE.tiktokLoading=false;STATE.tiktokResult=TT_DATA[id-1];renderPage('tiktok')},2000);
+  STATE.tiktokLoading=true;STATE.tiktokResult=null;STATE.ttError=null;renderPage('tiktok');
+  setTimeout(()=>{STATE.tiktokLoading=false;STATE.tiktokResult=TT_DATA[id-1];renderPage('tiktok')},1800);
 }
-function analyzeTikTok(){
-  const url=document.getElementById('tt-url')?.value;
-  if(!url)return;
-  analyzeTikTokDemo(1);
+
+function saveApiKey(){
+  const k=(document.getElementById('api-key-input')?.value||'').trim();
+  if(!k.startsWith('sk-'))return alert('מפתח לא תקין — חייב להתחיל ב-sk-');
+  localStorage.setItem('claude_api_key',k);
+  renderPage('tiktok');
 }
+function clearApiKey(){localStorage.removeItem('claude_api_key');renderPage('tiktok')}
+
+async function analyzeTikTok(){
+  const url=(document.getElementById('tt-url')?.value||STATE.ttUrl||'').trim();
+  if(!url){alert('הדבק קישור לסרטון');return;}
+  STATE.ttUrl=url;
+
+  const apiKey=localStorage.getItem('claude_api_key');
+  if(!apiKey){alert('הגדר מפתח Claude API תחילה');renderPage('tiktok');return;}
+
+  STATE.tiktokLoading=true;STATE.tiktokResult=null;STATE.ttError=null;
+  STATE.ttStep='מאחזר מידע על הסרטון...';
+  renderPage('tiktok');
+
+  // Step 1: fetch oEmbed metadata (best-effort, CORS may block)
+  let platform='סרטון',title='',author='';
+  if(url.includes('tiktok.com'))platform='TikTok';
+  else if(url.includes('instagram.com'))platform='Instagram';
+  else if(url.includes('youtube.com')||url.includes('youtu.be'))platform='YouTube';
+  else if(url.includes('facebook.com')||url.includes('fb.watch'))platform='Facebook';
+
+  try{
+    let oembed='';
+    if(platform==='TikTok')oembed=`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`;
+    else if(platform==='YouTube')oembed=`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+    if(oembed){
+      const r=await fetch(oembed,{signal:AbortSignal.timeout(5000)});
+      const d=await r.json();
+      title=d.title||'';author=d.author_name||'';
+    }
+  }catch(e){}
+
+  STATE.ttStep=`שולח ל-Claude AI${title?' — "'+title+'"':''}...`;
+  const stepEl=document.getElementById('tt-step');if(stepEl)stepEl.textContent=STATE.ttStep;
+
+  // Step 2: call Claude Haiku
+  const prompt=`אתה שף מקצועי המתמחה בחילוץ מתכונים מסרטוני בישול.
+
+פרטי הסרטון:
+- פלטפורמה: ${platform}
+- קישור: ${url}${title?`\n- כותרת: "${title}"`:''}${author?`\n- יוצר: ${author}`:''}
+
+**המשימה:** חלץ את המתכון המלא מהסרטון הזה. אם אתה מזהה את המתכון מהכותרת — השתמש בידע שלך עליו. אחרת, צור מתכון ישראלי קלאסי שמתאים לנושא.
+
+הוראות:
+- כתוב הכל בעברית
+- כמויות מדויקות ומציאותיות
+- שלבי הכנה ברורים ומפורטים כמו שמסביר בסרטון
+- טיפ שף אחד שימושי
+
+החזר **JSON בלבד** (ללא טקסט נוסף לפני או אחרי):
+{"name":"שם המתכון","prepTime":10,"cookTime":20,"servings":4,"difficulty":"קל","ingredients":[{"name":"מצרך","amount":"כמות","unit":"יחידה"}],"steps":["שלב 1 מפורט","שלב 2 מפורט"],"tips":"טיפ שף","nutrition":{"calories":350,"protein":20,"carbs":40,"fat":12}}`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'x-api-key':apiKey,
+        'anthropic-version':'2023-06-01',
+        'content-type':'application/json',
+        'anthropic-dangerous-allow-browser':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:1800,
+        messages:[{role:'user',content:prompt}]
+      }),
+      signal:AbortSignal.timeout(30000)
+    });
+    if(!resp.ok){const err=await resp.json();throw new Error(err.error?.message||`שגיאת API ${resp.status}`);}
+    const data=await resp.json();
+    const text=data.content[0].text;
+    const m=text.match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('תגובת AI לא תקינה — נסה שוב');
+    const recipe=JSON.parse(m[0]);
+    STATE.tiktokLoading=false;STATE.tiktokResult=recipe;
+    renderPage('tiktok');
+  }catch(e){
+    STATE.tiktokLoading=false;
+    STATE.ttError=e.message||'שגיאה לא ידועה';
+    renderPage('tiktok');
+  }
+}
+
 function ttAddToShopping(){
   const tt=STATE.tiktokResult;if(!tt)return;
-  tt.ing.forEach(ing=>{
-    const name=ing.split(' ')[0];
-    const p=PRODUCTS.find(x=>x.name.includes(name));
-    if(p){const ex=STATE.shopping.find(i=>i.pid===p.id);if(ex)ex.qty++;else STATE.shopping.push({id:uid(),pid:p.id,qty:1,checked:false});}
+  const items=tt.ingredients||tt.ing||[];
+  let added=0;
+  items.forEach(ing=>{
+    const name=typeof ing==='string'?ing.split(' ')[0]:ing.name;
+    const p=PRODUCTS.find(x=>x.name.includes(name)||name.includes(x.name.split(' ')[0]));
+    if(p){const ex=STATE.shopping.find(i=>i.pid===p.id);if(ex)ex.qty++;else STATE.shopping.push({id:uid(),pid:p.id,qty:1,checked:false});added++;}
   });
-  save();updateNavBadges();alert('המרכיבים נוספו לרשימת הקניות!');
+  save();updateNavBadges();
+  alert(added>0?`נוספו ${added} מוצרים לרשימת הקניות!`:'המוצרים לא נמצאו במאגר — נסה להוסיף ידנית.');
+}
+
+function ttSaveRecipe(){
+  const tt=STATE.tiktokResult;if(!tt||!tt.ingredients)return;
+  if(!STATE.savedRecipes)STATE.savedRecipes=[];
+  STATE.savedRecipes.push({...tt,id:'sr'+Date.now()});
+  save();alert('✓ המתכון נשמר!');
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
