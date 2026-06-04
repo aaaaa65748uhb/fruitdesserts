@@ -241,46 +241,62 @@ function updateNavBadges(){
 // ─── CAMERA ──────────────────────────────────────────────────────────────────
 let _camStream=null, _camInterval=null, _camDetector=null;
 
+function _showCameraBtn(liveDiv, msg=''){
+  liveDiv.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:.75rem;padding:1rem">
+    <div style="font-size:2.5rem">📷</div>
+    ${msg?`<div style="font-size:.78rem;color:rgba(255,255,255,.65);text-align:center;max-width:240px">${msg}</div>`:''}
+    <button onclick="initCamera()" style="padding:.6rem 1.4rem;border-radius:10px;border:none;background:#00ff88;color:#0f172a;font-family:inherit;font-weight:800;font-size:.9rem;cursor:pointer">הפעל מצלמה</button>
+    <div style="font-size:.7rem;color:rgba(255,255,255,.4)">או הזן ברקוד ידנית למטה</div>
+  </div>`;
+}
+
 async function initCamera(){
   const liveDiv=document.getElementById('camera-live');
   if(!liveDiv)return;
 
-  // If stream already running, just re-attach the video element to the (re-rendered) DOM
-  if(_camStream){
-    _attachVideo(liveDiv);
-    return;
-  }
+  // Re-attach if stream already active (happens on page re-render)
+  if(_camStream){_attachVideo(liveDiv);return;}
 
-  liveDiv.innerHTML=`<div style="color:rgba(255,255,255,.7);text-align:center;font-size:.82rem;padding:1rem">⏳ מבקש הרשאת מצלמה...</div>`;
+  // Check environment — file:// blocks getUserMedia in some browsers
+  const isFile=location.protocol==='file:';
+
+  liveDiv.innerHTML=`<div style="color:rgba(255,255,255,.6);text-align:center;font-size:.82rem;padding:1.5rem">⏳ מבקש הרשאת מצלמה...</div>`;
 
   try{
-    // Request back camera (environment) first, fall back to any camera
+    if(!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('getUserMedia לא נתמך'),{name:'NotSupportedError'});
+
     const stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}
-    }).catch(()=>navigator.mediaDevices.getUserMedia({video:true}));
+      video:{facingMode:{ideal:'environment'}}
+    }).catch(async ()=>navigator.mediaDevices.getUserMedia({video:true}));
 
     _camStream=stream;
 
-    // BarcodeDetector (Chrome/Edge/Android WebView — iOS needs fallback)
     if('BarcodeDetector' in window){
-      _camDetector=new BarcodeDetector({formats:['ean_13','ean_8','code_128','upc_a','upc_e','itf','codabar']});
+      _camDetector=new BarcodeDetector({formats:['ean_13','ean_8','code_128','upc_a','upc_e','itf']});
     }
 
     _attachVideo(liveDiv);
 
     if(_camDetector){
-      _camInterval=setInterval(_scanFrame,250);
+      _camInterval=setInterval(_scanFrame,300);
     }else{
       const msg=document.getElementById('cam-msg');
-      if(msg)msg.textContent='⚠️ הדפדפן לא תומך בסריקה אוטומטית — הזן ברקוד ידנית';
+      if(msg)msg.textContent='📷 פעיל — הזן ברקוד ידנית (הדפדפן לא תומך סריקה אוטומטית)';
     }
+
   }catch(e){
-    liveDiv.innerHTML=`<div style="color:rgba(255,255,255,.8);text-align:center;padding:1rem">
-      <div style="font-size:1.5rem;margin-bottom:.4rem">${e.name==='NotAllowedError'?'⛔':'📵'}</div>
-      <div style="font-size:.82rem;font-weight:700">${e.name==='NotAllowedError'?'לא אושרה גישה למצלמה':'מצלמה לא זמינה'}</div>
-      <div style="font-size:.72rem;opacity:.7;margin-top:.25rem">${e.message}</div>
-      <button onclick="initCamera()" style="margin-top:.75rem;padding:.45rem .9rem;border-radius:8px;border:none;background:rgba(255,255,255,.15);color:#fff;font-family:inherit;cursor:pointer;font-size:.8rem">נסה שוב</button>
-    </div>`;
+    stopCamera();
+    let hint='';
+    if(e.name==='NotAllowedError'||e.name==='PermissionDeniedError'){
+      hint='אשר גישה למצלמה בהגדרות הדפדפן ולחץ שוב';
+    }else if(isFile){
+      hint='פתח את הקובץ דרך שרת מקומי (http://localhost) — קבצי file:// חסומים בחלק מהדפדפנים';
+    }else if(e.name==='NotFoundError'){
+      hint='לא נמצאה מצלמה במכשיר';
+    }else{
+      hint=e.message||e.name||'שגיאה לא ידועה';
+    }
+    _showCameraBtn(liveDiv,hint);
   }
 }
 
@@ -300,6 +316,9 @@ function _attachVideo(liveDiv){
         <div style="position:absolute;bottom:-2px;left:-2px;width:22px;height:22px;border-bottom:3px solid #00ff88;border-left:3px solid #00ff88;border-radius:2px"></div>
       </div>
       <div class="scan-line" style="top:calc(50% - 60px);animation-duration:1.5s"></div>
+    </div>
+    <div style="position:absolute;top:8px;left:8px">
+      <button onclick="stopCamera();bindPage('scanner')" style="padding:.3rem .6rem;border-radius:6px;border:none;background:rgba(0,0,0,.45);color:rgba(255,255,255,.8);font-size:.72rem;cursor:pointer;font-family:inherit">⏹ עצור</button>
     </div>
     <div id="cam-msg" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;color:rgba(255,255,255,.75);font-size:.75rem;font-weight:600">
       ${_camDetector?'🟢 סורק ברקוד...':'📷 פעיל — הזן ברקוד ידנית'}
@@ -331,7 +350,14 @@ function stopCamera(){
 }
 
 // ─── RENDER ──────────────────────────────────────────────────────────────────
-function bindPage(page){if(page==='scanner')initCamera();}
+function bindPage(page){
+  if(page==='scanner'){
+    const liveDiv=document.getElementById('camera-live');
+    if(!liveDiv)return;
+    if(_camStream){_attachVideo(liveDiv);}       // already running → re-attach
+    else _showCameraBtn(liveDiv);                // not running → show start button
+  }
+}
 function renderPage(page){
   const el=document.getElementById('page-'+page);
   if(!el)return;
