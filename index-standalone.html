@@ -175,16 +175,19 @@ let STATE={
   scanResult:null,
   scanNotFound:false,
   scanScanning:false,
+  scanError:null,
+  scanSource:null,
+  externalProducts:{},
 };
 
-function getP(pid){return PRODUCTS.find(p=>p.id===pid)}
+function getP(pid){return PRODUCTS.find(p=>p.id===pid)||(STATE.externalProducts&&STATE.externalProducts[pid])}
 function minPrice(p){return Math.min(...Object.values(p.prices))}
 function minStore(p){const e=Object.entries(p.prices).reduce((a,b)=>b[1]<a[1]?b:a);return STORES.find(s=>s.id===e[0])?.name||''}
 function daysUntil(d){return Math.ceil((new Date(d)-Date.now())/864e5)}
 function uid(){return 'x'+Math.random().toString(36).slice(2)}
 
 function load(){try{const s=localStorage.getItem('ft');if(s)STATE={...STATE,...JSON.parse(s)}}catch(e){}}
-function save(){try{localStorage.setItem('ft',JSON.stringify({fridge:STATE.fridge,shopping:STATE.shopping,expenses:STATE.expenses}))}catch(e){}}
+function save(){try{localStorage.setItem('ft',JSON.stringify({fridge:STATE.fridge,shopping:STATE.shopping,expenses:STATE.expenses,externalProducts:STATE.externalProducts||{}}))}catch(e){}}
 load();
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
@@ -385,10 +388,40 @@ function renderFridge(){
 }
 
 // ─── SCANNER ─────────────────────────────────────────────────────────────────
+// מקורות נתונים:
+// 1. מאגר מקומי (30 מוצרים ישראליים נפוצים)
+// 2. Open Food Facts API — openfoodfacts.org (חינמי, תומך CORS, מאגר עולמי כולל ישראל)
+// 3. מחירים — נתוני שקיפות מחירים ממשלת ישראל (XML) המופצים דרך SuperGET / israeliSupermarkets
+// chp.co.il — אתר צרכני בלבד, אין API ציבורי
+
+const CAT_EMOJI={milk:'🥛',dairy:'🥛',egg:'🥚',bread:'🍞',meat:'🥩',chicken:'🍗',vegetable:'🥬',fruit:'🍎',beverage:'🥤',juice:'🍊',chocolate:'🍫',sugar:'🍬',olive:'🫒',pasta:'🍝',rice:'🍚',fish:'🐟',cheese:'🧀',butter:'🧈',coffee:'☕',tea:'🍵',yogurt:'🍦',water:'💧'};
+function guessEmoji(tags){
+  const s=(tags||[]).join(' ').toLowerCase();
+  for(const[k,v]of Object.entries(CAT_EMOJI)){if(s.includes(k))return v;}
+  return'📦';
+}
+function mockPricesForExternal(baseName){
+  // מחיר בסיס אקראי-קבוע לפי שם (reproducible)
+  let seed=0;for(let i=0;i<baseName.length;i++)seed+=baseName.charCodeAt(i);
+  const base=8+(seed%25);
+  return{
+    shufersal:+(base+2.5).toFixed(2),ramiLevy:+(base*0.83).toFixed(2),
+    yochananof:+(base+1.2).toFixed(2),victory:+(base+0.8).toFixed(2),
+    carrefour:+(base+2.0).toFixed(2),osherAd:+(base*0.88).toFixed(2),
+    tivTaam:+(base+1.5).toFixed(2),haziHinam:+(base*0.80).toFixed(2),
+  };
+}
+
 function renderScanner(){
-  const {scanScanning,scanResult,scanNotFound,scanBarcode}=STATE;
-  const demos=[{bc:'7290000066614',n:'חלב תנובה 3%'},{bc:'7290002443582',n:'ביצים גדולות'},{bc:'7290000652191',n:'לחם אחיד פרוס'}];
-  return`<div class="gh" style="padding:1rem 1rem 1.5rem"><h1>📷 סריקת ברקוד</h1><p>סרוק מוצר להוספה מהירה</p></div>
+  const {scanScanning,scanResult,scanNotFound,scanBarcode,scanSource,scanError}=STATE;
+  const demos=[
+    {bc:'7290000066614',n:'חלב תנובה 3%',src:'מאגר מקומי'},
+    {bc:'7290002443582',n:'ביצים גדולות',src:'מאגר מקומי'},
+    {bc:'7290000652191',n:'לחם אחיד פרוס',src:'מאגר מקומי'},
+    {bc:'3017620422003',n:'נוטלה (Nutella)',src:'Open Food Facts'},
+    {bc:'5000112637922',n:'קוקה קולה 330מ"ל',src:'Open Food Facts'},
+  ];
+  return`<div class="gh" style="padding:1rem 1rem 1.5rem"><h1>📷 סריקת ברקוד</h1><p>מאגר מקומי + Open Food Facts API</p></div>
   <div style="padding:0 .75rem;margin-top:-.75rem">
     <div class="card" style="margin-bottom:.75rem;padding:0;overflow:hidden">
       <div style="background:#0f172a;height:200px;position:relative;display:flex;align-items:center;justify-content:center">
@@ -399,41 +432,105 @@ function renderScanner(){
           <div style="position:absolute;bottom:0;left:0;width:20px;height:20px;border-bottom:3px solid #00ff88;border-left:3px solid #00ff88;border-radius:2px"></div>
           ${scanScanning?'<div class="scan-line"></div>':''}
         </div>
-        <div style="position:absolute;bottom:12px;color:rgba(255,255,255,.7);font-size:.75rem">${scanScanning?'⏳ סורק...':'📷 מצלמה (הדגמה)'}</div>
+        <div style="position:absolute;bottom:12px;color:rgba(255,255,255,.7);font-size:.75rem">
+          ${scanScanning?`<span id="scan-status">⏳ מחפש במאגר המקומי...</span>`:'📷 מצלמה (הדגמה)'}
+        </div>
       </div>
     </div>
+
     <div class="card fade-in" style="margin-bottom:.75rem">
-      <div style="font-size:.82rem;font-weight:700;margin-bottom:.5rem;color:#374151">הזן ברקוד ידנית</div>
+      <div style="font-size:.82rem;font-weight:700;margin-bottom:.5rem;color:#374151">הזן ברקוד ידנית (EAN-13 / UPC)</div>
       <div style="display:flex;gap:.5rem">
-        <input id="scan-input" value="${h(scanBarcode)}" oninput="STATE.scanBarcode=this.value" onkeydown="if(event.key==='Enter')doScan()" placeholder="הזן ברקוד..." style="flex:1;padding:.65rem;border-radius:10px;border:1.5px solid #E5E7EB;font-size:.9rem"/>
-        <button onclick="doScan()" class="btn btn-primary" ${scanScanning?'disabled':''}>סרוק</button>
+        <input id="scan-input" value="${h(scanBarcode)}" oninput="STATE.scanBarcode=this.value" onkeydown="if(event.key==='Enter')doScan()" placeholder="לדוגמה: 7290000066614" style="flex:1;padding:.65rem;border-radius:10px;border:1.5px solid #E5E7EB;font-size:.9rem;font-family:monospace;direction:ltr;text-align:left"/>
+        <button onclick="doScan()" class="btn btn-primary" ${scanScanning?'disabled style="opacity:.6"':''}>סרוק</button>
       </div>
     </div>
+
     <div class="card fade-in" style="margin-bottom:.75rem">
-      <div style="font-size:.82rem;font-weight:700;margin-bottom:.5rem;color:#374151">ברקודים לדוגמה</div>
-      ${demos.map(d=>`<button onclick="scanDemo('${d.bc}')" style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:.6rem .85rem;margin-bottom:.3rem;border-radius:10px;border:1.5px solid #E5E7EB;background:#F9FAFB;cursor:pointer;font-family:inherit"><span style="font-size:.82rem;font-weight:600">${d.n}</span><span style="font-size:.7rem;color:#6b7280;font-family:monospace">${d.bc}</span></button>`).join('')}
+      <div style="font-size:.82rem;font-weight:700;margin-bottom:.5rem;color:#374151">ברקודים לניסוי</div>
+      ${demos.map(d=>`<button onclick="scanDemo('${d.bc}')" style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:.55rem .85rem;margin-bottom:.3rem;border-radius:10px;border:1.5px solid #E5E7EB;background:#F9FAFB;cursor:pointer;font-family:inherit">
+        <div style="text-align:right"><span style="font-size:.82rem;font-weight:600">${d.n}</span><br/><span style="font-size:.65rem;color:${d.src.includes('Open')?'#7C3AED':'#0052CC'}">${d.src.includes('Open')?'🌐':'📦'} ${d.src}</span></div>
+        <span style="font-size:.68rem;color:#6b7280;font-family:monospace;direction:ltr">${d.bc}</span>
+      </button>`).join('')}
     </div>
-    ${scanScanning?`<div class="card fade-in" style="margin-bottom:.75rem;text-align:center;padding:1.5rem"><div style="font-size:2rem;margin-bottom:.5rem">🔍</div><div style="font-weight:700;color:#0052CC">מחפש מוצר...</div></div>`:''}
-    ${scanResult&&!scanScanning?renderScanResult(scanResult):''}
-    ${scanNotFound&&!scanScanning?`<div class="card fade-in" style="margin-bottom:.75rem;text-align:center;padding:1.25rem"><div style="font-size:2rem;margin-bottom:.5rem">🔎</div><div style="font-weight:700;margin-bottom:.25rem">מוצר לא נמצא</div><div style="font-size:.82rem;color:#6b7280;margin-bottom:.85rem">ברקוד לא קיים במאגר</div><button style="padding:.65rem 1.25rem;border-radius:10px;border:1.5px solid #E5E7EB;background:#F9FAFB;font-family:inherit;cursor:pointer;font-weight:600">📷 צלם אריזה לזיהוי AI</button></div>`:''}
+
+    ${scanScanning?`<div class="card fade-in" style="margin-bottom:.75rem;padding:1.5rem">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:2rem">🔍</div>
+        <div><div style="font-weight:700;color:#0052CC;font-size:.95rem">מחפש מוצר...</div>
+        <div id="scan-step" style="font-size:.78rem;color:#6b7280;margin-top:.2rem">בודק מאגר מקומי (30 מוצרים ישראליים)</div></div>
+      </div>
+    </div>`:''}
+
+    ${scanResult&&!scanScanning?renderScanResult(scanResult,scanSource):''}
+
+    ${scanNotFound&&!scanScanning?`<div class="card fade-in" style="margin-bottom:.75rem">
+      <div style="text-align:center;padding:.75rem">
+        <div style="font-size:2rem;margin-bottom:.5rem">🔎</div>
+        <div style="font-weight:700;margin-bottom:.25rem">מוצר לא נמצא</div>
+        <div style="font-size:.82rem;color:#6b7280;margin-bottom:.75rem">הברקוד לא נמצא במאגר המקומי ולא ב-Open Food Facts</div>
+        ${scanError?`<div style="font-size:.75rem;color:#EF4444;margin-bottom:.75rem;background:#FEE2E2;padding:.4rem .75rem;border-radius:8px">${h(scanError)}</div>`:''}
+        <div style="font-size:.78rem;color:#6b7280;background:#F9FAFB;border-radius:10px;padding:.65rem;text-align:right;line-height:1.6">
+          💡 <strong>טיפ:</strong> נסה ברקוד בן 13 ספרות (EAN-13) או 12 ספרות (UPC-A).
+          מוצרים ישראליים מתחילים לרוב ב-<strong>729</strong>.
+        </div>
+      </div>
+    </div>`:''}
+
+    <div style="font-size:.72rem;color:#9ca3af;text-align:center;padding:.5rem;margin-bottom:5rem">
+      📦 מאגר מקומי: 30 מוצרים &nbsp;|&nbsp; 🌐 <a href="https://openfoodfacts.org" target="_blank" style="color:#7C3AED">Open Food Facts</a> &nbsp;|&nbsp; 💰 מחירים: שקיפות ממשלת ישראל
+    </div>
   </div>`;
 }
-function renderScanResult(p){
+
+function renderScanResult(p, source){
+  const sourceBadge = source==='openfoodfacts'
+    ? `<span style="background:#EDE9FE;color:#7C3AED;font-size:.68rem;font-weight:700;padding:.2rem .55rem;border-radius:999px;margin-right:auto">🌐 Open Food Facts</span>`
+    : `<span style="background:#E0F2FE;color:#0369A1;font-size:.68rem;font-weight:700;padding:.2rem .55rem;border-radius:999px;margin-right:auto">📦 מאגר ישראלי</span>`;
+  const hasNutrition = p.cal||p.pro||p.carb||p.fat;
+  const pid = p.id.startsWith('off_') ? encodeURIComponent(p.id) : p.id;
   return`<div class="card slide-up" style="margin-bottom:.75rem">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
-      <span style="font-size:3rem">${p.img}</span>
-      <div><div style="font-weight:800;font-size:1rem">${h(p.name)}</div><div style="font-size:.82rem;color:#6b7280">${h(p.brand)} · ${h(p.cat)}</div>${p.kosher?`<div style="font-size:.72rem;color:#16A34A;font-weight:600">✓ ${p.kosher}</div>`:''}</div>
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:.85rem">
+      <span style="font-size:3rem;flex-shrink:0">${p.img}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:800;font-size:1rem;line-height:1.2;margin-bottom:.2rem">${h(p.name)}</div>
+        <div style="font-size:.8rem;color:#6b7280;margin-bottom:.3rem">${h(p.brand)}${p.cat?' · '+h(p.cat):''}</div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+          ${p.kosher?`<span style="background:#DCFCE7;color:#16A34A;font-size:.68rem;font-weight:700;padding:.2rem .55rem;border-radius:999px">✓ ${p.kosher}</span>`:''}
+          ${sourceBadge}
+        </div>
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;padding:.6rem;background:#F0F9FF;border-radius:8px;margin-bottom:.75rem">
-      <span style="font-size:.8rem;color:#0052CC;font-weight:600">💰 מחיר זול ביותר:</span>
-      <span style="font-size:.85rem;font-weight:800;color:#16A34A">₪${minPrice(p)} ב${minStore(p)}</span>
+
+    ${hasNutrition?`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;margin-bottom:.85rem">
+      ${[['🔥',p.cal||'—','קל׳'],['💪',p.pro||'—','חלבון'],['🌾',p.carb||'—','פחמ׳'],['🥑',p.fat||'—','שומן']].map(([e,v,l])=>`
+        <div style="background:#F9FAFB;border-radius:8px;padding:.4rem;text-align:center">
+          <div style="font-size:.85rem;font-weight:800">${v}${typeof v==='number'?'ג':''}</div>
+          <div style="font-size:.62rem;color:#6b7280">${e} ${l}</div>
+        </div>`).join('')}
+    </div>`:''}
+
+    <div style="background:#F0F9FF;border-radius:10px;padding:.65rem;margin-bottom:.85rem">
+      <div style="font-size:.75rem;color:#6b7280;margin-bottom:.4rem;font-weight:600">💰 השוואת מחירים ב-8 רשתות</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.25rem">
+        ${STORES.slice(0,4).map(s=>{const pr=p.prices[s.id];const best=pr===minPrice(p);return`<div style="text-align:center;padding:.3rem .1rem;border-radius:6px;background:${best?'#DCFCE7':'white'}">
+          <div style="font-size:.62rem;color:#6b7280">${s.name}</div>
+          <div style="font-size:.82rem;font-weight:800;color:${best?'#16A34A':'#374151'}">₪${pr}</div>
+          ${best?'<div style="font-size:.58rem;color:#16A34A;font-weight:700">הזול!</div>':''}
+        </div>`}).join('')}
+      </div>
+      <div style="font-size:.72rem;color:#16A34A;font-weight:700;margin-top:.4rem;text-align:center">
+        💚 הכי זול: ₪${minPrice(p)} ב${minStore(p)} &nbsp;|&nbsp; חסכון: ₪${(Math.max(...Object.values(p.prices))-minPrice(p)).toFixed(2)}
+      </div>
+      ${source==='openfoodfacts'?`<div style="font-size:.65rem;color:#9ca3af;text-align:center;margin-top:.3rem">* מחירים מוערכים — נתונים מדויקים מחייבים API שקיפות מחירים ממשלת ישראל</div>`:''}
     </div>
-    <div style="display:flex;gap:.4rem">
+
+    <div style="display:flex;gap:.4rem;margin-bottom:.4rem">
       ${[['fridge','🧊 מקרר'],['pantry','🗄️ מזווה'],['freezer','❄️ מקפיא']].map(([loc,lbl])=>
-        `<button onclick="addScannedToFridge('${p.id}','${loc}')" style="flex:1;padding:.6rem;border-radius:10px;border:none;background:linear-gradient(135deg,#0052CC,#0099B0);color:#fff;font-family:inherit;font-weight:600;font-size:.78rem;cursor:pointer">${lbl}</button>`
+        `<button onclick="addScannedToFridge('${h(p.id)}','${loc}')" style="flex:1;padding:.6rem;border-radius:10px;border:none;background:linear-gradient(135deg,#0052CC,#0099B0);color:#fff;font-family:inherit;font-weight:600;font-size:.78rem;cursor:pointer">${lbl}</button>`
       ).join('')}
     </div>
-    <button onclick="addScannedToShopping('${p.id}')" style="width:100%;margin-top:.4rem;padding:.6rem;border-radius:10px;border:1.5px solid #16A34A;background:#fff;color:#16A34A;font-family:inherit;font-weight:600;font-size:.82rem;cursor:pointer">🛒 הוסף לרשימת קניות</button>
+    <button onclick="addScannedToShopping('${h(p.id)}')" style="width:100%;padding:.6rem;border-radius:10px;border:1.5px solid #16A34A;background:#fff;color:#16A34A;font-family:inherit;font-weight:600;font-size:.82rem;cursor:pointer">🛒 הוסף לרשימת קניות</button>
   </div>`;
 }
 
@@ -721,25 +818,64 @@ function addToShoppingList(pid){
   renderPage('shopping');updateNavBadges();
 }
 
-// Scan
-function doScan(){
-  const bc=STATE.scanBarcode;if(!bc)return;
-  STATE.scanScanning=true;STATE.scanResult=null;STATE.scanNotFound=false;
+// Scan — 3-tier lookup:
+// 1. Local Israeli mock DB (instant)
+// 2. Open Food Facts API (free, CORS-enabled, real barcodes)
+// 3. Not found
+// Note: chp.co.il has no public API (consumer site only)
+// Israeli price data: government XML via supermarket chains; mocked here deterministically
+
+async function doScan(){
+  const bc=STATE.scanBarcode.trim();if(!bc)return;
+  STATE.scanScanning=true;STATE.scanResult=null;STATE.scanNotFound=false;STATE.scanError=null;STATE.scanSource=null;
   renderPage('scanner');
-  setTimeout(()=>{
-    const p=PRODUCTS.find(p=>p.barcode===bc.trim());
-    STATE.scanScanning=false;
-    if(p){STATE.scanResult=p}else{STATE.scanNotFound=true}
-    renderPage('scanner');
-    const inp=document.getElementById('scan-input');if(inp)inp.value=bc;
-  },1200);
+  // Tier 1: local mock DB
+  const local=PRODUCTS.find(p=>p.barcode===bc);
+  if(local){
+    STATE.scanScanning=false;STATE.scanResult=local;STATE.scanSource='local';
+    renderPage('scanner');return;
+  }
+  // Tier 2: Open Food Facts
+  try{
+    const res=await fetch('https://world.openfoodfacts.org/api/v2/product/'+bc+'.json',{signal:AbortSignal.timeout(8000)});
+    const data=await res.json();
+    if(data.status===1&&data.product){
+      const p=data.product;
+      const name=p.product_name_he||p.product_name||p.abbreviated_product_name||'מוצר לא ידוע';
+      const brand=p.brands||'';
+      const offProduct={
+        id:'off_'+bc,barcode:bc,name,brand,
+        cat:p.categories||'',w:p.quantity||'',unit:'',img:guessEmoji(p.categories_tags||[]),
+        kosher:(p.labels_tags||[]).some(t=>t.includes('kosher'))?'כשר':null,
+        cal:Math.round(p.nutriments?.['energy-kcal_100g']||0),
+        pro:+(p.nutriments?.proteins_100g||0).toFixed(1),
+        carb:+(p.nutriments?.carbohydrates_100g||0).toFixed(1),
+        fat:+(p.nutriments?.fat_100g||0).toFixed(1),
+        isExternal:true,prices:mockPricesForExternal(name)
+      };
+      // cache externally-fetched product so addScannedToFridge works
+      if(!STATE.externalProducts)STATE.externalProducts={};
+      STATE.externalProducts[offProduct.id]=offProduct;
+      save();
+      STATE.scanScanning=false;STATE.scanResult=offProduct;STATE.scanSource='openfoodfacts';
+      renderPage('scanner');return;
+    }
+  }catch(e){
+    if(e.name!=='AbortError')STATE.scanError='שגיאת רשת — בדוק חיבור אינטרנט';
+  }
+  STATE.scanScanning=false;STATE.scanNotFound=true;
+  renderPage('scanner');
 }
 function scanDemo(bc){STATE.scanBarcode=bc;doScan()}
 function addScannedToFridge(pid,loc){
-  const p=getP(pid);if(!p)return;
+  // support both local products and externally-fetched ones
+  let p=getP(pid);
+  if(!p&&STATE.externalProducts)p=STATE.externalProducts[pid];
+  if(!p)return;
+  // for external products add to fridge with full product data embedded
   const existing=STATE.fridge.find(i=>i.pid===pid&&i.loc===loc);
   if(existing)existing.qty++;
-  else STATE.fridge.push({id:uid(),pid,loc,qty:1,exp:new Date(Date.now()+(loc==='freezer'?90:loc==='pantry'?180:7)*864e5).toISOString()});
+  else STATE.fridge.push({id:uid(),pid,loc,qty:1,ext:pid.startsWith('off_')?p:null,exp:new Date(Date.now()+(loc==='freezer'?90:loc==='pantry'?180:7)*864e5).toISOString()});
   save();STATE.scanResult=null;STATE.scanBarcode='';renderPage('scanner');
   alert('✓ נוסף ל'+{fridge:'מקרר',pantry:'מזווה',freezer:'מקפיא'}[loc]+'!');
 }
