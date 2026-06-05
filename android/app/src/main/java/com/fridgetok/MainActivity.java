@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.webkit.FileChooserParams;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -35,7 +34,7 @@ public class MainActivity extends Activity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> cb,
-                                              FileChooserParams params) {
+                                              WebChromeClient.FileChooserParams params) {
                 if (fileChooserCallback != null) fileChooserCallback.onReceiveValue(null);
                 fileChooserCallback = cb;
                 try {
@@ -74,7 +73,7 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int req, int res, Intent data) {
         if (req == FILE_CHOOSER_CODE && fileChooserCallback != null) {
             fileChooserCallback.onReceiveValue(
-                res == RESULT_OK ? FileChooserParams.parseResult(res, data) : null
+                res == RESULT_OK ? WebChromeClient.FileChooserParams.parseResult(res, data) : null
             );
             fileChooserCallback = null;
         }
