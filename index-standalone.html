@@ -4,6 +4,13 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
 <title>FridgeTok 🧊 - המקרר החכם של ישראל</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FridgeTok">
+<link rel="apple-touch-icon" href="icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 <style>
@@ -392,6 +399,16 @@ function renderHome(){
         <span style="margin-right:auto;opacity:.6;font-size:1.2rem">›</span>
       </div>
     </div>
+
+    ${!window.matchMedia('(display-mode:standalone)').matches?`
+    <div class="card fade-in" style="margin-bottom:.75rem;background:linear-gradient(135deg,#1a1a2e,#4F46E5);color:#fff;padding:.85rem">
+      <div style="font-size:.8rem;font-weight:700;margin-bottom:.25rem">📲 התקן את האפליקציה</div>
+      <div style="font-size:.72rem;opacity:.8;margin-bottom:.5rem">הוסף למסך הבית כדי לקבל שיתוף ישיר מ-TikTok/Instagram</div>
+      <div style="display:flex;gap:.5rem;font-size:.72rem">
+        <span style="background:rgba(255,255,255,.15);border-radius:999px;padding:.2rem .6rem">Android: תפריט → הוסף למסך הבית</span>
+        <span style="background:rgba(255,255,255,.15);border-radius:999px;padding:.2rem .6rem">iOS: שתף → הוסף</span>
+      </div>
+    </div>`:''}
   </div>`;
 }
 
@@ -1229,6 +1246,47 @@ function ttSaveRecipe(){
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 updateNavBadges();
 renderPage('home');
+
+// ─── PWA / SHARE TARGET ───────────────────────────────────────────────────
+function _extractVideoUrl(text){
+  if(!text)return'';
+  const m=text.match(/https?:\/\/(www\.)?(tiktok\.com|vm\.tiktok\.com|vt\.tiktok\.com|instagram\.com|youtube\.com|youtu\.be|facebook\.com|fb\.watch|m\.facebook\.com)[^\s<"]*/i);
+  return m?m[0]:'';
+}
+
+function handleShareTarget(){
+  const p=new URLSearchParams(location.search);
+  const sharedUrl=p.get('url')||'';
+  const sharedText=p.get('text')||'';
+  const sharedTitle=p.get('title')||'';
+  const page=p.get('page')||'';
+
+  const videoUrl=sharedUrl||_extractVideoUrl(sharedText)||_extractVideoUrl(sharedTitle);
+
+  if(videoUrl){
+    STATE.ttUrl=videoUrl;
+    history.replaceState({},'',location.pathname);
+    navigate('tiktok');
+    const apiKey=localStorage.getItem('claude_api_key');
+    if(apiKey){
+      STATE.tiktokLoading=true;STATE.tiktokResult=null;STATE.ttError=null;
+      STATE.ttStep='מנתח סרטון שהתקבל...';
+      renderPage('tiktok');
+      setTimeout(()=>analyzeTikTok(),400);
+    }
+  }else if(page){
+    history.replaceState({},'',location.pathname);
+    navigate(page);
+  }
+}
+
+// Register service worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// Handle share on load
+handleShareTarget();
 </script>
 </body>
 </html>
