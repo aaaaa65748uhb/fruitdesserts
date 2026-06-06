@@ -70,6 +70,27 @@ input:focus{border-color:#0052CC!important}
   <div id="page-recipes" class="page"></div>
   <div id="page-shopping" class="page"></div>
   <div id="page-prices" class="page"></div>
+
+  <!-- Live barcode scanner overlay — persists across renders -->
+  <div id="live-scanner-overlay" style="display:none;position:fixed;inset:0;background:#000;z-index:300;flex-direction:column">
+    <div style="position:relative;flex:1;overflow:hidden">
+      <video id="scan-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block"></video>
+      <!-- viewfinder frame -->
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+        <div style="width:260px;height:140px;position:relative">
+          <div style="position:absolute;top:0;left:0;width:28px;height:28px;border-top:3px solid #00ff88;border-left:3px solid #00ff88;border-radius:3px 0 0 0"></div>
+          <div style="position:absolute;top:0;right:0;width:28px;height:28px;border-top:3px solid #00ff88;border-right:3px solid #00ff88;border-radius:0 3px 0 0"></div>
+          <div style="position:absolute;bottom:0;left:0;width:28px;height:28px;border-bottom:3px solid #00ff88;border-left:3px solid #00ff88;border-radius:0 0 0 3px"></div>
+          <div style="position:absolute;bottom:0;right:0;width:28px;height:28px;border-bottom:3px solid #00ff88;border-right:3px solid #00ff88;border-radius:0 0 3px 0"></div>
+          <div class="scan-line"></div>
+        </div>
+      </div>
+      <div id="scan-live-status" style="position:absolute;bottom:24px;width:100%;text-align:center;color:rgba(255,255,255,.8);font-size:.85rem;padding:0 1rem">מכוון את הברקוד לתוך המסגרת</div>
+    </div>
+    <div style="background:#111;padding:1.25rem 1rem;display:flex;justify-content:center;gap:1rem;align-items:center">
+      <button onclick="stopLiveScan()" style="background:#fff;color:#0f172a;border:none;padding:.7rem 2rem;border-radius:999px;font-weight:700;font-size:.95rem;cursor:pointer">✕ סגור</button>
+    </div>
+  </div>
   <div id="page-tiktok" class="page"></div>
   <div id="page-stats" class="page"></div>
 
@@ -244,7 +265,7 @@ load();
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
 function navigate(page){
-  if(page!=='scanner') STATE.scanPhotoPreview=null;
+  if(page!=='scanner'){STATE.scanPhotoPreview=null;stopLiveScan();}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+page)?.classList.add('active');
@@ -330,7 +351,65 @@ async function handleBarcodePhoto(input){
   }
 }
 
-function stopCamera(){} // kept for backward compat with navigate()
+function stopCamera(){stopLiveScan();}
+
+// ─── LIVE CAMERA BARCODE SCANNER ─────────────────────────────────────────────
+let _scanStream=null,_scanRaf=null,_scanDet=null;
+
+async function startLiveScan(){
+  const overlay=document.getElementById('live-scanner-overlay');
+  if(!overlay)return;
+  if(!navigator.mediaDevices?.getUserMedia){
+    STATE.scanError='המצלמה החיה אינה נתמכת בדפדפן זה — נסה לצלם תמונה';
+    renderPage('scanner');return;
+  }
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
+    });
+    _scanStream=stream;
+    const video=document.getElementById('scan-video');
+    video.srcObject=stream;
+    await video.play().catch(()=>{});
+    overlay.style.display='flex';
+    if('BarcodeDetector' in window){
+      _scanDet=new BarcodeDetector({formats:['ean_13','ean_8','code_128','upc_a','upc_e','itf','codabar','qr_code']});
+      _scanRaf=requestAnimationFrame(_liveScanLoop);
+    }else{
+      const s=document.getElementById('scan-live-status');
+      if(s)s.textContent='BarcodeDetector לא נתמך — הגרסה ישנה מדי';
+    }
+  }catch(e){
+    STATE.scanError='לא ניתן לגשת למצלמה: '+(e.message||e.name||'שגיאה לא ידועה')+'. נסה לצלם תמונה';
+    renderPage('scanner');
+  }
+}
+
+async function _liveScanLoop(){
+  if(!_scanStream)return;
+  const video=document.getElementById('scan-video');
+  if(video&&video.readyState>=2&&_scanDet){
+    try{
+      const codes=await _scanDet.detect(video);
+      if(codes.length>0){
+        const bc=codes[0].rawValue;
+        stopLiveScan();
+        STATE.scanBarcode=bc;
+        doScan();
+        return;
+      }
+    }catch(e){}
+  }
+  _scanRaf=requestAnimationFrame(_liveScanLoop);
+}
+
+function stopLiveScan(){
+  if(_scanStream){_scanStream.getTracks().forEach(t=>t.stop());_scanStream=null;}
+  if(_scanRaf){cancelAnimationFrame(_scanRaf);_scanRaf=null;}
+  _scanDet=null;
+  const overlay=document.getElementById('live-scanner-overlay');
+  if(overlay)overlay.style.display='none';
+}
 
 // ─── RENDER ──────────────────────────────────────────────────────────────────
 function bindPage(page){}
@@ -537,20 +616,23 @@ function renderScanner(){
   return`<div class="gh" style="padding:1rem 1rem 1.5rem"><h1>📷 סריקת ברקוד</h1><p>מאגר מקומי + Open Food Facts</p></div>
   <div style="padding:0 .75rem;margin-top:-.75rem">
     <div class="card" style="margin-bottom:.75rem;padding:0;overflow:hidden">
-      <label for="barcode-photo" style="display:block;background:#0f172a;height:210px;cursor:pointer;position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent">
+      <!-- Primary: live camera scan -->
+      <button onclick="startLiveScan()" style="width:100%;background:#0f172a;height:160px;cursor:pointer;position:relative;overflow:hidden;border:none;display:block;-webkit-tap-highlight-color:transparent">
+        <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.65rem">
+          <div style="font-size:3.5rem;line-height:1">📹</div>
+          <div style="color:#fff;font-weight:800;font-size:1.05rem">סריקה חיה</div>
+          <div style="color:rgba(255,255,255,.5);font-size:.78rem">פתיחת מצלמה בזמן אמת</div>
+          <div style="display:flex;gap:.3rem;margin-top:.2rem">
+            <div style="width:14px;height:14px;border:2px solid #00ff88;border-radius:2px"></div>
+            <div style="width:14px;height:14px;border:2px solid #00ff88;border-radius:2px"></div>
+          </div>
+        </div>
+      </button>
+      <!-- Secondary: photo from gallery or camera snap -->
+      <label for="barcode-photo" style="display:flex;align-items:center;justify-content:center;gap:.6rem;background:#1e293b;padding:.7rem 1rem;cursor:pointer;-webkit-tap-highlight-color:transparent;border-top:1px solid #334155">
         ${prev
-          ?`<img src="${prev}" style="width:100%;height:100%;object-fit:cover;opacity:.55">
-             <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem">
-               <div style="background:rgba(0,255,136,.9);color:#0f172a;padding:.5rem 1.25rem;border-radius:20px;font-weight:800;font-size:.9rem">🔄 צלם שוב</div>
-             </div>`
-          :`<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.65rem">
-               <div style="font-size:4rem;line-height:1">📷</div>
-               <div style="color:#fff;font-weight:800;font-size:1.05rem">לחץ לצילום ברקוד</div>
-               <div style="color:rgba(255,255,255,.5);font-size:.78rem">פותח מצלמה — ללא הרשאה</div>
-               <div style="display:flex;gap:.3rem">
-                 ${['↘','↙'].map(()=>'<div style="width:14px;height:14px;border:2px solid #00ff88;border-radius:2px"></div>').join('')}
-               </div>
-             </div>`
+          ?`<span style="color:#00ff88;font-weight:700;font-size:.88rem">🔄 צלם/העלה שוב</span>`
+          :`<span style="font-size:1.1rem">🖼️</span><span style="color:rgba(255,255,255,.75);font-size:.85rem;font-weight:600">צילום תמונה / גלרייה</span>`
         }
         <input type="file" id="barcode-photo" accept="image/*" capture="environment" style="display:none" onchange="handleBarcodePhoto(this)">
       </label>
