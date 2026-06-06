@@ -1345,16 +1345,30 @@ async function analyzeTikTok(){
       text=data.choices?.[0]?.message?.content||'';
       if(!text)throw new Error('תגובת Groq ריקה — נסה שוב');
     }else{
-      // Free, no-key AI via Pollinations.ai
-      const resp=await fetch('https://text.pollinations.ai/openai',{
+      // Free, no-key AI via Pollinations.ai — with 429 fallback to GET endpoint
+      const postResp=await fetch('https://text.pollinations.ai/openai',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({model:'openai',messages:[{role:'user',content:prompt}],seed:42,private:true}),
         signal:AbortSignal.timeout(45000)
       });
-      if(!resp.ok)throw new Error(`שגיאת Pollinations ${resp.status} — נסה שוב`);
-      const data=await resp.json();
-      text=data.choices?.[0]?.message?.content||'';
+      if(postResp.status===429||postResp.status===503){
+        // Rate limited — fall back to GET endpoint with shorter prompt
+        const stepEl2=document.getElementById('tt-step');
+        if(stepEl2)stepEl2.textContent='שרת עמוס, מנסה ערוץ חלופי...';
+        await new Promise(r=>setTimeout(r,2500));
+        const shortP=`אתה שף. צור מתכון בעברית JSON בלבד לפי הכותרת:\nכותרת: "${title||url}"\nמבנה נדרש: {"name":"שם","prepTime":10,"cookTime":20,"servings":4,"difficulty":"קל","ingredients":[{"name":"מצרך","amount":"כמות","unit":"יחידה"}],"steps":["שלב 1","שלב 2"],"tips":"טיפ שף","nutrition":{"calories":350,"protein":20,"carbs":40,"fat":12}}`;
+        const getResp=await fetch(`https://text.pollinations.ai/${encodeURIComponent(shortP)}?model=openai&seed=42`,{
+          signal:AbortSignal.timeout(60000)
+        });
+        if(!getResp.ok)throw new Error('השרת החינמי עמוס כרגע. נסה שוב בעוד דקה, או הוסף מפתח Groq/Gemini ב"הגדרות מתקדמות".');
+        text=await getResp.text();
+      }else if(!postResp.ok){
+        throw new Error(`שגיאת Pollinations ${postResp.status} — נסה שוב`);
+      }else{
+        const data=await postResp.json();
+        text=data.choices?.[0]?.message?.content||'';
+      }
       if(!text)throw new Error('תגובת AI ריקה — נסה שוב');
     }
     const m=text.match(/\{[\s\S]*\}/);
