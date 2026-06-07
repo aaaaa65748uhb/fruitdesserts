@@ -1425,13 +1425,13 @@ function ttSaveRecipe(){
 }
 function orderIngredient(name){
   const s=ORDER_STORES.find(x=>x.id===STATE.orderStore)||ORDER_STORES[0];
-  window.open(s.searchUrl+encodeURIComponent(name),'_blank');
+  window.location.href=s.searchUrl+encodeURIComponent(name);
 }
 function orderAll(){
   const tt=STATE.tiktokResult;if(!tt||!tt.ingredients)return;
   const s=ORDER_STORES.find(x=>x.id===STATE.orderStore)||ORDER_STORES[0];
   const q=tt.ingredients.map(i=>i.name||i).join(' ');
-  window.open(s.searchUrl+encodeURIComponent(q),'_blank');
+  window.location.href=s.searchUrl+encodeURIComponent(q);
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
