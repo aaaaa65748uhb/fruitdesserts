@@ -121,6 +121,13 @@ const STORES=[
   {id:'tivTaam',name:'טיב טעם',logo:'🟣',color:'#6B21A8'},
   {id:'haziHinam',name:'חצי חינם',logo:'⚫',color:'#1F2937'},
 ];
+const ORDER_STORES=[
+  {id:'wolt',     name:'Wolt Market', color:'#009DE0', bg:'#E0F4FF', searchUrl:'https://wolt.com/he/isr/search?q='},
+  {id:'shufersal',name:'שופרסל',      color:'#003DA5', bg:'#EEF2FF', searchUrl:'https://www.shufersal.co.il/online/he/search?q='},
+  {id:'ramiLevy', name:'רמי לוי',     color:'#CC4400', bg:'#FFF0E6', searchUrl:'https://www.rami-levy.co.il/he/online/market/search?q='},
+  {id:'carrefour',name:'קרפור',       color:'#E31E24', bg:'#FFF0F0', searchUrl:'https://www.carrefour.co.il/Search?q='},
+  {id:'osherAd',  name:'אושר עד',     color:'#00843D', bg:'#E6F5ED', searchUrl:'https://www.osherad.co.il/search?q='},
+];
 const PRODUCTS=[
   // ─── חלב וגבינות ───
   {id:'1',barcode:'7290000066614',name:'חלב תנובה 3%',brand:'תנובה',cat:'חלב וגבינות',w:1000,unit:'מ"ל',img:'🥛',kosher:'חלק',cal:61,prices:{shufersal:7.20,ramiLevy:6.40,yochananof:6.90,victory:6.80,carrefour:7.10,osherAd:6.50,tivTaam:6.90,haziHinam:6.30}},
@@ -251,6 +258,7 @@ let STATE={
   ttStep:'',
   ttError:null,
   savedRecipes:[],
+  orderStore:'wolt',
 };
 
 function getP(pid){return PRODUCTS.find(p=>p.id===pid)||(STATE.externalProducts&&STATE.externalProducts[pid])}
@@ -937,9 +945,22 @@ function renderTikTok(){
       ${ttr.nutrition?`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;margin-bottom:.75rem">
         ${[['🔥','קל׳',ttr.nutrition.calories],['💪','חלבון',ttr.nutrition.protein],['🌾','פחמ׳',ttr.nutrition.carbs],['🥑','שומן',ttr.nutrition.fat]].map(([e,l,v])=>`<div style="background:#F9FAFB;border-radius:8px;padding:.4rem;text-align:center"><div style="font-size:.88rem;font-weight:800">${v||'—'}</div><div style="font-size:.62rem;color:#6b7280">${e} ${l}</div></div>`).join('')}
       </div>`:''}
-      <div style="display:flex;gap:.5rem">
+      <div style="display:flex;gap:.5rem;margin-bottom:.65rem">
         <button onclick="ttAddToShopping()" style="flex:1;padding:.65rem;border-radius:10px;border:none;background:#DCFCE7;color:#16A34A;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer">🛒 הוסף לקניות</button>
         <button onclick="ttSaveRecipe()" style="flex:1;padding:.65rem;border-radius:10px;border:none;background:linear-gradient(135deg,#1a1a2e,#4F46E5);color:#fff;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer">💾 שמור</button>
+      </div>
+      <div style="border-top:1px solid #F3F4F6;padding-top:.65rem">
+        <div style="font-size:.8rem;font-weight:800;color:#374151;margin-bottom:.45rem">🛍️ הזמן מוצרים אונליין</div>
+        <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.5rem">
+          ${ORDER_STORES.map(s=>`<button onclick="STATE.orderStore='${s.id}';renderPage('tiktok')" style="padding:.32rem .65rem;border-radius:20px;border:2px solid ${STATE.orderStore===s.id?s.color:'#E5E7EB'};background:${STATE.orderStore===s.id?s.bg:'#fff'};color:${STATE.orderStore===s.id?s.color:'#6b7280'};font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s">${s.name}</button>`).join('')}
+        </div>
+        <div style="font-size:.72rem;color:#6b7280;margin-bottom:.35rem">לחץ על מרכיב לחיפוש בחנות שנבחרה:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem">
+          ${ttr.ingredients.map(i=>{const nm=i.name||String(i);const amt=i.amount?(` ${i.amount}${i.unit?' '+i.unit:''}`):'';return`<button onclick="orderIngredient(this.dataset.n)" data-n="${h(nm)}" style="background:#F3F4F6;border:1.5px solid transparent;border-radius:20px;padding:.28rem .65rem;font-size:.75rem;cursor:pointer;font-family:inherit;color:#374151" onmouseover="this.style.borderColor='#009DE0'" onmouseout="this.style.borderColor='transparent'">${h(nm)}${h(amt)}</button>`;}).join('')}
+        </div>
+        <div style="margin-top:.45rem;display:flex;gap:.3rem">
+          <button onclick="orderAll()" style="flex:1;padding:.55rem;border-radius:10px;border:none;background:${(ORDER_STORES.find(s=>s.id===STATE.orderStore)||ORDER_STORES[0]).color};color:#fff;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🛒 הזמן הכל מ-${(ORDER_STORES.find(s=>s.id===STATE.orderStore)||ORDER_STORES[0]).name}</button>
+        </div>
       </div>
     </div>`:''}
 
@@ -1401,6 +1422,16 @@ function ttSaveRecipe(){
   if(!STATE.savedRecipes)STATE.savedRecipes=[];
   STATE.savedRecipes.push({...tt,id:'sr'+Date.now()});
   save();alert('✓ המתכון נשמר!');
+}
+function orderIngredient(name){
+  const s=ORDER_STORES.find(x=>x.id===STATE.orderStore)||ORDER_STORES[0];
+  window.open(s.searchUrl+encodeURIComponent(name),'_blank');
+}
+function orderAll(){
+  const tt=STATE.tiktokResult;if(!tt||!tt.ingredients)return;
+  const s=ORDER_STORES.find(x=>x.id===STATE.orderStore)||ORDER_STORES[0];
+  const q=tt.ingredients.map(i=>i.name||i).join(' ');
+  window.open(s.searchUrl+encodeURIComponent(q),'_blank');
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
