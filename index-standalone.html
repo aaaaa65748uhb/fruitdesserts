@@ -950,16 +950,16 @@ function renderTikTok(){
         <button onclick="ttSaveRecipe()" style="flex:1;padding:.65rem;border-radius:10px;border:none;background:linear-gradient(135deg,#1a1a2e,#4F46E5);color:#fff;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer">💾 שמור</button>
       </div>
       <div style="border-top:1px solid #F3F4F6;padding-top:.65rem">
-        <div style="font-size:.8rem;font-weight:800;color:#374151;margin-bottom:.45rem">🛍️ הזמן מוצרים אונליין</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem">
+          <div style="font-size:.8rem;font-weight:800;color:#374151">🛍️ הזמן מוצרים אונליין</div>
+          <button onclick="shareShoppingList()" style="font-size:.72rem;background:#DCFCE7;color:#16A34A;border:none;padding:.25rem .65rem;border-radius:999px;cursor:pointer;font-family:inherit;font-weight:700">📋 וואטסאפ</button>
+        </div>
         <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.5rem">
-          ${ORDER_STORES.map(s=>`<button onclick="STATE.orderStore='${s.id}';renderPage('tiktok')" style="padding:.32rem .65rem;border-radius:20px;border:2px solid ${STATE.orderStore===s.id?s.color:'#E5E7EB'};background:${STATE.orderStore===s.id?s.bg:'#fff'};color:${STATE.orderStore===s.id?s.color:'#6b7280'};font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s">${s.name}</button>`).join('')}
+          ${ORDER_STORES.map(s=>`<button onclick="STATE.orderStore='${s.id}';renderPage('tiktok')" style="padding:.32rem .65rem;border-radius:20px;border:2px solid ${STATE.orderStore===s.id?s.color:'#E5E7EB'};background:${STATE.orderStore===s.id?s.bg:'#fff'};color:${STATE.orderStore===s.id?s.color:'#6b7280'};font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit">${s.name}</button>`).join('')}
         </div>
-        <div style="font-size:.72rem;color:#6b7280;margin-bottom:.35rem">לחץ על מרכיב לחיפוש בחנות שנבחרה:</div>
-        <div style="display:flex;flex-wrap:wrap;gap:.3rem">
-          ${ttr.ingredients.map(i=>{const nm=i.name||String(i);const amt=i.amount?(` ${i.amount}${i.unit?' '+i.unit:''}`):'';return`<button onclick="orderIngredient(this.dataset.n)" data-n="${h(nm)}" style="background:#F3F4F6;border:1.5px solid transparent;border-radius:20px;padding:.28rem .65rem;font-size:.75rem;cursor:pointer;font-family:inherit;color:#374151" onmouseover="this.style.borderColor='#009DE0'" onmouseout="this.style.borderColor='transparent'">${h(nm)}${h(amt)}</button>`;}).join('')}
-        </div>
-        <div style="margin-top:.45rem;display:flex;gap:.3rem">
-          <button onclick="orderAll()" style="flex:1;padding:.55rem;border-radius:10px;border:none;background:${(ORDER_STORES.find(s=>s.id===STATE.orderStore)||ORDER_STORES[0]).color};color:#fff;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🛒 הזמן הכל מ-${(ORDER_STORES.find(s=>s.id===STATE.orderStore)||ORDER_STORES[0]).name}</button>
+        <div style="font-size:.7rem;color:#9ca3af;margin-bottom:.4rem">לחץ על מוצר → נפתח חיפוש בחנות → הוסף לסל</div>
+        <div style="display:flex;flex-direction:column;gap:.25rem">
+          ${ttr.ingredients.map(i=>{const nm=i.name||String(i);const amt=i.amount?`${i.amount}${i.unit?' '+i.unit:''}`:'';const sc=ORDER_STORES.find(s=>s.id===STATE.orderStore)||ORDER_STORES[0];return`<button onclick="orderIngredient(this.dataset.n)" data-n="${h(nm)}" style="display:flex;align-items:center;justify-content:space-between;background:#F9FAFB;border:1.5px solid #E5E7EB;border-radius:10px;padding:.45rem .75rem;cursor:pointer;font-family:inherit;width:100%;text-align:right" onmouseover="this.style.background='${sc.bg}';this.style.borderColor='${sc.color}'" onmouseout="this.style.background='#F9FAFB';this.style.borderColor='#E5E7EB'"><span style="font-size:.82rem;font-weight:600;color:#1f2937">${h(nm)}</span><div style="display:flex;align-items:center;gap:.5rem">${amt?`<span style="font-size:.72rem;color:#6b7280;background:#fff;padding:.1rem .4rem;border-radius:6px;border:1px solid #e5e7eb">${h(amt)}</span>`:''}<span style="font-size:.75rem;color:${sc.color};font-weight:700">→ ${sc.name}</span></div></button>`;}).join('')}
         </div>
       </div>
     </div>`:''}
@@ -1452,6 +1452,16 @@ function orderAll(){
   const s=ORDER_STORES.find(x=>x.id===STATE.orderStore)||ORDER_STORES[0];
   const q=tt.ingredients.map(i=>i.name||i).join(' ');
   window.location.href=s.searchUrl+encodeURIComponent(q);
+}
+function shareShoppingList(){
+  const tt=STATE.tiktokResult;if(!tt||!tt.ingredients)return;
+  const list=tt.ingredients.map(i=>{
+    const amt=i.amount?` - ${i.amount}${i.unit?' '+i.unit:''}`:''
+    return `• ${i.name||i}${amt}`;
+  }).join('\n');
+  const text=`🛒 מצרכים למתכון: ${tt.name}\n\n${list}`;
+  if(navigator.share){navigator.share({text});}
+  else{window.location.href=`whatsapp://send?text=${encodeURIComponent(text)}`;}
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
