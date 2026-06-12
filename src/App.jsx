@@ -9,6 +9,7 @@ import ShoppingPage from './pages/ShoppingPage'
 import PricesPage from './pages/PricesPage'
 import TikTokPage from './pages/TikTokPage'
 import StatsPage from './pages/StatsPage'
+import ChefTok from './pages/ChefTok'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/prices" element={<PricesPage />} />
           <Route path="/tiktok" element={<TikTokPage />} />
           <Route path="/stats" element={<StatsPage />} />
+          <Route path="/cheftok" element={<ChefTok />} />
         </Routes>
         <BottomNav />
       </div>
