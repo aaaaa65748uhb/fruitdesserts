@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "claude/fridgetok-smart-fridge-zh6qv"
+      - "claude/cheftok-cooking-assistant-je9tpi"
       - main
   workflow_dispatch:
 
