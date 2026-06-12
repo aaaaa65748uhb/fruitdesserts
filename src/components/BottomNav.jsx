@@ -6,6 +6,7 @@ const navItems = [
   { to: '/fridge', label: 'מקרר', icon: '🧊' },
   { to: '/scanner', label: 'סריקה', icon: '📷' },
   { to: '/recipes', label: 'מתכונים', icon: '🍳' },
+  { to: '/cheftok', label: 'שף', icon: '🧑‍🍳' },
   { to: '/shopping', label: 'קניות', icon: '🛒' },
   { to: '/prices', label: 'מחירים', icon: '💰' },
 ]
