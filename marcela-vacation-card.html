@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>למרסלה היקרה – ברכת חופשה</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&family=Suez+One&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: #0a3d5c;
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+
+  .card {
+    width: 800px;
+    max-width: 100%;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.35);
+    background: #fffdf7;
+  }
+
+  /* ===== Hero: sky, sea, sun, beach ===== */
+  .hero {
+    position: relative;
+    height: 320px;
+    background:
+      linear-gradient(180deg,
+        #7ec8e3 0%,
+        #aee3f5 28%,
+        #ffe39a 42%,
+        #ffd166 50%,
+        #2bb6c4 52%,
+        #1aa0b5 70%,
+        #f6e2b3 86%,
+        #f3d99a 100%);
+    overflow: hidden;
+  }
+
+  .sun {
+    position: absolute;
+    top: 48px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%, #fff6d6 0%, #ffd84d 55%, #ffbf3c 100%);
+    box-shadow: 0 0 60px 20px rgba(255,214,77,0.6);
+  }
+
+  .wave {
+    position: absolute;
+    left: 0; width: 100%;
+    height: 40px;
+    opacity: 0.55;
+  }
+  .wave svg { display: block; width: 100%; height: 100%; }
+
+  /* palm trees */
+  .palm {
+    position: absolute;
+    bottom: 14px;
+    font-size: 90px;
+    line-height: 1;
+    filter: drop-shadow(0 6px 6px rgba(0,0,0,0.2));
+  }
+  .palm.left  { right: 28px; }
+  .palm.right { left: 28px; transform: scaleX(-1); }
+
+  .beach-icons {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 46px;
+    letter-spacing: 14px;
+    text-shadow: 0 4px 6px rgba(0,0,0,0.15);
+  }
+
+  .hero-title {
+    position: absolute;
+    top: 150px;
+    width: 100%;
+    text-align: center;
+    font-family: 'Suez One', serif;
+    color: #fff;
+    font-size: 34px;
+    text-shadow: 0 3px 10px rgba(0,80,110,0.55);
+    padding: 0 24px;
+  }
+
+  /* ===== Body ===== */
+  .body {
+    padding: 36px 44px 12px;
+    color: #2a4a57;
+    line-height: 1.85;
+    font-size: 17px;
+  }
+
+  .greet {
+    font-weight: 800;
+    font-size: 22px;
+    color: #e8772e;
+    margin-bottom: 14px;
+  }
+
+  .body p { margin-bottom: 16px; }
+
+  .highlight {
+    font-weight: 700;
+    color: #0a8aa0;
+  }
+
+  /* ===== Poem block ===== */
+  .poem {
+    margin: 8px 44px 28px;
+    padding: 26px 28px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #d8f3f7 0%, #fff4d6 100%);
+    border: 2px dashed #2bb6c4;
+    text-align: center;
+    position: relative;
+  }
+  .poem .badge {
+    font-size: 22px;
+    font-weight: 900;
+    color: #e8772e;
+    margin-bottom: 14px;
+  }
+  .poem .lines {
+    font-family: 'Suez One', serif;
+    color: #0a5a6b;
+    font-size: 19px;
+    line-height: 2.1;
+  }
+
+  /* ===== Footer ===== */
+  .footer {
+    text-align: center;
+    padding: 6px 44px 40px;
+    color: #2a4a57;
+  }
+  .footer .thanks {
+    font-size: 17px;
+    line-height: 1.85;
+    margin-bottom: 22px;
+  }
+  .footer .send-off {
+    font-weight: 700;
+    color: #0a8aa0;
+    font-size: 18px;
+    margin-bottom: 24px;
+  }
+  .sign {
+    display: inline-block;
+    background: linear-gradient(135deg, #ffd166, #ff9e57);
+    color: #6b3a12;
+    font-weight: 800;
+    font-size: 19px;
+    padding: 14px 34px;
+    border-radius: 50px;
+    box-shadow: 0 10px 24px rgba(255,158,87,0.4);
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+
+    <div class="hero">
+      <div class="sun"></div>
+      <div class="wave" style="bottom:70px">
+        <svg viewBox="0 0 1200 40" preserveAspectRatio="none"><path d="M0,20 C150,40 300,0 450,20 C600,40 750,0 900,20 C1050,40 1200,10 1200,20 L1200,40 L0,40 Z" fill="#ffffff"/></svg>
+      </div>
+      <div class="wave" style="bottom:40px">
+        <svg viewBox="0 0 1200 40" preserveAspectRatio="none"><path d="M0,20 C150,0 300,40 450,20 C600,0 750,40 900,20 C1050,0 1200,30 1200,20 L1200,40 L0,40 Z" fill="#ffffff"/></svg>
+      </div>
+      <div class="palm left">🌴</div>
+      <div class="palm right">🌴</div>
+      <div class="hero-title">למרסלה היקרה<br>הלב והמנוע של בית הספר ❤️</div>
+      <div class="beach-icons">🏖️ ⛱️ 🐚 🌊 ☀️</div>
+    </div>
+
+    <div class="body">
+      <p class="greet">מרסלה יקרה,</p>
+      <p>אם היו מבקשים מאיתנו להגדיר מהי <span class="highlight">מנהלת מערכת</span> בשתי מילים, היינו אומרים בלי להסס: <span class="highlight">מרסלה אחת</span>.</p>
+      <p>בתוך כל השינויים הבלתי פוסקים, הלו"זים שמתהפכים בדקה ה־90 והמורכבות שמלווה את ימי השגרה – את תמיד מצליחה להיות העוגן הכי יציב, רגוע ומחבק שלנו. את האחת שכל אחד ואחת בצוות ובבית הספר יודעים שאפשר לסמוך עליה בעיניים עצומות. ולכולם ברור: אם מרסלה לא תפתור את הפלונטר, כנראה שרק נס גלוי מהשמיים יציל את המצב.</p>
+      <p>האישיות הססגונית והאנרגטית שלך פשוט מדבקת! הדאגה האמיתית והעמוקה שלך לכל פרט ופרט הופכת את המקום האינטנסיבי הזה לבית חם, אנושי ומלא בצבע ובשמחה. את משקיענית בצורה יוצאת דופן – ואחרי אינספור שעות של נתינה, הגיע הזמן שהמערכת תסתדר קצת בלעדייך (או פשוט תקרוס בשקט, מה שיבוא קודם...), בזמן שאת יוצאת לנשום אוויר צח ולנקות את הראש.</p>
+    </div>
+
+    <div class="poem">
+      <div class="badge">🎯 זמן חופשה!</div>
+      <div class="lines">
+        זֶהוּ הַזְּמַן הַמֻּשְׁלָם לִנְפֹּשׁ,<br>
+        לָתֵת מְנוּחָה לָאֶקְסֶל וְלָרֹאשׁ!<br>
+        לִסְגֹּר תָּאִים, נוּסְחָאוֹת וּמַסָּכִים,<br>
+        וְלִבְהוֹת קְצָת בִּנְהָרוֹת וּבַדְּרָכִים.<br>
+        לְמַלֵּא מַצְבֵּרִים, לֵהָנוֹת וְלִשְׂמֹחַ,<br>
+        כִּי גַּם לַמָּנוֹעַ שֶׁל בֵּית הַסֵּפֶר מַגִּיעַ קְצָת כֹּחַ!
+      </div>
+    </div>
+
+    <div class="footer">
+      <p class="thanks">תודה ענקית על הלב הרחב, על האוזן הקשבת ועל זה שאת תמיד – אבל תמיד – שם בשבילנו.</p>
+      <p class="send-off">צאי לחופש, תיהני מכל רגע, תנפשי מול נופים מטורפים כמו בתמונה ותספגי המון רוגע! 🌅</p>
+      <div class="sign">באהבה ענקית, בחיוך רחב ובהערכה אינסופית — רינת ואייל ❤️</div>
+    </div>
+
+  </div>
+</body>
+</html>
