@@ -1,0 +1,23 @@
+rules_version = '2';
+
+// אחסון קבצים (תמונות מוצרים): קריאה ציבורית, העלאה ומחיקה — Admin בלבד.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'aecake273@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,89 @@
+rules_version = '2';
+
+// חוקי האבטחה של Squidget — שכבת ההגנה האמיתית על הנתונים.
+// Admin יחיד מזוהה לפי אימייל חשבון Google מאומת.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'aecake273@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    // מוצרים: קריאה חופשית לכולם; ניהול מלא רק ל-Admin.
+    // חריגה יחידה: עדכון שמוריד את המלאי בלבד (רכישה בצד לקוח).
+    match /products/{productId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock'])
+        && request.resource.data.stock is int
+        && request.resource.data.stock >= 0
+        && request.resource.data.stock < resource.data.stock
+      );
+    }
+
+    // הזמנות: יצירה עם ולידציית שדות; קריאה לבעל ההזמנה או ל-Admin;
+    // עדכון סטטוס ומעקב — Admin בלבד.
+    match /orders/{orderId} {
+      allow create: if
+        request.resource.data.keys().hasAll([
+          'orderNumber', 'customer', 'items', 'subtotal', 'discount', 'couponCode',
+          'shippingMethod', 'shippingCost', 'total', 'paymentMethod', 'status',
+          'trackingId', 'uid', 'createdAt'
+        ])
+        && request.resource.data.orderNumber is string
+        && request.resource.data.customer.fullName is string
+        && request.resource.data.customer.email is string
+        && request.resource.data.customer.phone is string
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.total is number
+        && request.resource.data.total >= 0
+        && request.resource.data.status == 'חדש'
+        && request.resource.data.trackingId == null
+        && (request.resource.data.uid == null
+            || (request.auth != null && request.resource.data.uid == request.auth.uid));
+      allow read: if isAdmin()
+        || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    // לקוחות: כתיבה במסגרת checkout (upsert של סיכומי רכישות); קריאה — Admin בלבד.
+    match /customers/{email} {
+      allow read: if isAdmin();
+      allow create: if
+        request.resource.data.keys().hasAll([
+          'fullName', 'email', 'phone', 'ordersCount', 'totalSpent', 'lastOrderAt', 'createdAt'
+        ])
+        && request.resource.data.email == email
+        && request.resource.data.ordersCount == 1;
+      allow update: if isAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'fullName', 'phone', 'ordersCount', 'totalSpent', 'lastOrderAt'
+        ])
+        && request.resource.data.ordersCount == resource.data.ordersCount + 1
+        && request.resource.data.totalSpent >= resource.data.totalSpent
+      );
+      allow delete: if isAdmin();
+    }
+
+    // יומן מלאי: רישום תנועה בעת רכישה; קריאה — Admin בלבד.
+    match /inventory/{movementId} {
+      allow read: if isAdmin();
+      allow create: if
+        request.resource.data.keys().hasAll([
+          'productId', 'productName', 'change', 'reason', 'orderNumber', 'createdAt'
+        ])
+        && request.resource.data.change is int
+        && request.resource.data.change < 0;
+      allow update, delete: if isAdmin();
+    }
+
+    // כל אוסף אחר — חסום.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

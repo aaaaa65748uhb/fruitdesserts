@@ -1,10 +1,8 @@
-name: Deploy FridgeTok to GitHub Pages
+name: פריסה ל-GitHub Pages
 
 on:
   push:
-    branches:
-      - "claude/fridgetok-smart-fridge-zh6qv"
-      - main
+    branches: [main, claude/squidget-ecommerce-build-95v5q6]
   workflow_dispatch:
 
 permissions:
@@ -17,23 +15,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: התקנת תלויות
+        run: npm ci
+      - name: בנייה (export סטטי)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
   deploy:
+    needs: build
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: "."
-
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4

@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-squid-cream text-squid-ink font-body antialiased;
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-l from-squid-pink to-squid-purple px-6 py-3 font-display font-bold text-white shadow-soft-pink transition-all duration-200 hover:scale-105 hover:shadow-soft active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border-2 border-squid-purple bg-white px-6 py-3 font-display font-bold text-squid-purple-dark transition-all duration-200 hover:bg-squid-purple-light/40 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .card {
+    @apply rounded-squish bg-white shadow-soft;
+  }
+
+  .input-field {
+    @apply w-full rounded-2xl border-2 border-squid-purple-light bg-white px-4 py-3 text-squid-ink outline-none transition-colors placeholder:text-squid-ink/40 focus:border-squid-purple;
+  }
+
+  .input-error {
+    @apply border-squid-pink-dark;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold;
+  }
+
+  .admin-table {
+    @apply w-full text-right text-sm;
+  }
+
+  .admin-table th {
+    @apply whitespace-nowrap border-b-2 border-squid-purple-light bg-squid-purple-light/30 px-4 py-3 font-display font-bold text-squid-ink;
+  }
+
+  .admin-table td {
+    @apply border-b border-squid-purple-light/40 px-4 py-3 align-middle;
+  }
+}
+
+/* פס גלילה עדין בגוני המותג */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #fff9fc;
+}
+::-webkit-scrollbar-thumb {
+  background: #e9d5ff;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a78bfa;
+}
+
+/* עמוד תווית משלוח — הדפסה נקייה */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+}
