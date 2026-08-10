@@ -1,3 +1,9 @@
 node_modules/
 dist/
 .env
+recipelens/node_modules/
+recipelens/web/dist/
+recipelens/server/data/
+recipelens/e2e/screenshots/
+recipelens/e2e/.tmp/
+recipelens/.env

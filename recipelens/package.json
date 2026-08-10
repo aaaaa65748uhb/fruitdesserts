@@ -1,0 +1,34 @@
+{
+  "name": "recipelens",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm --workspace server run dev",
+    "dev:web": "npm --workspace web run dev",
+    "build": "npm --workspace web run build",
+    "start": "npm --workspace server run start",
+    "typecheck": "npm --workspace server run typecheck && npm --workspace web run typecheck",
+    "lint": "eslint .",
+    "test": "npm --workspace server run test && npm --workspace web run test",
+    "test:server": "npm --workspace server run test",
+    "test:web": "npm --workspace web run test",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "e2e": "node e2e/journey.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "concurrently": "^9.1.0",
+    "eslint": "^9.17.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "globals": "^15.14.0",
+    "playwright": "^1.62.1",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1"
+  }
+}
