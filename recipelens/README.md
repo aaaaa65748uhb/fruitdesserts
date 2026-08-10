@@ -157,7 +157,7 @@ Preferences; browsers keep using the HttpOnly cookie.
 ```bash
 npm run typecheck    # tsc --noEmit, server + web
 npm run lint         # eslint, flat config
-npm run test         # vitest: server (128) + web (16)
+npm run test         # vitest: server (128) + web (21)
 npm run build        # production client build
 npm run verify       # all of the above, in order
 npm run e2e          # Chromium journey against the real stack (needs `npm run build` first)
