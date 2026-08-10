@@ -12,8 +12,9 @@ import { CollectionRepo } from './db/collections.js';
 import { ShoppingRepo } from './db/shopping.js';
 import { CookingRepo } from './db/cooking.js';
 import { AnalysisRepo } from './db/analyses.js';
+import { ProgressTracker } from './lib/progress.js';
 import { RecipeAIService } from './ai/RecipeAIService.js';
-import { OpenAICompatibleProvider } from './ai/providers/OpenAICompatibleProvider.js';
+import { createProvider } from './ai/providers/factory.js';
 import type { AIProvider } from './ai/providers/AIProvider.js';
 
 export interface AppContext {
@@ -25,6 +26,8 @@ export interface AppContext {
   shopping: ShoppingRepo;
   cooking: CookingRepo;
   analyses: AnalysisRepo;
+  /** Live import progress, keyed by the client's request id. */
+  progress: ProgressTracker;
   /** Null when the server has no AI credentials — routes answer 503. */
   ai: RecipeAIService | null;
   /** Reason the AI is unavailable, safe to show to an operator. */
@@ -50,17 +53,19 @@ export function createContext(options: CreateContextOptions): AppContext {
   let ai: RecipeAIService | null = null;
   let aiDisabledReason: string | null = config.ai.disabledReason;
 
-  const provider =
-    options.provider !== undefined
-      ? options.provider
-      : config.ai.configured
-        ? new OpenAICompatibleProvider({
-            apiKey: config.ai.apiKey!,
-            baseUrl: config.ai.baseUrl,
-            model: config.ai.model,
-            timeoutMs: config.ai.timeoutMs,
-          })
-        : null;
+  let provider: AIProvider | null = null;
+  if (options.provider !== undefined) {
+    provider = options.provider;
+  } else if (config.ai.configured) {
+    try {
+      provider = createProvider(config.ai, options.fetchImpl);
+    } catch (error) {
+      // A bad AI_PROVIDER value must not stop the server: the rest of the app
+      // keeps working and the AI routes report the configuration problem.
+      provider = null;
+      aiDisabledReason = error instanceof Error ? error.message : 'The AI provider could not be created.';
+    }
+  }
 
   if (provider) {
     ai = new RecipeAIService(provider, { maxRetries: config.ai.maxRetries });
@@ -76,6 +81,7 @@ export function createContext(options: CreateContextOptions): AppContext {
     shopping: new ShoppingRepo(db),
     cooking: new CookingRepo(db),
     analyses: new AnalysisRepo(db),
+    progress: new ProgressTracker(),
     ai,
     aiDisabledReason,
     allowPrivateNetworkFetch: options.allowPrivateNetworkFetch ?? config.isTest,

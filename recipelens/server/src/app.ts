@@ -13,6 +13,7 @@ import { shoppingRoutes } from './routes/shopping.js';
 import { collectionRoutes } from './routes/collections.js';
 import { cookingRoutes } from './routes/cooking.js';
 import { importRoutes } from './routes/import.js';
+import { assistRoutes } from './routes/assist.js';
 
 export function createApp(ctx: AppContext): Express {
   const app = express();
@@ -41,6 +42,7 @@ export function createApp(ctx: AppContext): Express {
       status: database === 'ok' ? 'ok' : 'degraded',
       database,
       ai: { configured: Boolean(ctx.ai), provider: ctx.ai?.providerName ?? null, model: ctx.ai?.model ?? null },
+      google: { configured: ctx.config.google.configured },
       version: '1.0.0',
     });
   });
@@ -51,6 +53,7 @@ export function createApp(ctx: AppContext): Express {
   app.use('/api/collections', collectionRoutes());
   app.use('/api/cooking', cookingRoutes());
   app.use('/api/import', importRoutes());
+  app.use('/api/assist', assistRoutes());
 
   serveWebClient(app);
 
@@ -74,7 +77,18 @@ function serveWebClient(app: Express): void {
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+      [
+        "default-src 'self'",
+        "img-src 'self' data: https:",
+        "style-src 'self' 'unsafe-inline'",
+        // Google Identity Services is loaded only when Google sign-in is configured.
+        "script-src 'self' https://accounts.google.com",
+        "connect-src 'self' https://accounts.google.com",
+        "frame-src https://accounts.google.com",
+        "frame-ancestors 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+      ].join('; '),
     );
   };
 

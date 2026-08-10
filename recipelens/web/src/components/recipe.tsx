@@ -1,4 +1,4 @@
-import { Clock, Heart, Sparkles, Users, Utensils } from 'lucide-react';
+import { Clock, Heart, Repeat, Sparkles, Users, Utensils } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { RecipeListItem } from '../lib/api.js';
 import type { ScaledIngredient } from '../shared.js';
@@ -81,7 +81,7 @@ export function ConfirmedBadge() {
   return <span className="badge bg-emerald-100 text-emerald-800">Confirmed</span>;
 }
 
-export function IngredientLine({ ingredient }: { ingredient: ScaledIngredient }) {
+export function IngredientLine({ ingredient, onReplace }: { ingredient: ScaledIngredient; onReplace?: () => void }) {
   return (
     <li className="flex items-start justify-between gap-3 border-b border-neutral-100 py-2 last:border-0">
       <div className="min-w-0">
@@ -95,9 +95,20 @@ export function IngredientLine({ ingredient }: { ingredient: ScaledIngredient })
           ) : null}
         </div>
       </div>
-      <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-neutral-900">
-        {ingredient.displayText || '—'}
-      </span>
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="whitespace-nowrap font-semibold tabular-nums text-neutral-900">{ingredient.displayText || '—'}</span>
+        {onReplace ? (
+          <button
+            type="button"
+            className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600"
+            aria-label={`Replace ${ingredient.name}`}
+            title="Suggest a replacement"
+            onClick={onReplace}
+          >
+            <Repeat className="h-4 w-4" aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
     </li>
   );
 }

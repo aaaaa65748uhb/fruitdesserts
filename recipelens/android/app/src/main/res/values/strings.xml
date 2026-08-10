@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">RecipeLens</string>
+    <string name="title_activity_main">RecipeLens</string>
+    <string name="package_name">com.recipelens.app</string>
+    <string name="custom_url_scheme">com.recipelens.app</string>
+    <string name="share_target_label">Turn into a recipe</string>
+</resources>

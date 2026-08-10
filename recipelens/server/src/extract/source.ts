@@ -39,6 +39,52 @@ export function detectPlatform(url: URL): Platform {
   return 'web';
 }
 
+/**
+ * Tracking parameters that change per share but not the content. Removing them
+ * makes the analysis cache hit when the same video is shared twice.
+ */
+const TRACKING_PARAMS = [
+  'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+  'igshid', 'igsh', 'si', '_r', '_t', 'is_from_webapp', 'sender_device',
+  'web_id', 'fbclid', 'gclid', 'share_app_id', 'share_link_id', 'feature',
+];
+
+export function canonicalizeUrl(url: URL): URL {
+  const copy = new URL(url.toString());
+  for (const param of TRACKING_PARAMS) copy.searchParams.delete(param);
+  copy.hash = '';
+  return copy;
+}
+
+/**
+ * What a user can do when a platform will not hand over enough information.
+ * These are honest fallbacks — RecipeLens never works around access controls.
+ */
+export function platformGuidance(platform: Platform): { note: string; recovery: string[] } {
+  const common = ['Upload a screenshot of the recipe', 'Paste the recipe text', 'Upload the video'];
+  switch (platform) {
+    case 'tiktok':
+      return {
+        note: 'TikTok only exposes the title and thumbnail to other apps — the audio and on-screen text are not available.',
+        recovery: ['Copy the video caption into the text tab', ...common],
+      };
+    case 'instagram':
+      return {
+        note: 'Instagram requires a login for Reel content, so only public preview data can be read.',
+        recovery: ['Copy the Reel caption into the text tab', ...common],
+      };
+    case 'youtube':
+      return {
+        note: 'YouTube exposes the title and description; captions are only available through its own APIs.',
+        recovery: ['Copy the video description into the text tab', ...common],
+      };
+    case 'facebook':
+      return { note: 'Facebook restricts video content to logged-in users.', recovery: common };
+    default:
+      return { note: 'This page did not contain enough recipe information.', recovery: common };
+  }
+}
+
 const OEMBED_ENDPOINTS: Partial<Record<Platform, (url: string) => string>> = {
   tiktok: (url) => `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`,
   youtube: (url) => `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`,
@@ -52,7 +98,7 @@ interface OEmbedResponse {
 }
 
 export async function extractFromUrl(rawUrl: string, options: FetchTextOptions = {}): Promise<SourceExtraction> {
-  const url = parseHttpUrl(rawUrl);
+  const url = canonicalizeUrl(parseHttpUrl(rawUrl));
   const platform = detectPlatform(url);
   const warnings: string[] = [];
 
@@ -120,10 +166,8 @@ export async function extractFromUrl(rawUrl: string, options: FetchTextOptions =
     }
   }
 
-  if (platform === 'tiktok' || platform === 'instagram' || platform === 'facebook') {
-    warnings.push(
-      'Social video pages do not expose the spoken audio to third parties — the recipe is reconstructed from the caption and page metadata only.',
-    );
+  if (platform !== 'web') {
+    warnings.push(platformGuidance(platform).note);
   }
 
   return result;

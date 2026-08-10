@@ -1,6 +1,9 @@
 /**
  * Provider abstraction. RecipeLens talks only to this interface, so swapping
  * or adding a vendor means adding one file — nothing else changes.
+ *
+ * Implementations live next to this file: OpenAIProvider, AnthropicProvider,
+ * GeminiProvider. All of them run server-side only.
  */
 
 export interface AnalyzeRecipeInput {
@@ -25,6 +28,18 @@ export interface AnalyzeRecipeInput {
   images?: string[];
   /** Locale hint for the answer, e.g. "en" or "he". */
   language?: string | null;
+}
+
+/** A single request to the model: system rules + user material. */
+export interface CompletionRequest {
+  system: string;
+  user: string;
+  /** data: URLs; ignored by providers/models without vision. */
+  images?: string[];
+  /** Ask the provider for strict JSON where the API supports it. */
+  json?: boolean;
+  temperature?: number;
+  maxTokens?: number;
 }
 
 export interface AIProviderResult {
@@ -60,5 +75,31 @@ export interface AnalyzeOptions {
 export interface AIProvider {
   readonly name: string;
   readonly model: string;
+  /** Recipe extraction from whatever the source made available. */
   analyzeRecipe(input: AnalyzeRecipeInput, options?: AnalyzeOptions): Promise<AIProviderResult>;
+  /** Every other recipe AI task (nutrition, substitutions, chat, …). */
+  complete(request: CompletionRequest, options?: AnalyzeOptions): Promise<AIProviderResult>;
+}
+
+export interface ProviderOptions {
+  apiKey: string;
+  baseUrl?: string;
+  model: string;
+  timeoutMs: number;
+  /** Injectable for tests; defaults to global fetch. */
+  fetchImpl?: typeof fetch;
+  temperature?: number;
+}
+
+/** Parsed `data:` URL, in the shape image APIs need. */
+export interface InlineImage {
+  mediaType: string;
+  base64: string;
+  dataUrl: string;
+}
+
+export function parseDataUrl(dataUrl: string): InlineImage | null {
+  const match = /^data:([a-z]+\/[a-z0-9.+-]+);base64,(.+)$/i.exec(dataUrl.trim());
+  if (!match) return null;
+  return { mediaType: match[1], base64: match[2], dataUrl: dataUrl.trim() };
 }

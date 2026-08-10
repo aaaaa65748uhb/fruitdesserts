@@ -151,4 +151,13 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX idx_cooking_user ON cooking_sessions(user_id, updated_at DESC);
     `,
   },
+  {
+    version: 2,
+    name: 'federated-identity',
+    sql: `
+      ALTER TABLE users ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'password';
+      ALTER TABLE users ADD COLUMN google_sub TEXT;
+      CREATE UNIQUE INDEX idx_users_google_sub ON users(google_sub) WHERE google_sub IS NOT NULL;
+    `,
+  },
 ];

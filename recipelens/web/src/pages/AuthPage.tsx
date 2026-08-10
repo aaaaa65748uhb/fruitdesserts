@@ -2,7 +2,9 @@ import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { BrandMark } from '../components/AppShell.js';
 import { InlineError } from '../components/feedback.js';
-import { ApiError } from '../lib/api.js';
+import { api, ApiError } from '../lib/api.js';
+import { useAsync } from '../lib/useAsync.js';
+import { GoogleSignInButton } from '../components/GoogleSignIn.js';
 import { useAuth } from '../state/AuthContext.js';
 
 interface FieldErrors {
@@ -23,6 +25,8 @@ export function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // Google is offered only when the server can actually verify its tokens.
+  const health = useAsync(() => api.health(), []);
 
   function validate(): boolean {
     const errors: FieldErrors = {};
@@ -123,6 +127,23 @@ export function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
         <button type="submit" className="btn-primary w-full" disabled={pending}>
           {pending ? 'Please wait…' : signingUp ? 'Create account' : 'Sign in'}
         </button>
+
+        {health.data?.google?.configured ? (
+          <>
+            <div className="flex items-center gap-3 text-xs text-neutral-500">
+              <span className="h-px flex-1 bg-neutral-200" />
+              or
+              <span className="h-px flex-1 bg-neutral-200" />
+            </div>
+            <GoogleSignInButton
+              onError={(message) => setFormError(message)}
+              onSignedIn={() => {
+                const from = (location.state as { from?: string } | null)?.from;
+                navigate(from && from !== '/sign-in' ? from : '/', { replace: true });
+              }}
+            />
+          </>
+        ) : null}
 
         <p className="text-center text-sm text-neutral-600">
           {signingUp ? (

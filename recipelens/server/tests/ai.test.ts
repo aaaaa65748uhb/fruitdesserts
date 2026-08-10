@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseJsonLoose } from '../src/ai/json.js';
 import { RecipeAIService } from '../src/ai/RecipeAIService.js';
 import { AIProviderError } from '../src/ai/providers/AIProvider.js';
-import { OpenAICompatibleProvider } from '../src/ai/providers/OpenAICompatibleProvider.js';
+import { OpenAIProvider } from '../src/ai/providers/OpenAIProvider.js';
 
 import { MockProvider, startFixtureServer, validAiJson } from './helpers.js';
 
@@ -158,14 +158,14 @@ describe('RecipeAIService', () => {
   });
 });
 
-describe('OpenAICompatibleProvider (real HTTP round trip)', () => {
+describe('OpenAIProvider (real HTTP round trip)', () => {
   it('sends the key server-side and returns the completion', async () => {
     const fixture = await startFixtureServer((_req, res) => {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ model: 'test-model', choices: [{ message: { content: validAiJson() } }] }));
     });
     try {
-      const provider = new OpenAICompatibleProvider({
+      const provider = new OpenAIProvider({
         apiKey: 'secret-key',
         baseUrl: fixture.url,
         model: 'test-model',
@@ -197,7 +197,7 @@ describe('OpenAICompatibleProvider (real HTTP round trip)', () => {
       res.end(JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }] }));
     });
     try {
-      const provider = new OpenAICompatibleProvider({ apiKey: 'k', baseUrl: fixture.url, model: 'm', timeoutMs: 5000 });
+      const provider = new OpenAIProvider({ apiKey: 'k', baseUrl: fixture.url, model: 'm', timeoutMs: 5000 });
       const result = await provider.analyzeRecipe({ sourceType: 'text', pastedText: 'x'.repeat(60) });
       expect(result.text).toBe('{"ok":true}');
       expect(JSON.parse(fixture.requests[0].body).response_format).toBeDefined();
@@ -219,7 +219,7 @@ describe('OpenAICompatibleProvider (real HTTP round trip)', () => {
         res.end('{"error":{"message":"nope"}}');
       });
       try {
-        const provider = new OpenAICompatibleProvider({ apiKey: 'k', baseUrl: fixture.url, model: 'm', timeoutMs: 5000 });
+        const provider = new OpenAIProvider({ apiKey: 'k', baseUrl: fixture.url, model: 'm', timeoutMs: 5000 });
         await expect(provider.analyzeRecipe({ sourceType: 'text', pastedText: 'x'.repeat(60) })).rejects.toMatchObject({
           code: testCase.code,
         });
@@ -234,7 +234,7 @@ describe('OpenAICompatibleProvider (real HTTP round trip)', () => {
       /* never responds */
     });
     try {
-      const provider = new OpenAICompatibleProvider({ apiKey: 'k', baseUrl: fixture.url, model: 'm', timeoutMs: 150 });
+      const provider = new OpenAIProvider({ apiKey: 'k', baseUrl: fixture.url, model: 'm', timeoutMs: 150 });
       await expect(provider.analyzeRecipe({ sourceType: 'text', pastedText: 'x'.repeat(60) })).rejects.toMatchObject({
         code: 'timeout',
       });
@@ -244,7 +244,7 @@ describe('OpenAICompatibleProvider (real HTTP round trip)', () => {
   });
 
   it('refuses to construct without an API key', () => {
-    expect(() => new OpenAICompatibleProvider({ apiKey: '', baseUrl: 'https://x/v1', model: 'm', timeoutMs: 100 })).toThrow(
+    expect(() => new OpenAIProvider({ apiKey: '', baseUrl: 'https://x/v1', model: 'm', timeoutMs: 100 })).toThrow(
       AIProviderError,
     );
   });

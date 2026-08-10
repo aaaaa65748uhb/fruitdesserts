@@ -1,11 +1,13 @@
+import { randomBytes } from 'node:crypto';
 import { Router } from 'express';
 import { z } from 'zod';
 import { ApiError } from '../lib/errors.js';
 import { hashPassword, verifyPassword } from '../lib/password.js';
 import { toPublicUser } from '../db/users.js';
-import { clearSession, currentUser, issueSession, requireAuth } from '../middleware/auth.js';
+import { clearSession, currentUser, issueSession, requireAuth, wantsToken } from '../middleware/auth.js';
 import { asyncHandler, getContext } from '../middleware/context.js';
 import { rateLimit } from '../middleware/rateLimit.js';
+import { verifyGoogleIdToken } from '../lib/googleIdToken.js';
 
 const emailSchema = z
   .string()
@@ -60,8 +62,8 @@ export function authRoutes(): Router {
         passwordHash,
       });
 
-      issueSession(res, user.id, user.token_version);
-      res.status(201).json({ user: toPublicUser(user) });
+      const token = issueSession(res, user.id, user.token_version);
+      res.status(201).json({ user: toPublicUser(user), ...(wantsToken(req) ? { token } : {}) });
     }),
   );
 
@@ -81,10 +83,65 @@ export function authRoutes(): Router {
         throw new ApiError(401, 'UNAUTHORIZED', 'Invalid email or password.');
       }
 
-      issueSession(res, user.id, user.token_version);
-      res.json({ user: toPublicUser(user) });
+      const token = issueSession(res, user.id, user.token_version);
+      res.json({ user: toPublicUser(user), ...(wantsToken(req) ? { token } : {}) });
     }),
   );
+
+  /**
+   * Google Sign-In. The client (Android or web) obtains an ID token from
+   * Google and posts it here; the server verifies it against Google's keys
+   * before creating or linking an account. No client secret is involved.
+   */
+  router.post(
+    '/google',
+    authLimiter,
+    asyncHandler(async (req, res) => {
+      const ctx = getContext(req);
+      if (!ctx.config.google.configured || !ctx.config.google.clientId) {
+        throw new ApiError(503, 'GOOGLE_NOT_CONFIGURED', 'Google sign-in is not available on this server.', {
+          details: { reason: ctx.config.google.disabledReason },
+          recovery: ['Sign in with an email address and password'],
+          retryable: false,
+        });
+      }
+
+      const { idToken } = z.object({ idToken: z.string().min(20).max(8192) }).parse(req.body);
+      const identity = await verifyGoogleIdToken(idToken, {
+        clientId: ctx.config.google.clientId,
+        jwksUrl: ctx.config.google.jwksUrl,
+        fetchImpl: ctx.fetchImpl,
+      });
+
+      let user = ctx.users.findByGoogleSub(identity.sub);
+      if (!user) {
+        const byEmail = ctx.users.findByEmail(identity.email);
+        if (byEmail) {
+          // Same person, already registered with a password — link the accounts.
+          user = ctx.users.linkGoogle(byEmail.id, identity.sub) ?? byEmail;
+        } else {
+          // Federated accounts get an unusable password hash: there is no
+          // password to guess, and password login for them always fails.
+          user = ctx.users.create({
+            email: identity.email,
+            displayName: identity.name ?? identity.email.split('@')[0],
+            passwordHash: `google$${randomBytes(32).toString('base64')}`,
+            authProvider: 'google',
+            googleSub: identity.sub,
+          });
+        }
+      }
+
+      const token = issueSession(res, user.id, user.token_version);
+      res.json({ user: toPublicUser(user), ...(wantsToken(req) ? { token } : {}) });
+    }),
+  );
+
+  /** The OAuth *client id* is public by design; the client needs it to start the flow. */
+  router.get('/google/config', (req, res) => {
+    const ctx = getContext(req);
+    res.json({ configured: ctx.config.google.configured, clientId: ctx.config.google.clientId });
+  });
 
   router.post('/logout', (req, res) => {
     void req;

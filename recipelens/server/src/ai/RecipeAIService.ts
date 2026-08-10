@@ -10,6 +10,7 @@
  *           error, never a fabricated recipe.
  */
 import { createHash } from 'node:crypto';
+import type { ZodType } from 'zod';
 import { ApiError } from '../lib/errors.js';
 import { aiRecipeSchema, normalizeAiRecipe, type RecipeDraft, type SourceType } from '../shared.js';
 import { parseJsonLoose } from './json.js';
@@ -177,6 +178,104 @@ export class RecipeAIService {
       new ApiError(502, 'AI_INVALID_RESPONSE', 'The AI response could not be validated.', { retryable: true })
     );
   }
+
+  /* ------------------------------------------------------------------------ */
+  /* Assistant tasks                                                          */
+  /* ------------------------------------------------------------------------ */
+
+  /**
+   * One completion, parsed and validated against `schema`, with the same
+   * retry-with-the-validator's-complaint behaviour as recipe extraction.
+   * `map` turns the tolerant AI payload into the strict domain value.
+   */
+  async runStructured<TRaw, TValue>(
+    task: string,
+    system: string,
+    user: string,
+    schema: ZodType<TRaw>,
+    map: (raw: TRaw) => TValue,
+    options: { signal?: AbortSignal; temperature?: number; maxTokens?: number } = {},
+  ): Promise<StructuredOutcome<TValue>> {
+    const started = Date.now();
+    let repairHint: string | null = null;
+    let lastError: ApiError | null = null;
+
+    for (let attempt = 1; attempt <= this.maxRetries + 1; attempt += 1) {
+      let text: string;
+      let model = this.provider.model;
+      try {
+        const result = await this.provider.complete(
+          {
+            system,
+            user: repairHint ? `${user}\n\n### Correction required\n${repairHint}\nReturn the corrected JSON object only.` : user,
+            json: true,
+            temperature: options.temperature,
+            maxTokens: options.maxTokens,
+          },
+          { signal: options.signal, repairHint },
+        );
+        text = result.text;
+        model = result.model;
+      } catch (error) {
+        const apiError = toApiError(error);
+        lastError = apiError;
+        if (!apiError.retryable || attempt > this.maxRetries) throw apiError;
+        await delay(backoffMs(attempt));
+        continue;
+      }
+
+      const parsed = parseJsonLoose(text);
+      if (!parsed.ok) {
+        repairHint = `The previous answer was not valid JSON (${parsed.error}). Reply with one JSON object only.`;
+        lastError = new ApiError(502, 'AI_INVALID_RESPONSE', `The AI returned an unreadable answer for ${task}.`, {
+          retryable: true,
+        });
+        if (attempt > this.maxRetries) break;
+        continue;
+      }
+
+      const validated = schema.safeParse(parsed.value);
+      if (!validated.success) {
+        repairHint = `Schema validation failed: ${validated.error.issues
+          .slice(0, 6)
+          .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+          .join('; ')}`;
+        lastError = new ApiError(502, 'AI_INVALID_RESPONSE', `The AI answer for ${task} did not match the expected structure.`, {
+          retryable: true,
+        });
+        if (attempt > this.maxRetries) break;
+        continue;
+      }
+
+      try {
+        return {
+          value: map(validated.data),
+          attempts: attempt,
+          durationMs: Date.now() - started,
+          model,
+          provider: this.provider.name,
+        };
+      } catch (error) {
+        repairHint = `The answer could not be normalised: ${error instanceof Error ? error.message : 'unknown error'}`;
+        lastError = new ApiError(502, 'AI_INVALID_RESPONSE', `The AI answer for ${task} could not be used.`, { retryable: true });
+        if (attempt > this.maxRetries) break;
+      }
+    }
+
+    throw lastError ?? new ApiError(502, 'AI_INVALID_RESPONSE', `The AI answer for ${task} could not be validated.`);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Assistant tasks (nutrition, substitutions, customisation, chat)            */
+/* -------------------------------------------------------------------------- */
+
+export interface StructuredOutcome<T> {
+  value: T;
+  attempts: number;
+  durationMs: number;
+  model: string;
+  provider: string;
 }
 
 function backoffMs(attempt: number): number {

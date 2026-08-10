@@ -5,7 +5,13 @@ import request from 'supertest';
 import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config/env.js';
 import { createContext, type AppContext } from '../src/context.js';
-import type { AIProvider, AIProviderResult, AnalyzeOptions, AnalyzeRecipeInput } from '../src/ai/providers/AIProvider.js';
+import type {
+  AIProvider,
+  AIProviderResult,
+  AnalyzeOptions,
+  AnalyzeRecipeInput,
+  CompletionRequest,
+} from '../src/ai/providers/AIProvider.js';
 
 export const TEST_ENV = {
   NODE_ENV: 'test',
@@ -25,7 +31,7 @@ export const TEST_ENV = {
 export class MockProvider implements AIProvider {
   readonly name = 'mock';
   readonly model = 'mock-model';
-  readonly calls: Array<{ input: AnalyzeRecipeInput; options: AnalyzeOptions }> = [];
+  readonly calls: Array<{ input: AnalyzeRecipeInput | CompletionRequest; options: AnalyzeOptions }> = [];
   private queue: Array<string | Error | (() => Promise<string>)> = [];
 
   constructor(responses: Array<string | Error | (() => Promise<string>)> = []) {
@@ -39,10 +45,20 @@ export class MockProvider implements AIProvider {
 
   async analyzeRecipe(input: AnalyzeRecipeInput, options: AnalyzeOptions = {}): Promise<AIProviderResult> {
     this.calls.push({ input, options });
-    const next = this.queue.shift();
-    if (next === undefined) throw new Error('MockProvider: no scripted response left');
-    if (next instanceof Error) throw next;
-    const text = typeof next === 'function' ? await next() : next;
+    return this.next();
+  }
+
+  /** Used by the assistant tasks (nutrition, substitutions, chat…). */
+  async complete(request: CompletionRequest, options: AnalyzeOptions = {}): Promise<AIProviderResult> {
+    this.calls.push({ input: request, options });
+    return this.next();
+  }
+
+  private async next(): Promise<AIProviderResult> {
+    const scripted = this.queue.shift();
+    if (scripted === undefined) throw new Error('MockProvider: no scripted response left');
+    if (scripted instanceof Error) throw scripted;
+    const text = typeof scripted === 'function' ? await scripted() : scripted;
     return { text, model: this.model, finishReason: 'stop' };
   }
 }

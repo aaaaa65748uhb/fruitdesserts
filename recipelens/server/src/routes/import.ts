@@ -18,9 +18,11 @@ import { asyncHandler, getContext } from '../middleware/context.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { RecipeAIService } from '../ai/RecipeAIService.js';
 import type { AnalyzeRecipeInput } from '../ai/providers/AIProvider.js';
-import { extractFromUrl } from '../extract/source.js';
+import { detectPlatform, extractFromUrl, platformGuidance, type Platform } from '../extract/source.js';
+import { parseHttpUrl } from '../extract/url.js';
 import { recipeDraftSchema, type RecipeDraft } from '../shared.js';
 import type { AppContext } from '../context.js';
+import { ProgressTracker } from '../lib/progress.js';
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_IMAGES = 4;
@@ -141,18 +143,24 @@ export function importRoutes(): Router {
       const userId = currentUser(req).id;
       const input = importSchema.parse(req.body);
       const warnings: string[] = [];
+      const progressId = ProgressTracker.normalizeId(req.get('x-request-id'));
+      ctx.progress.start(progressId, userId);
 
       let aiInput: AnalyzeRecipeInput;
+      let platform: Platform | null = null;
       let sourceRef: string | null = null;
       let structuredDraft: RecipeDraft | null = null;
       let imageUrl: string | null = null;
 
       switch (input.type) {
         case 'url': {
+          ctx.progress.push(progressId, 'reading-source');
+          platform = detectPlatform(parseHttpUrl(input.url));
           const extraction = await extractFromUrl(input.url, {
             allowPrivateNetwork: ctx.allowPrivateNetworkFetch,
             fetchImpl: ctx.fetchImpl,
           });
+          ctx.progress.push(progressId, 'extracting-text');
           warnings.push(...extraction.warnings);
           sourceRef = extraction.url;
           imageUrl = extraction.imageUrl;
@@ -266,6 +274,7 @@ export function importRoutes(): Router {
 
       /* ---- AI path ------------------------------------------------------- */
       const ai = requireAi(ctx);
+      ctx.progress.push(progressId, 'analysing');
 
       const cached = ctx.analyses.findRecentSuccess(userId, sourceHash, CACHE_TTL_MS);
       if (cached) {
@@ -297,6 +306,7 @@ export function importRoutes(): Router {
           sourceType: input.type,
           sourceUrl: sourceRef,
         };
+        ctx.progress.push(progressId, 'validating');
         const analysis = ctx.analyses.record({
           userId,
           recipeId: null,
@@ -310,8 +320,10 @@ export function importRoutes(): Router {
           durationMs: outcome.durationMs,
           resultJson: JSON.stringify(draft),
         });
+        ctx.progress.push(progressId, 'saving');
         const recipe = ctx.recipes.create(userId, recipeDraftSchema.parse(draft));
         ctx.analyses.attachRecipe(analysis.id, recipe.id);
+        ctx.progress.push(progressId, 'done');
 
         if (draft.missingInfo.length > 0) {
           warnings.push(`The source did not state: ${draft.missingInfo.join(', ')}. Add the details yourself when you edit.`);
@@ -332,7 +344,16 @@ export function importRoutes(): Router {
           warnings,
         });
       } catch (error) {
-        const apiError = error instanceof ApiError ? error : new ApiError(500, 'INTERNAL_ERROR', 'Import failed.');
+        let apiError = error instanceof ApiError ? error : new ApiError(500, 'INTERNAL_ERROR', 'Import failed.');
+        if (apiError.code === 'INSUFFICIENT_SOURCE_DATA' && platform) {
+          const guidance = platformGuidance(platform);
+          apiError = new ApiError(422, 'INSUFFICIENT_SOURCE_DATA', "We couldn't extract enough information from this video.", {
+            details: { platform, reason: guidance.note },
+            recovery: [...guidance.recovery, 'Try again'],
+            retryable: false,
+          });
+        }
+        ctx.progress.fail(progressId, apiError.message);
         ctx.analyses.record({
           userId,
           recipeId: null,
@@ -349,6 +370,26 @@ export function importRoutes(): Router {
         });
         throw apiError;
       }
+    }),
+  );
+
+  /** Real, server-recorded progress for an import that is running now. */
+  router.get(
+    '/progress/:id',
+    asyncHandler(async (req, res) => {
+      const ctx = getContext(req);
+      const id = ProgressTracker.normalizeId(req.params.id);
+      const record = id ? ctx.progress.get(id, currentUser(req).id) : null;
+      if (!record) {
+        res.json({ known: false, phases: [], finished: false, error: null });
+        return;
+      }
+      res.json({
+        known: true,
+        phases: record.entries.map((entry) => ({ phase: entry.phase, label: entry.label, at: entry.at })),
+        finished: record.finished,
+        error: record.error,
+      });
     }),
   );
 

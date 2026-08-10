@@ -9,6 +9,8 @@ export interface UserRow {
   display_name: string;
   password_hash: string;
   token_version: number;
+  auth_provider: string;
+  google_sub: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -27,7 +29,13 @@ export function toPublicUser(row: UserRow): PublicUser {
 export class UserRepo {
   constructor(private readonly db: Db) {}
 
-  create(input: { email: string; displayName: string; passwordHash: string }): UserRow {
+  create(input: {
+    email: string;
+    displayName: string;
+    passwordHash: string;
+    authProvider?: string;
+    googleSub?: string | null;
+  }): UserRow {
     const now = nowIso();
     const row: UserRow = {
       id: randomUUID(),
@@ -36,16 +44,30 @@ export class UserRepo {
       display_name: input.displayName.trim(),
       password_hash: input.passwordHash,
       token_version: 1,
+      auth_provider: input.authProvider ?? 'password',
+      google_sub: input.googleSub ?? null,
       created_at: now,
       updated_at: now,
     };
     this.db
       .prepare(
-        `INSERT INTO users (id, email, email_lower, display_name, password_hash, token_version, created_at, updated_at)
-         VALUES (@id, @email, @email_lower, @display_name, @password_hash, @token_version, @created_at, @updated_at)`,
+        `INSERT INTO users (id, email, email_lower, display_name, password_hash, token_version, auth_provider, google_sub, created_at, updated_at)
+         VALUES (@id, @email, @email_lower, @display_name, @password_hash, @token_version, @auth_provider, @google_sub, @created_at, @updated_at)`,
       )
       .run(row);
     return row;
+  }
+
+  findByGoogleSub(sub: string): UserRow | null {
+    return (this.db.prepare('SELECT * FROM users WHERE google_sub = ?').get(sub) as UserRow | undefined) ?? null;
+  }
+
+  /** Links a Google identity to an account that already exists by email. */
+  linkGoogle(id: string, sub: string): UserRow | null {
+    this.db
+      .prepare("UPDATE users SET google_sub = ?, auth_provider = CASE auth_provider WHEN 'password' THEN 'password+google' ELSE auth_provider END, updated_at = ? WHERE id = ?")
+      .run(sub, nowIso(), id);
+    return this.findById(id);
   }
 
   findByEmail(email: string): UserRow | null {

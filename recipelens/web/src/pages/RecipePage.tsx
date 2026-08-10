@@ -1,12 +1,13 @@
-import { ChefHat, Clock, ExternalLink, Heart, Minus, Pencil, Plus, ShoppingCart, Trash2, Users } from 'lucide-react';
+import { ChefHat, Clock, ExternalLink, Heart, Minus, Pencil, Plus, ShoppingCart, Trash2, Users, Wand2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ConfirmDialog, Modal } from '../components/Modal.js';
+import { CustomizeDialog, NutritionPanel, RecipeChat, SubstitutionDialog } from '../components/assist.js';
 import { ErrorState, LoadingScreen, Spinner } from '../components/feedback.js';
 import { EstimatedBadge, IngredientLine } from '../components/recipe.js';
 import { api, type Collection } from '../lib/api.js';
 import { useAsync } from '../lib/useAsync.js';
-import { scaleRecipe, totalMinutes } from '../shared.js';
+import { scaleRecipe, totalMinutes, type Ingredient } from '../shared.js';
 
 export function RecipePage() {
   const { id = '' } = useParams();
@@ -20,6 +21,8 @@ export function RecipePage() {
   const [addingToList, setAddingToList] = useState(false);
   const [listMessage, setListMessage] = useState<string | null>(null);
   const [collectionsOpen, setCollectionsOpen] = useState(false);
+  const [substituting, setSubstituting] = useState<Ingredient | null>(null);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
 
   const recipe = recipeState.data?.recipe ?? null;
 
@@ -195,7 +198,11 @@ export function RecipePage() {
 
         <ul className="mt-3">
           {scaled.ingredients.map((ingredient, index) => (
-            <IngredientLine key={ingredient.id ?? index} ingredient={ingredient} />
+            <IngredientLine
+              key={ingredient.id ?? index}
+              ingredient={ingredient}
+              onReplace={ingredient.id ? () => setSubstituting(ingredient) : undefined}
+            />
           ))}
         </ul>
 
@@ -253,6 +260,10 @@ export function RecipePage() {
         </section>
       ) : null}
 
+      <NutritionPanel recipe={recipe} servings={currentServings} />
+
+      <RecipeChat recipe={recipe} />
+
       <div className="grid grid-cols-2 gap-2">
         <Link className="btn-primary col-span-2" to={`/recipes/${recipe.id}/cook`}>
           <ChefHat className="h-4 w-4" aria-hidden="true" />
@@ -264,6 +275,10 @@ export function RecipePage() {
         </Link>
         <button type="button" className="btn-secondary" onClick={() => setCollectionsOpen(true)}>
           Collections
+        </button>
+        <button type="button" className="btn-secondary col-span-2" onClick={() => setCustomizeOpen(true)}>
+          <Wand2 className="h-4 w-4" aria-hidden="true" />
+          Customize with AI
         </button>
         <button type="button" className="btn-danger col-span-2" onClick={() => setConfirmDelete(true)}>
           <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -280,6 +295,18 @@ export function RecipePage() {
         pending={deleting}
         onConfirm={() => void onDelete()}
         onCancel={() => setConfirmDelete(false)}
+      />
+
+      <SubstitutionDialog recipe={recipe} ingredient={substituting} onClose={() => setSubstituting(null)} />
+
+      <CustomizeDialog
+        recipe={recipe}
+        open={customizeOpen}
+        onClose={() => setCustomizeOpen(false)}
+        onSaved={(newRecipeId) => {
+          setCustomizeOpen(false);
+          navigate(`/recipes/${newRecipeId}`);
+        }}
       />
 
       <CollectionPicker

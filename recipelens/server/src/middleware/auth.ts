@@ -74,6 +74,15 @@ export const requireAuth: RequestHandler = (req: Request, _res: Response, next: 
   next();
 };
 
+/**
+ * Native clients (the Android APK) cannot share cookies with the backend
+ * origin, so they ask for the session token and send it as a bearer header.
+ * Browsers never get the token in the body — it stays HttpOnly.
+ */
+export function wantsToken(req: Request): boolean {
+  return req.get('x-recipelens-client')?.toLowerCase() === 'native';
+}
+
 export function currentUser(req: Request): { id: string; email: string; displayName: string } {
   if (!req.user) throw unauthorized();
   return req.user;

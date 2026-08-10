@@ -142,7 +142,7 @@ async function main() {
     await page.getByRole('tab', { name: 'Text' }).click();
     await page.getByLabel(/paste the recipe/i).fill(RECIPE_TEXT);
     await page.screenshot({ path: path.join(screenshotDir, '03-import.png') });
-    await page.getByRole('button', { name: /import recipe/i }).click();
+    await page.getByRole('button', { name: /analyze recipe/i }).click();
 
     await page.getByRole('button', { name: /open recipe/i }).waitFor({ timeout: 30000 });
     check('import returns a recipe from the analysis pipeline', await visible(page.getByRole('heading', { name: 'Creamy Garlic Pasta' })));
@@ -189,6 +189,21 @@ async function main() {
     await page.waitForURL(/\/recipes\/[0-9a-f-]+$/);
     check('edited amount is stored', await visible(page.getByText('250 ml')));
     await page.screenshot({ path: path.join(screenshotDir, '06-edited.png'), fullPage: true });
+
+    /* ---- 9b. Assistant: nutrition, substitutions, chat ------------------ */
+    await page.getByRole('button', { name: /estimate with ai/i }).click();
+    check('nutrition estimate arrives and is labelled', await visible(page.getByText(/not a verified nutritional analysis/i), 20000));
+    check('nutrition numbers are rendered', await visible(page.getByText('612kcal')));
+
+    await page.getByRole('button', { name: /replace heavy cream/i }).click();
+    await page.getByRole('button', { name: /suggest replacements/i }).click();
+    check('a substitution is suggested for the right ingredient', await visible(page.getByText('Greek yoghurt'), 20000));
+    check('the substitution explains the trade-off', await visible(page.getByText(/splits if boiled/i)));
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+
+    await page.getByRole('textbox', { name: /your question/i }).fill('Can I use evaporated milk?');
+    await page.getByRole('button', { name: /send question/i }).click();
+    check('the assistant answers about this recipe', await visible(page.getByText(/evaporated milk/i), 20000));
 
     /* ---- 10. Cooking mode + refresh ----------------------------------- */
     await page.getByRole('link', { name: /start cooking/i }).click();
@@ -251,11 +266,11 @@ async function main() {
     await page.getByRole('link', { name: 'Import', exact: true }).click();
     await page.getByRole('tab', { name: 'Link' }).click();
     await page.getByLabel(/recipe or video link/i).fill('not-a-link');
-    await page.getByRole('button', { name: /import recipe/i }).click();
+    await page.getByRole('button', { name: /analyze recipe/i }).click();
     check('client-side validation catches a malformed link', await visible(page.getByText(/does not look like a link/i)));
 
     await page.getByLabel(/recipe or video link/i).fill('https://recipelens-does-not-exist.invalid/x');
-    await page.getByRole('button', { name: /import recipe/i }).click();
+    await page.getByRole('button', { name: /analyze recipe/i }).click();
     await page.getByRole('alert').waitFor({ timeout: 30000 });
     const alertText = (await page.getByRole('alert').innerText()).toLowerCase();
     check('an unreachable source shows a useful error with fallbacks', alertText.includes('paste the recipe text'), alertText.slice(0, 120));

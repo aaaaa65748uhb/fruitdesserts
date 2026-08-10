@@ -1,10 +1,12 @@
-import { Camera, FileText, Link2, Loader2, Sparkles, Video, X } from 'lucide-react';
+import { Camera, Check, FileText, Link2, Loader2, Sparkles, Video, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/AppShell.js';
-import { ErrorState, InlineError, Spinner } from '../components/feedback.js';
+import { ErrorState, InlineError } from '../components/feedback.js';
 import { api, ApiError, type ImportCapabilities, type ImportResult } from '../lib/api.js';
+import { isNative } from '../lib/runtime.js';
 import { useAsync } from '../lib/useAsync.js';
+import { useShare } from '../state/ShareContext.js';
 
 type Tab = 'url' | 'text' | 'image' | 'video';
 
@@ -15,12 +17,8 @@ const TABS: Array<{ id: Tab; label: string; icon: typeof Link2 }> = [
   { id: 'video', label: 'Video', icon: Video },
 ];
 
-const PROGRESS_STAGES = [
-  'Reading the source…',
-  'Pulling out captions and text…',
-  'Asking the AI to structure the recipe…',
-  'Validating the result…',
-];
+/** Shown before the server has reported its first phase. */
+const INITIAL_PHASE = { phase: 'received', label: 'Sending the source to RecipeLens' };
 
 export function ImportPage() {
   const navigate = useNavigate();
@@ -37,17 +35,55 @@ export function ImportPage() {
   const [error, setError] = useState<ApiError | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [pending, setPending] = useState(false);
-  const [stage, setStage] = useState(0);
+  const [phases, setPhases] = useState<Array<{ phase: string; label: string }>>([]);
   const abortRef = useRef<AbortController | null>(null);
 
+  const { pending: sharedItem, consume } = useShare();
+  const [autoRun, setAutoRun] = useState(false);
+  const importRef = useRef<() => Promise<void>>(async () => undefined);
+
+  // A link shared from TikTok/Instagram/YouTube lands here already filled in.
   useEffect(() => {
-    if (!pending) {
-      setStage(0);
-      return undefined;
+    if (!sharedItem) return;
+    const item = consume();
+    if (!item) return;
+    setError(null);
+    setResult(null);
+    if (item.type === 'url') {
+      setTab('url');
+      setUrl(item.value);
+    } else {
+      setTab('text');
+      setText(item.value);
     }
-    const timer = setInterval(() => setStage((current) => Math.min(current + 1, PROGRESS_STAGES.length - 1)), 2500);
-    return () => clearInterval(timer);
-  }, [pending]);
+    setAutoRun(true);
+  }, [sharedItem, consume]);
+
+  // Share -> analyse with no extra taps.
+  useEffect(() => {
+    if (!autoRun) return;
+    setAutoRun(false);
+    void importRef.current();
+  }, [autoRun]);
+
+  // Progress comes from the server: each entry is a phase it actually reached.
+  const [requestId, setRequestId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pending || !requestId) return undefined;
+    let cancelled = false;
+    const poll = setInterval(async () => {
+      try {
+        const status = await api.import.progress(requestId);
+        if (!cancelled && status.known) setPhases(status.phases.map(({ phase, label }) => ({ phase, label })));
+      } catch {
+        // Progress is a nicety; the import itself reports success or failure.
+      }
+    }, 900);
+    return () => {
+      cancelled = true;
+      clearInterval(poll);
+    };
+  }, [pending, requestId]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -132,7 +168,10 @@ export function ImportPage() {
     if (!validate()) return;
     setError(null);
     setResult(null);
+    setPhases([INITIAL_PHASE]);
     setPending(true);
+    const id = crypto.randomUUID().replace(/-/g, '');
+    setRequestId(id);
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -152,7 +191,7 @@ export function ImportPage() {
                   frames: images.length ? images : undefined,
                 } as const);
 
-      const response = await api.import.analyze(payload, controller.signal);
+      const response = await api.import.analyze(payload, controller.signal, id);
       setResult(response);
     } catch (caught) {
       if (controller.signal.aborted) return;
@@ -163,9 +202,11 @@ export function ImportPage() {
     }
   }
 
+  importRef.current = onImport;
+
   return (
     <div className="space-y-4">
-      <PageHeader title="Import a recipe" subtitle="From a link, pasted text, a screenshot or a video you already have." />
+      <PageHeader title="Turn any cooking video into a recipe" subtitle="Share from TikTok, Instagram or YouTube — or paste a link, a screenshot or the text." />
 
       {capabilities.data && !aiConfigured ? (
         <div className="card border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">
@@ -174,6 +215,15 @@ export function ImportPage() {
           <p className="mt-1">Links that publish a machine-readable recipe still import, and you can always add a recipe by hand.</p>
         </div>
       ) : null}
+
+      <div className="card border-brand-200 bg-brand-50/60 p-3 text-sm text-brand-900">
+        <p className="font-semibold">Share a video</p>
+        <p className="mt-1">
+          {isNative
+            ? 'In TikTok, Instagram or YouTube tap Share → RecipeLens. The link lands here and analysis starts on its own.'
+            : 'On the Android app you can tap Share → RecipeLens straight from TikTok, Instagram or YouTube. Here in the browser, paste the link below.'}
+        </p>
+      </div>
 
       <div role="tablist" aria-label="Import source" className="grid grid-cols-4 gap-1 rounded-xl bg-neutral-100 p-1">
         {TABS.map((item) => (
@@ -313,7 +363,7 @@ export function ImportPage() {
         <div className="mt-4 flex items-center gap-2">
           <button type="button" className="btn-primary flex-1" onClick={() => void onImport()} disabled={pending}>
             {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
-            {pending ? 'Analysing…' : 'Import recipe'}
+            {pending ? 'Analysing…' : 'Analyze Recipe'}
           </button>
           {pending ? (
             <button type="button" className="btn-secondary" onClick={() => abortRef.current?.abort()}>
@@ -324,13 +374,19 @@ export function ImportPage() {
 
         {pending ? (
           <div className="mt-3" aria-live="polite">
-            <Spinner label={PROGRESS_STAGES[stage]} />
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-100">
-              <div
-                className="h-full rounded-full bg-brand-500 transition-all duration-700"
-                style={{ width: `${((stage + 1) / PROGRESS_STAGES.length) * 100}%` }}
-              />
-            </div>
+            <p className="text-sm font-medium text-neutral-800">Analyzing your recipe…</p>
+            <ul className="mt-2 space-y-1 text-sm">
+              {phases.map((entry, index) => (
+                <li key={`${entry.phase}-${index}`} className="flex items-center gap-2 text-neutral-700">
+                  {index === phases.length - 1 ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-500" aria-hidden="true" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
+                  )}
+                  {entry.label}
+                </li>
+              ))}
+            </ul>
           </div>
         ) : null}
       </div>

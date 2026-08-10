@@ -48,6 +48,8 @@ const envSchema = z.object({
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(300000).default(45000),
   AI_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
   MAX_UPLOAD_BYTES: z.coerce.number().int().min(1024).max(100 * 1024 * 1024).default(10 * 1024 * 1024),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_JWKS_URL: z.string().optional(),
 });
 
 export interface AiConfig {
@@ -63,6 +65,13 @@ export interface AiConfig {
   disabledReason: string | null;
 }
 
+export interface GoogleConfig {
+  clientId: string | null;
+  jwksUrl: string | undefined;
+  configured: boolean;
+  disabledReason: string | null;
+}
+
 export interface AppConfig {
   nodeEnv: 'development' | 'test' | 'production';
   isProduction: boolean;
@@ -74,6 +83,7 @@ export interface AppConfig {
   databaseFile: string;
   maxUploadBytes: number;
   ai: AiConfig;
+  google: GoogleConfig;
 }
 
 export class ConfigurationError extends Error {
@@ -140,16 +150,33 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       : `AI provider is not configured. Missing environment variable(s): ${missing.join(', ')}.`,
   };
 
+  // Capacitor serves the APK's assets from these origins. They are safe to
+  // allow because native clients authenticate with a bearer token, never with
+  // a cookie, so they cannot be used for a cross-site request forgery.
+  const nativeOrigins = ['https://localhost', 'capacitor://localhost'];
+  const configuredOrigins = e.WEB_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean);
+
+  const googleClientId = e.GOOGLE_CLIENT_ID?.trim() || null;
+  const google: GoogleConfig = {
+    clientId: googleClientId,
+    jwksUrl: e.GOOGLE_JWKS_URL?.trim() || undefined,
+    configured: googleClientId !== null,
+    disabledReason: googleClientId
+      ? null
+      : 'Google sign-in is not configured. Set GOOGLE_CLIENT_ID to the OAuth client ID of your Android app / web client.',
+  };
+
   return {
     nodeEnv: e.NODE_ENV,
     isProduction,
     isTest: e.NODE_ENV === 'test',
     port: e.PORT,
-    webOrigins: e.WEB_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean),
+    webOrigins: [...new Set([...configuredOrigins, ...nativeOrigins])],
     sessionSecret,
     sessionTtlSeconds: e.SESSION_TTL_SECONDS,
     databaseFile: resolveDatabaseFile(e.DATABASE_URL),
     maxUploadBytes: e.MAX_UPLOAD_BYTES,
     ai,
+    google,
   };
 }

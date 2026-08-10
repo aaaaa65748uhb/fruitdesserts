@@ -5,7 +5,8 @@
  * is identical everywhere and the server's error envelope
  * ({ error: { code, message, recovery, retryable } }) is preserved.
  */
-import type { Ingredient, RecipeDraft, Step } from '../shared.js';
+import type { ChatAnswer, Customization, CustomizationGoal, Ingredient, Nutrition, RecipeDraft, Step, Substitution } from '../shared.js';
+import { apiBaseUrl, isNative, tokenStore } from './runtime.js';
 
 export interface ApiUser {
   id: string;
@@ -123,6 +124,7 @@ interface RequestOptions {
   body?: unknown;
   signal?: AbortSignal;
   timeoutMs?: number;
+  headers?: Record<string, string>;
 }
 
 /** Anything that wants to know a session went away (e.g. the auth provider). */
@@ -134,18 +136,37 @@ export function onUnauthorized(listener: () => void): () => void {
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, signal, timeoutMs = 90_000 } = options;
+  const extraHeaders = options.headers ?? {};
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(new Error('timeout')), timeoutMs);
   const onAbort = () => controller.abort();
   signal?.addEventListener('abort', onAbort, { once: true });
 
+  const headers: Record<string, string> = { ...extraHeaders };
+  if (body !== undefined) headers['content-type'] = 'application/json';
+  if (isNative) {
+    // The APK cannot use cookies across origins, so it carries a bearer token
+    // and tells the server to issue one on sign-in.
+    headers['x-recipelens-client'] = 'native';
+    const token = await tokenStore.get();
+    if (token) headers.authorization = `Bearer ${token}`;
+  }
+
+  let base: string;
+  try {
+    base = apiBaseUrl();
+  } catch (error) {
+    clearTimeout(timer);
+    throw new ApiError(0, 'NOT_CONFIGURED', error instanceof Error ? error.message : 'This build has no backend address.');
+  }
+
   let response: Response;
   try {
-    response = await fetch(`/api${path}`, {
+    response = await fetch(`${base}/api${path}`, {
       method,
       credentials: 'include',
-      headers: body === undefined ? {} : { 'content-type': 'application/json' },
+      headers,
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: controller.signal,
     });
@@ -196,16 +217,40 @@ export interface RecipeInput extends Omit<RecipeDraft, 'ingredients' | 'steps'> 
   version?: number;
 }
 
+/** Native builds receive a bearer token alongside the user; store it. */
+async function keepToken(response: { user: ApiUser; token?: string }): Promise<{ user: ApiUser }> {
+  if (isNative && response.token) await tokenStore.set(response.token);
+  return { user: response.user };
+}
+
 export const api = {
   auth: {
     me: () => request<{ user: ApiUser }>('/auth/me'),
-    login: (email: string, password: string) => request<{ user: ApiUser }>('/auth/login', { method: 'POST', body: { email, password } }),
+    login: (email: string, password: string) =>
+      request<{ user: ApiUser; token?: string }>('/auth/login', { method: 'POST', body: { email, password } }).then(keepToken),
     register: (email: string, password: string, displayName?: string) =>
-      request<{ user: ApiUser }>('/auth/register', { method: 'POST', body: { email, password, displayName } }),
-    logout: () => request<{ ok: true }>('/auth/logout', { method: 'POST' }),
+      request<{ user: ApiUser; token?: string }>('/auth/register', { method: 'POST', body: { email, password, displayName } }).then(
+        keepToken,
+      ),
+    googleConfig: () => request<{ configured: boolean; clientId: string | null }>('/auth/google/config'),
+    google: (idToken: string) =>
+      request<{ user: ApiUser; token?: string }>('/auth/google', { method: 'POST', body: { idToken } }).then(keepToken),
+    logout: async () => {
+      try {
+        return await request<{ ok: true }>('/auth/logout', { method: 'POST' });
+      } finally {
+        await tokenStore.set(null);
+      }
+    },
     updateProfile: (displayName: string) => request<{ user: ApiUser }>('/auth/me', { method: 'PATCH', body: { displayName } }),
   },
-  health: () => request<{ status: string; database: string; ai: { configured: boolean; provider: string | null; model: string | null } }>('/health'),
+  health: () =>
+    request<{
+      status: string;
+      database: string;
+      ai: { configured: boolean; provider: string | null; model: string | null };
+      google?: { configured: boolean };
+    }>('/health'),
   recipes: {
     list: (params: { search?: string; favorite?: boolean; collectionId?: string; tag?: string } = {}) => {
       const query = new URLSearchParams();
@@ -256,8 +301,33 @@ export const api = {
       request<{ session: CookingSession }>(`/cooking/${recipeId}`, { method: 'PUT', body: patch }),
     reset: (recipeId: string) => request<{ ok: true }>(`/cooking/${recipeId}`, { method: 'DELETE' }),
   },
+  assist: {
+    nutrition: (recipeId: string, servings?: number) =>
+      request<{ nutrition: Nutrition; disclaimer: string }>(`/assist/${recipeId}/nutrition`, {
+        method: 'POST',
+        body: { servings },
+        timeoutMs: 120_000,
+      }),
+    substitutions: (recipeId: string, ingredientId: string, reason?: string) =>
+      request<{ ingredient: { id: string; name: string }; substitutions: Substitution[]; disclaimer: string }>(
+        `/assist/${recipeId}/substitutions`,
+        { method: 'POST', body: { ingredientId, reason }, timeoutMs: 120_000 },
+      ),
+    customize: (recipeId: string, goals: CustomizationGoal[], options: { notes?: string; save?: boolean } = {}) =>
+      request<{ customization: Customization; goals: CustomizationGoal[]; recipe: Recipe | null; disclaimer: string }>(
+        `/assist/${recipeId}/customize`,
+        { method: 'POST', body: { goals, ...options }, timeoutMs: 180_000 },
+      ),
+    chat: (recipeId: string, question: string, history: Array<{ role: 'user' | 'assistant'; content: string }> = []) =>
+      request<ChatAnswer>(`/assist/${recipeId}/chat`, { method: 'POST', body: { question, history }, timeoutMs: 120_000 }),
+  },
   import: {
     capabilities: () => request<ImportCapabilities>('/import/capabilities'),
+    progress: (requestId: string) =>
+      request<{ known: boolean; phases: Array<{ phase: string; label: string; at: number }>; finished: boolean; error: string | null }>(
+        `/import/progress/${requestId}`,
+        { timeoutMs: 15_000 },
+      ),
     analyze: (
       body:
         | { type: 'url'; url: string; language?: string }
@@ -265,6 +335,14 @@ export const api = {
         | { type: 'image'; images: string[]; ocrText?: string; note?: string }
         | { type: 'video'; filename?: string; durationSeconds?: number; sizeBytes?: number; captions?: string[]; transcript?: string; frames?: string[] },
       signal?: AbortSignal,
-    ) => request<ImportResult>('/import/analyze', { method: 'POST', body, signal, timeoutMs: 120_000 }),
+      requestId?: string,
+    ) =>
+      request<ImportResult>('/import/analyze', {
+        method: 'POST',
+        body,
+        signal,
+        timeoutMs: 120_000,
+        headers: requestId ? { 'x-request-id': requestId } : undefined,
+      }),
   },
 };
