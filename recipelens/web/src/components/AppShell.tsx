@@ -71,7 +71,7 @@ export function PageHeader({
   return (
     <header className="mb-4 flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="truncate text-2xl font-bold tracking-tight text-neutral-900">{title}</h1>
+        <h1 className="text-balance text-2xl font-bold leading-tight tracking-tight text-neutral-900">{title}</h1>
         {subtitle ? <p className="mt-0.5 text-sm text-neutral-600">{subtitle}</p> : null}
       </div>
       {action}
