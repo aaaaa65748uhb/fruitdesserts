@@ -60,6 +60,9 @@ jobs:
     name: Build Android APK
     needs: checks
     runs-on: ubuntu-latest
+    # Needed to attach the APK to the preview release.
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: recipelens
@@ -108,3 +111,43 @@ jobs:
           name: RecipeLens-debug-apk
           path: recipelens/android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
+
+      # A direct .apk link so the app can be installed from a phone browser
+      # without a GitHub login or an unzip step.
+      - name: Publish the APK to the preview release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: recipelens-preview
+        run: |
+          set -euo pipefail
+          apk=android/app/build/outputs/apk/debug/app-debug.apk
+          cp "$apk" RecipeLens-debug.apk
+          notes=$(cat <<'EOF'
+          Debug build of RecipeLens for sideloading on Android.
+
+          **Read before installing**
+
+          * This is an unsigned debug build. Android will warn about installing from an
+            unknown source, and Play Protect may ask you to confirm.
+          * The backend address is baked in at build time. If it was built without
+            `VITE_API_BASE_URL`, the app opens on a "RecipeLens is not configured" screen
+            and cannot sign in or import anything. Re-run the workflow with the
+            `api_base_url` input (or set the `RECIPELENS_API_BASE_URL` repository variable)
+            to produce a build that talks to your server.
+          * The APK contains no AI key and no database credentials — it only calls the
+            backend you point it at.
+
+          Built from commit ${{ github.sha }}.
+          EOF
+          )
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" RecipeLens-debug.apk --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes "$notes"
+          else
+            gh release create "$TAG" RecipeLens-debug.apk \
+              --repo "$GITHUB_REPOSITORY" \
+              --prerelease \
+              --title "RecipeLens — Android preview" \
+              --notes "$notes"
+          fi
+          echo "Install link: https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/RecipeLens-debug.apk"
