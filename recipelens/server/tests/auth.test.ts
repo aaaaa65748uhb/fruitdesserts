@@ -111,6 +111,18 @@ describe('sessions', () => {
     await other.get('/api/auth/me').expect(401);
   });
 
+  it('allows a write from the page this server itself served', async () => {
+    const user = await registerUser(harness.app);
+    // Same-origin: the Origin header matches the host the request arrived on,
+    // which is what happens once the app is deployed under any real hostname.
+    const response = await user.agent
+      .post('/api/collections')
+      .set('Host', 'recipelens.example.com')
+      .set('Origin', 'http://recipelens.example.com')
+      .send({ name: 'Deployed' });
+    expect(response.status).toBe(201);
+  });
+
   it('blocks cross-site state changes', async () => {
     const user = await registerUser(harness.app);
     await user.agent

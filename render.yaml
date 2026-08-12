@@ -1,0 +1,43 @@
+# One-click deploy for the RecipeLens backend (https://render.com).
+#
+# In Render: New → Blueprint → pick this repository → pick the branch. Render
+# reads this file, creates the service and generates SESSION_SECRET for you.
+# The only value you must type is AI_API_KEY (and the model/base URL if you are
+# not using OpenAI).
+#
+# The service serves the API *and* the built web client, so the URL Render gives
+# you works in a phone browser as well as being the address to build the APK
+# against.
+services:
+  - type: web
+    name: recipelens
+    runtime: node
+    plan: free
+    rootDir: recipelens
+    # --include=dev because the build and the TypeScript runtime live in
+    # devDependencies; Render sets NODE_ENV=production, which would omit them.
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      # Signs session cookies. Render generates it once and keeps it.
+      - key: SESSION_SECRET
+        generateValue: true
+      # SQLite lives on the instance disk. On the free plan that disk is wiped
+      # when the service restarts or redeploys, so treat the data as temporary.
+      - key: DATABASE_URL
+        value: file:./data/recipelens.db
+      # --- AI: fill AI_API_KEY in the Render dashboard ---------------------
+      - key: AI_PROVIDER
+        value: openai-compatible
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_API_BASE_URL
+        value: https://api.openai.com/v1
+      - key: AI_MODEL
+        value: gpt-4o-mini
