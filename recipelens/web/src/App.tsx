@@ -1,10 +1,11 @@
-import { useCallback, useEffect, type ReactElement } from 'react';
+import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { WifiOff } from 'lucide-react';
 import { AppShell } from './components/AppShell.js';
 import { LoadingScreen } from './components/feedback.js';
 import { initNativeShell, useAndroidBackButton, useOnline } from './lib/nativeShell.js';
-import { nativeConfigError } from './lib/runtime.js';
+import { ensureRuntimeReady, needsServerSetup } from './lib/runtime.js';
+import { ServerSetup } from './components/ServerSetup.js';
 import { useAuth } from './state/AuthContext.js';
 import { ShareProvider } from './state/ShareContext.js';
 import { AuthPage } from './pages/AuthPage.js';
@@ -27,16 +28,6 @@ function RequireAuth({ children }: { children: ReactElement }) {
   return children;
 }
 
-/** Shown when an APK was built without a backend address. */
-function ConfigurationScreen({ message }: { message: string }) {
-  return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-3 px-6 text-center">
-      <h1 className="text-xl font-bold">RecipeLens is not configured</h1>
-      <p className="text-sm text-neutral-700">{message}</p>
-    </div>
-  );
-}
-
 function OfflineBanner() {
   const online = useOnline();
   if (online) return null;
@@ -49,13 +40,21 @@ function OfflineBanner() {
 }
 
 export function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, setUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const configError = nativeConfigError();
+
+  // The Android build has to know which backend to talk to before anything
+  // else can happen; the browser build is always same-origin.
+  const [runtimeReady, setRuntimeReady] = useState(false);
+  const [askForServer, setAskForServer] = useState(false);
 
   useEffect(() => {
     void initNativeShell();
+    void ensureRuntimeReady().then(() => {
+      setAskForServer(needsServerSetup());
+      setRuntimeReady(true);
+    });
   }, []);
 
   // Android back button: leave the app only from the home screen.
@@ -63,7 +62,17 @@ export function App() {
   const goBack = useCallback(() => navigate(-1), [navigate]);
   useAndroidBackButton(canGoBack, goBack);
 
-  if (configError) return <ConfigurationScreen message={configError} />;
+  if (!runtimeReady) return <LoadingScreen label="Starting RecipeLens…" />;
+  if (askForServer) {
+    return (
+      <ServerSetup
+        onConnected={() => {
+          setUser(null);
+          setAskForServer(false);
+        }}
+      />
+    );
+  }
 
   return (
     <ShareProvider>

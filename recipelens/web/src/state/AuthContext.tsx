@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, ApiError, onUnauthorized, type ApiUser } from '../lib/api.js';
+import { ensureRuntimeReady, needsServerSetup } from '../lib/runtime.js';
 
 interface AuthContextValue {
   user: ApiUser | null;
@@ -20,17 +21,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    api.auth
-      .me()
-      .then((response) => {
+    // Wait for the backend address before asking who is signed in, otherwise a
+    // stored session would be discarded on every cold start of the Android app.
+    void ensureRuntimeReady().then(async () => {
+      if (cancelled) return;
+      if (needsServerSetup()) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      try {
+        const response = await api.auth.me();
         if (!cancelled) setUser(response.user);
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setUser(null);
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    });
     return () => {
       cancelled = true;
     };

@@ -1,4 +1,4 @@
-import { LogOut, ShieldCheck, Sparkles } from 'lucide-react';
+import { LogOut, Server, ShieldCheck, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/AppShell.js';
@@ -6,6 +6,8 @@ import { InlineError, Spinner } from '../components/feedback.js';
 import { api } from '../lib/api.js';
 import { useAsync } from '../lib/useAsync.js';
 import { useAuth } from '../state/AuthContext.js';
+import { ServerSetup } from '../components/ServerSetup.js';
+import { currentApiBaseUrl, isNative } from '../lib/runtime.js';
 
 export function SettingsPage() {
   const { user, logout, setUser } = useAuth();
@@ -16,6 +18,7 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [changingServer, setChangingServer] = useState(false);
 
   async function saveProfile() {
     setError(null);
@@ -34,6 +37,18 @@ export function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (changingServer) {
+    return (
+      <ServerSetup
+        onConnected={() => {
+          setChangingServer(false);
+          void logout().then(() => navigate('/sign-in', { replace: true }));
+        }}
+        onCancel={() => setChangingServer(false)}
+      />
+    );
   }
 
   return (
@@ -75,6 +90,22 @@ export function SettingsPage() {
         ) : null}
         {health.error ? <p className="text-sm text-red-700">Could not reach the server just now.</p> : null}
       </section>
+
+      {isNative ? (
+        <section className="card space-y-2 p-4">
+          <h2 className="flex items-center gap-2 font-semibold">
+            <Server className="h-4 w-4 text-brand-500" aria-hidden="true" />
+            Server
+          </h2>
+          <p className="break-all text-sm text-neutral-700">{currentApiBaseUrl() ?? 'Not set'}</p>
+          <p className="text-xs text-neutral-500">
+            Your recipes live here. Changing it signs you out of this device.
+          </p>
+          <button type="button" className="btn-secondary" onClick={() => setChangingServer(true)}>
+            Change server
+          </button>
+        </section>
+      ) : null}
 
       <section className="card space-y-2 p-4">
         <h2 className="flex items-center gap-2 font-semibold">
