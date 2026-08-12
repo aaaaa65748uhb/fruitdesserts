@@ -15,6 +15,25 @@ export const securityHeaders: RequestHandler = (_req, res, next) => {
   next();
 };
 
+/**
+ * Every header the client is allowed to send on a cross-origin request. The
+ * Android app is always cross-origin, so anything missing here fails its
+ * preflight and surfaces as "could not reach the server" — which is exactly
+ * what a browser reports when a preflight is refused.
+ */
+const ALLOWED_REQUEST_HEADERS = [
+  'content-type',
+  'authorization',
+  'accept',
+  // Tells the server this client uses a bearer token rather than a cookie.
+  'x-recipelens-client',
+  // Correlates an import with its progress feed.
+  'x-request-id',
+].join(', ');
+
+/** Response headers the client is allowed to read cross-origin. */
+const EXPOSED_RESPONSE_HEADERS = ['x-request-id'].join(', ');
+
 /** CORS limited to the configured web origins, with credentials enabled. */
 export const cors: RequestHandler = (req, res, next) => {
   const ctx = getContext(req);
@@ -23,7 +42,8 @@ export const cors: RequestHandler = (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Headers', 'content-type, authorization');
+    res.setHeader('Access-Control-Allow-Headers', ALLOWED_REQUEST_HEADERS);
+    res.setHeader('Access-Control-Expose-Headers', EXPOSED_RESPONSE_HEADERS);
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,PUT,DELETE,OPTIONS');
     res.setHeader('Access-Control-Max-Age', '600');
   }
