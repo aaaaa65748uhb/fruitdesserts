@@ -127,13 +127,18 @@ jobs:
 
           **Read before installing**
 
-          * This is an unsigned debug build. Android will warn about installing from an
-            unknown source, and Play Protect may ask you to confirm.
-          * The backend address is baked in at build time. If it was built without
-            `VITE_API_BASE_URL`, the app opens on a "RecipeLens is not configured" screen
-            and cannot sign in or import anything. Re-run the workflow with the
-            `api_base_url` input (or set the `RECIPELENS_API_BASE_URL` repository variable)
-            to produce a build that talks to your server.
+          * This is a debug build, signed with the throwaway Android debug key. Android
+            will warn about installing from an unknown source, and Play Protect may ask
+            you to confirm.
+          * Each build is signed with a fresh debug key, so installing a newer APK over an
+            older one fails with "App not installed". Uninstall the previous RecipeLens
+            first. Uninstalling clears the server address and the session on the device;
+            your recipes stay on the server.
+          * On first launch the app asks for your backend address (for example
+            `https://your-service.onrender.com`) and checks it before storing it. You can
+            change it later under Settings → Server. Baking an address in at build time is
+            still possible with the `api_base_url` input or the `RECIPELENS_API_BASE_URL`
+            repository variable, but it is no longer required.
           * The APK contains no AI key and no database credentials — it only calls the
             backend you point it at.
 
