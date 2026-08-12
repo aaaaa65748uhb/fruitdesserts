@@ -2,8 +2,11 @@
 #
 # In Render: New → Blueprint → pick this repository → pick the branch. Render
 # reads this file, creates the service and generates SESSION_SECRET for you.
-# The only value you must type is AI_API_KEY (and the model/base URL if you are
-# not using OpenAI).
+#
+# Nothing here needs to be filled in by hand, so the blueprint applies straight
+# away. AI analysis stays switched off until you add AI_API_KEY in the Render
+# dashboard (Environment → Add Environment Variable); everything else — sign-in,
+# recipes, scaling, shopping list, cooking mode — works without it.
 #
 # The service serves the API *and* the built web client, so the URL Render gives
 # you works in a phone browser as well as being the address to build the APK
@@ -32,11 +35,12 @@ services:
       # when the service restarts or redeploys, so treat the data as temporary.
       - key: DATABASE_URL
         value: file:./data/recipelens.db
-      # --- AI: fill AI_API_KEY in the Render dashboard ---------------------
+      # --- AI ---------------------------------------------------------------
+      # Add AI_API_KEY in the dashboard to switch AI analysis on. Change the
+      # provider/base URL/model there too if you are not using OpenAI:
+      #   AI_PROVIDER   openai | openai-compatible | anthropic | gemini
       - key: AI_PROVIDER
         value: openai-compatible
-      - key: AI_API_KEY
-        sync: false
       - key: AI_API_BASE_URL
         value: https://api.openai.com/v1
       - key: AI_MODEL
