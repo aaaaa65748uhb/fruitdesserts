@@ -5,6 +5,7 @@
  * The API key is held here and never leaves the server: it is not returned by
  * any route, not logged, and not part of any error message.
  */
+import { recordProviderFailure, type FailureStage } from '../failureLog.js';
 import { buildUserPrompt, SYSTEM_PROMPT } from '../prompt.js';
 import {
   AIProviderError,
@@ -76,7 +77,11 @@ export abstract class BaseProvider implements AIProvider {
       });
     } catch (cause) {
       if (controller.signal.aborted && !external?.aborted) {
+        this.note('transport', 'timeout', null, `no response within ${this.timeoutMs} ms`);
         throw new AIProviderError('timeout', `AI request timed out after ${this.timeoutMs} ms.`, { cause, retryable: true });
+      }
+      if (!external?.aborted) {
+        this.note('transport', 'unavailable', null, cause instanceof Error ? cause.message : String(cause));
       }
       throw new AIProviderError('unavailable', 'Could not reach the AI provider.', { cause, retryable: true });
     } finally {
@@ -85,8 +90,26 @@ export abstract class BaseProvider implements AIProvider {
     }
   }
 
+  /**
+   * Remember why a call failed. The detail is provider text, so it is redacted
+   * and truncated before it is stored — see failureLog.ts.
+   */
+  protected note(stage: FailureStage, code: string, status: number | null, detail: string): void {
+    recordProviderFailure({
+      stage,
+      code,
+      status,
+      provider: this.name,
+      model: this.model,
+      endpoint: this.endpoint,
+      detail,
+    });
+  }
+
   protected toError(status: number, detail: string): AIProviderError {
-    // `detail` is provider text: used for classification only, never surfaced.
+    // `detail` is provider text: classified here, recorded for diagnostics, and
+    // never returned to an unauthenticated caller.
+    this.note('http', String(status), status, detail);
     if (status === 401 || status === 403) {
       return new AIProviderError('auth', 'The configured AI credentials were rejected by the provider.', {
         status,
@@ -110,12 +133,14 @@ export abstract class BaseProvider implements AIProvider {
     try {
       return (await response.json()) as T;
     } catch (cause) {
+      this.note('envelope', 'bad_response', response.status, cause instanceof Error ? cause.message : 'not JSON');
       throw new AIProviderError('bad_response', 'AI provider returned a non-JSON response envelope.', { cause });
     }
   }
 
-  protected requireText(text: string | null | undefined): string {
+  protected requireText(text: string | null | undefined, context = ''): string {
     if (!text || !text.trim()) {
+      this.note('empty', 'bad_response', null, `no assistant text in the response${context ? ` (${context})` : ''}`);
       throw new AIProviderError('bad_response', 'AI provider returned an empty completion.', { retryable: true });
     }
     return text;

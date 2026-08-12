@@ -50,6 +50,9 @@ Absolute rules:
 Required JSON shape:
 ${RECIPE_JSON_SHAPE}`;
 
+/** Roughly 20k tokens of source material — generous, but finite. */
+const MAX_PROMPT_CHARS = 80_000;
+
 function section(label: string, value: string | null | undefined): string | null {
   if (!value) return null;
   const trimmed = value.replace(/\s+/g, ' ').trim();
@@ -81,7 +84,14 @@ export function buildUserPrompt(input: AnalyzeRecipeInput, repairHint?: string |
     input.language ? `### Preferred output language\n${input.language}` : null,
   ];
 
-  let prompt = `Extract the recipe from the material below.\n\n${parts.filter(Boolean).join('\n\n')}`;
+  // Each section is already bounded; this bounds their sum, so a page that
+  // yields an unusual amount of text cannot push the request past the model's
+  // context window and turn into an opaque HTTP 400.
+  let body = parts.filter(Boolean).join('\n\n');
+  if (body.length > MAX_PROMPT_CHARS) {
+    body = `${body.slice(0, MAX_PROMPT_CHARS)}\n\n[source text truncated]`;
+  }
+  let prompt = `Extract the recipe from the material below.\n\n${body}`;
 
   if (repairHint) {
     prompt += `\n\n### Correction required

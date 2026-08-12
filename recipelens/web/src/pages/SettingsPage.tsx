@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/AppShell.js';
 import { InlineError, Spinner } from '../components/feedback.js';
-import { api } from '../lib/api.js';
+import { api, type AiDiagnostics } from '../lib/api.js';
 import { useAsync } from '../lib/useAsync.js';
 import { useAuth } from '../state/AuthContext.js';
 import { ServerSetup } from '../components/ServerSetup.js';
@@ -19,6 +19,23 @@ export function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [changingServer, setChangingServer] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<AiDiagnostics | null>(null);
+  const [diagnosticsError, setDiagnosticsError] = useState<string | null>(null);
+
+  async function testAi() {
+    setTesting(true);
+    setDiagnostics(null);
+    setDiagnosticsError(null);
+    try {
+      // The deep check runs a real extraction, which is what actually breaks.
+      setDiagnostics(await api.diagnostics.ai(true));
+    } catch (caught) {
+      setDiagnosticsError(caught instanceof Error ? caught.message : 'The check could not be run.');
+    } finally {
+      setTesting(false);
+    }
+  }
 
   async function saveProfile() {
     setError(null);
@@ -89,6 +106,63 @@ export function SettingsPage() {
           )
         ) : null}
         {health.error ? <p className="text-sm text-red-700">Could not reach the server just now.</p> : null}
+
+        <button type="button" className="btn-secondary" onClick={() => void testAi()} disabled={testing}>
+          {testing ? 'Testing…' : 'Test AI connection'}
+        </button>
+        <p className="text-xs text-neutral-500">
+          Sends one short request to the model and extracts a known recipe from it. Use this when an import fails.
+        </p>
+
+        {diagnosticsError ? <p className="text-sm text-red-700">{diagnosticsError}</p> : null}
+
+        {diagnostics ? (
+          <div className="space-y-2 rounded-lg bg-neutral-50 p-3 text-sm" role="status">
+            <p className={diagnostics.ok ? 'font-semibold text-emerald-700' : 'font-semibold text-red-700'}>
+              {diagnostics.ok ? 'The model answered correctly.' : 'The model did not answer usably.'}
+            </p>
+            <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-neutral-700">
+              <dt className="text-neutral-500">Provider</dt>
+              <dd className="break-all">{diagnostics.provider}</dd>
+              <dt className="text-neutral-500">Endpoint</dt>
+              <dd className="break-all">{diagnostics.endpoint}</dd>
+              <dt className="text-neutral-500">Model</dt>
+              <dd className="break-all">{diagnostics.model ?? diagnostics.configuredModel}</dd>
+              {diagnostics.latencyMs != null ? (
+                <>
+                  <dt className="text-neutral-500">Took</dt>
+                  <dd>{(diagnostics.latencyMs / 1000).toFixed(1)}s</dd>
+                </>
+              ) : null}
+              {diagnostics.extracted ? (
+                <>
+                  <dt className="text-neutral-500">Extracted</dt>
+                  <dd>
+                    {diagnostics.extracted.ingredientCount} ingredients, {diagnostics.extracted.stepCount} steps
+                  </dd>
+                </>
+              ) : null}
+            </dl>
+            {diagnostics.failure ? (
+              <p className="text-red-700">
+                {diagnostics.failure.code}: {diagnostics.failure.message}
+              </p>
+            ) : null}
+            {diagnostics.recentFailures.length ? (
+              <div>
+                <p className="text-neutral-500">What the provider said:</p>
+                <ul className="mt-1 space-y-1">
+                  {diagnostics.recentFailures.slice(0, 3).map((failure) => (
+                    <li key={failure.at} className="break-all rounded bg-white p-2 font-mono text-xs text-neutral-700">
+                      {failure.status ? `HTTP ${failure.status} — ` : ''}
+                      {failure.detail || failure.stage}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       {isNative ? (

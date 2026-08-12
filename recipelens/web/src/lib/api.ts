@@ -223,6 +223,32 @@ async function keepToken(response: { user: ApiUser; token?: string }): Promise<{
   return { user: response.user };
 }
 
+export interface AiDiagnostics {
+  ok: boolean;
+  check: 'ping' | 'deep';
+  provider: string;
+  configuredModel: string;
+  endpoint: string;
+  model?: string;
+  attempts?: number;
+  latencyMs?: number;
+  checkedAt: string;
+  extracted?: { title: string; ingredientCount: number; stepCount: number };
+  failure?: { code: string; message: string; status: number };
+  /** Redacted provider text — what the model's endpoint actually objected to. */
+  recentFailures: Array<{
+    at: string;
+    stage: string;
+    status: number | null;
+    detail: string;
+  }>;
+}
+
+function isAiDiagnostics(value: unknown): value is AiDiagnostics {
+  const candidate = value as AiDiagnostics | null;
+  return Boolean(candidate && typeof candidate.ok === 'boolean' && Array.isArray(candidate.recentFailures));
+}
+
 export const api = {
   auth: {
     me: () => request<{ user: ApiUser }>('/auth/me'),
@@ -251,6 +277,21 @@ export const api = {
       ai: { configured: boolean; provider: string | null; model: string | null };
       google?: { configured: boolean };
     }>('/health'),
+  diagnostics: {
+    /**
+     * Real round trip to the configured model; `deep` runs a full extraction.
+     * A failed check answers with an error status *and* the diagnosis, so both
+     * outcomes are returned in the same shape rather than one of them throwing.
+     */
+    ai: async (deep = false): Promise<AiDiagnostics> => {
+      try {
+        return await request<AiDiagnostics>(`/diagnostics/ai${deep ? '?deep=1' : ''}`, { timeoutMs: 120_000 });
+      } catch (error) {
+        if (error instanceof ApiError && isAiDiagnostics(error.details)) return error.details;
+        throw error;
+      }
+    },
+  },
   recipes: {
     list: (params: { search?: string; favorite?: boolean; collectionId?: string; tag?: string } = {}) => {
       const query = new URLSearchParams();

@@ -13,7 +13,14 @@ import {
 } from './AIProvider.js';
 
 interface ChatResponse {
-  choices?: Array<{ message?: { content?: string | null }; finish_reason?: string | null }>;
+  choices?: Array<{
+    message?: {
+      content?: string | null;
+      /** Some OpenAI-compatible endpoints put a reasoning model's text here. */
+      reasoning_content?: string | null;
+    };
+    finish_reason?: string | null;
+  }>;
   model?: string;
   usage?: { prompt_tokens?: number; completion_tokens?: number };
 }
@@ -58,27 +65,32 @@ export class OpenAIProvider extends BaseProvider {
     const url = `${this.baseUrl}/chat/completions`;
     let response = await this.post(url, body, { authorization: `Bearer ${this.apiKey}` }, options.signal);
 
-    // Some compatible endpoints reject response_format — retry once without it.
+    // JSON mode is the most common thing an OpenAI-compatible endpoint refuses,
+    // and every endpoint words that refusal differently. Rather than guess at
+    // the wording, drop response_format and try once more on any rejection:
+    // the worst case is one wasted call, and the failure is recorded either way.
     if ((response.status === 400 || response.status === 422) && body.response_format) {
       const text = await safeText(response);
-      if (/response_format|json_object|json[_ ]?schema|guided|structured/i.test(text)) {
-        this.jsonModeUnsupported = true;
-        delete body.response_format;
-        response = await this.post(url, body, { authorization: `Bearer ${this.apiKey}` }, options.signal);
-      } else {
-        throw this.toError(response.status, text);
-      }
+      this.note('http', String(response.status), response.status, `with response_format: ${text}`);
+      this.jsonModeUnsupported = true;
+      delete body.response_format;
+      response = await this.post(url, body, { authorization: `Bearer ${this.apiKey}` }, options.signal);
     }
 
     if (!response.ok) throw this.toError(response.status, await safeText(response));
 
     const payload = await this.readJson<ChatResponse>(response);
-    const text = this.requireText(payload.choices?.[0]?.message?.content);
+    const choice = payload.choices?.[0];
+    const finishReason = choice?.finish_reason ?? null;
+    const text = this.requireText(
+      choice?.message?.content || choice?.message?.reasoning_content,
+      `finish_reason=${finishReason ?? 'none'}, choices=${payload.choices?.length ?? 0}`,
+    );
 
     return {
       text,
       model: payload.model ?? this.model,
-      finishReason: payload.choices?.[0]?.finish_reason ?? null,
+      finishReason,
       usage: payload.usage
         ? { promptTokens: payload.usage.prompt_tokens, completionTokens: payload.usage.completion_tokens }
         : null,
