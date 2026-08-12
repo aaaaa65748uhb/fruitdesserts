@@ -31,6 +31,7 @@ export const TEST_ENV = {
 export class MockProvider implements AIProvider {
   readonly name = 'mock';
   readonly model = 'mock-model';
+  readonly endpoint = 'mock.invalid';
   readonly calls: Array<{ input: AnalyzeRecipeInput | CompletionRequest; options: AnalyzeOptions }> = [];
   private queue: Array<string | Error | (() => Promise<string>)> = [];
 

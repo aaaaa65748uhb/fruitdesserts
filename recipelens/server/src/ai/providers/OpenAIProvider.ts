@@ -25,6 +25,11 @@ export class OpenAIProvider extends BaseProvider {
   /** Set once the endpoint tells us it cannot honour response_format. */
   private jsonModeUnsupported = false;
 
+  /** Subclasses raise this where the endpoint's own default is too small. */
+  protected get defaultMaxTokens(): number | null {
+    return null;
+  }
+
   constructor(options: ProviderOptions) {
     super(options, 'https://api.openai.com/v1');
   }
@@ -46,21 +51,22 @@ export class OpenAIProvider extends BaseProvider {
         { role: 'user', content },
       ],
     };
-    if (request.maxTokens) body.max_tokens = request.maxTokens;
+    const maxTokens = request.maxTokens ?? this.defaultMaxTokens;
+    if (maxTokens) body.max_tokens = maxTokens;
     if (request.json && !this.jsonModeUnsupported) body.response_format = { type: 'json_object' };
 
     const url = `${this.baseUrl}/chat/completions`;
     let response = await this.post(url, body, { authorization: `Bearer ${this.apiKey}` }, options.signal);
 
     // Some compatible endpoints reject response_format — retry once without it.
-    if (response.status === 400 && body.response_format) {
+    if ((response.status === 400 || response.status === 422) && body.response_format) {
       const text = await safeText(response);
-      if (/response_format|json_object/i.test(text)) {
+      if (/response_format|json_object|json[_ ]?schema|guided|structured/i.test(text)) {
         this.jsonModeUnsupported = true;
         delete body.response_format;
         response = await this.post(url, body, { authorization: `Bearer ${this.apiKey}` }, options.signal);
       } else {
-        throw this.toError(400, text);
+        throw this.toError(response.status, text);
       }
     }
 

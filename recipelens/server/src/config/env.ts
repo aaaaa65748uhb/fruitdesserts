@@ -128,13 +128,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   }
 
   const apiKey = e.AI_API_KEY?.trim() || null;
-  const baseUrl = (e.AI_API_BASE_URL?.trim() || 'https://api.openai.com/v1').replace(/\/+$/, '');
-  const model = e.AI_MODEL?.trim() || 'gpt-4o-mini';
+  // Left empty when unset: the provider factory then applies the endpoint and
+  // model that belong to AI_PROVIDER, instead of forcing OpenAI's onto NVIDIA.
+  const baseUrl = (e.AI_API_BASE_URL?.trim() ?? '').replace(/\/+$/, '');
+  const model = e.AI_MODEL?.trim() ?? '';
 
-  const missing: string[] = [];
-  if (!apiKey) missing.push('AI_API_KEY');
-  if (!e.AI_API_BASE_URL?.trim()) missing.push('AI_API_BASE_URL');
-  if (!e.AI_MODEL?.trim()) missing.push('AI_MODEL');
   const configured = apiKey != null;
 
   const ai: AiConfig = {
@@ -147,7 +145,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     configured,
     disabledReason: configured
       ? null
-      : `AI provider is not configured. Missing environment variable(s): ${missing.join(', ')}.`,
+      : 'AI provider is not configured. Set AI_API_KEY (and optionally AI_PROVIDER, AI_API_BASE_URL, AI_MODEL).',
   };
 
   // Capacitor serves the APK's assets from these origins. They are safe to

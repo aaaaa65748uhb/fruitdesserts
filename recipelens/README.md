@@ -24,6 +24,7 @@ Android APK (Capacitor)          Browser (React + Vite + Tailwind)
                         ├── SQLite (migrations, per-user authorization)
                         │
                         └── RecipeAIService ──▶ AIProvider ──▶ configured model
+                                                 NvidiaProvider  (NIM)
                                                  OpenAIProvider
                                                  AnthropicProvider
                                                  GeminiProvider
@@ -77,10 +78,10 @@ Names only — never commit real values. See `.env.example` for the annotated ve
 | `SESSION_SECRET` | **yes in production** | Signs session cookies (≥32 chars) |
 | `SESSION_TTL_SECONDS` | no (7 days) | Session lifetime |
 | `DATABASE_URL` | no | `file:./data/recipelens.db` or `:memory:` |
-| `AI_PROVIDER` | no | `openai` \| `openai-compatible` \| `anthropic` \| `gemini` |
+| `AI_PROVIDER` | no | `nvidia` \| `openai` \| `openai-compatible` \| `anthropic` \| `gemini` |
 | `AI_API_KEY` | for AI import | Provider key — server-side only |
-| `AI_API_BASE_URL` | for AI import | e.g. `https://api.openai.com/v1` |
-| `AI_MODEL` | for AI import | e.g. `gpt-4o-mini` |
+| `AI_API_BASE_URL` | no | Endpoint; empty falls back to the provider's own default |
+| `AI_MODEL` | no | Model; empty falls back to the provider's default model |
 | `AI_TIMEOUT_MS` | no (45000) | Per-request timeout |
 | `AI_MAX_RETRIES` | no (2) | Retries for an invalid/failed AI answer |
 | `MAX_UPLOAD_BYTES` | no (10 MB) | Cap on request bodies and screenshots |
@@ -213,6 +214,20 @@ error handling applies, and each result is labelled as an estimate:
   untouched.
 * **Ask AI about this recipe** — answers grounded in the recipe on screen, and says so
   plainly when the recipe does not contain the answer.
+
+## Checking the AI provider is really working
+
+`GET /api/diagnostics/ai` (signed in) makes a real completion request to whatever
+`AI_PROVIDER` points at and reports what answered:
+
+```json
+{ "ok": true, "provider": "nvidia", "model": "meta/llama-4-maverick-17b-128e-instruct",
+  "endpoint": "integrate.api.nvidia.com", "attempts": 1, "latencyMs": 812 }
+```
+
+A rejected key comes back as `502 AI_UNAVAILABLE`, a missing one as
+`503 AI_NOT_CONFIGURED`. The key itself is never in the response, and the check
+is rate limited to 10 per hour because each call costs a completion.
 
 ## Security notes
 

@@ -14,6 +14,7 @@ import { collectionRoutes } from './routes/collections.js';
 import { cookingRoutes } from './routes/cooking.js';
 import { importRoutes } from './routes/import.js';
 import { assistRoutes } from './routes/assist.js';
+import { diagnosticsRoutes } from './routes/diagnostics.js';
 
 export function createApp(ctx: AppContext): Express {
   const app = express();
@@ -41,7 +42,13 @@ export function createApp(ctx: AppContext): Express {
     res.status(database === 'ok' ? 200 : 503).json({
       status: database === 'ok' ? 'ok' : 'degraded',
       database,
-      ai: { configured: Boolean(ctx.ai), provider: ctx.ai?.providerName ?? null, model: ctx.ai?.model ?? null },
+      ai: {
+        configured: Boolean(ctx.ai),
+        provider: ctx.ai?.providerName ?? null,
+        model: ctx.ai?.model ?? null,
+        endpoint: ctx.ai?.endpoint ?? null,
+        reason: ctx.aiDisabledReason,
+      },
       google: { configured: ctx.config.google.configured },
       version: '1.0.0',
     });
@@ -54,6 +61,7 @@ export function createApp(ctx: AppContext): Express {
   app.use('/api/cooking', cookingRoutes());
   app.use('/api/import', importRoutes());
   app.use('/api/assist', assistRoutes());
+  app.use('/api/diagnostics', diagnosticsRoutes());
 
   serveWebClient(app);
 

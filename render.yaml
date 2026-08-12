@@ -35,13 +35,14 @@ services:
       # when the service restarts or redeploys, so treat the data as temporary.
       - key: DATABASE_URL
         value: file:./data/recipelens.db
-      # --- AI ---------------------------------------------------------------
-      # Add AI_API_KEY in the dashboard to switch AI analysis on. Change the
-      # provider/base URL/model there too if you are not using OpenAI:
-      #   AI_PROVIDER   openai | openai-compatible | anthropic | gemini
+      # --- AI: NVIDIA Build (NIM) -------------------------------------------
+      # AI_API_KEY is deliberately NOT here: add it in the dashboard so the
+      # secret never lives in the repository. Everything else is public config.
+      # Supported AI_PROVIDER values:
+      #   nvidia | openai | openai-compatible | anthropic | gemini
       - key: AI_PROVIDER
-        value: openai-compatible
+        value: nvidia
       - key: AI_API_BASE_URL
-        value: https://api.openai.com/v1
+        value: https://integrate.api.nvidia.com/v1
       - key: AI_MODEL
-        value: gpt-4o-mini
+        value: meta/llama-4-maverick-17b-128e-instruct

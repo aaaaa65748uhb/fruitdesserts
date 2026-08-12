@@ -58,6 +58,10 @@ export class RecipeAIService {
     return this.provider.model;
   }
 
+  get endpoint(): string {
+    return this.provider.endpoint;
+  }
+
   /** Stable fingerprint of the input, used for caching and de-duplication. */
   static fingerprint(input: AnalyzeRecipeInput): string {
     const canonical = JSON.stringify({

@@ -49,6 +49,15 @@ export abstract class BaseProvider implements AIProvider {
     );
   }
 
+  /** Hostname only — safe to show in a diagnostics response. */
+  get endpoint(): string {
+    try {
+      return new URL(this.baseUrl).host;
+    } catch {
+      return 'unknown';
+    }
+  }
+
   abstract complete(request: CompletionRequest, options?: AnalyzeOptions): Promise<AIProviderResult>;
 
   /** POST JSON with a hard timeout and uniform transport error mapping. */

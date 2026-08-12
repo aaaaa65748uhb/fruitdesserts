@@ -75,6 +75,8 @@ export interface AnalyzeOptions {
 export interface AIProvider {
   readonly name: string;
   readonly model: string;
+  /** Host the provider talks to, for diagnostics. Never includes credentials. */
+  readonly endpoint: string;
   /** Recipe extraction from whatever the source made available. */
   analyzeRecipe(input: AnalyzeRecipeInput, options?: AnalyzeOptions): Promise<AIProviderResult>;
   /** Every other recipe AI task (nutrition, substitutions, chat, …). */
