@@ -6,6 +6,7 @@ import { api, ApiError } from '../lib/api.js';
 import { useAsync } from '../lib/useAsync.js';
 import { GoogleSignInButton } from '../components/GoogleSignIn.js';
 import { useAuth } from '../state/AuthContext.js';
+import { isLikelyEmail, normalizeEmail } from '../shared.js';
 
 interface FieldErrors {
   email?: string;
@@ -28,9 +29,9 @@ export function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   // Google is offered only when the server can actually verify its tokens.
   const health = useAsync(() => api.health(), []);
 
-  function validate(): boolean {
+  function validate(cleanEmail: string): boolean {
     const errors: FieldErrors = {};
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.email = 'Enter a valid email address.';
+    if (!isLikelyEmail(cleanEmail)) errors.email = 'Enter a valid email address, for example name@example.com.';
     if (password.length < 8) errors.password = 'Use at least 8 characters.';
     if (signingUp && displayName.trim().length === 0) errors.displayName = 'Tell us what to call you.';
     setFieldErrors(errors);
@@ -40,12 +41,16 @@ export function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setFormError(null);
-    if (!validate()) return;
+    // What the keyboard produced is not always what the address is: strip the
+    // invisible marks an RTL keyboard adds before judging or sending it.
+    const cleanEmail = normalizeEmail(email);
+    if (cleanEmail !== email) setEmail(cleanEmail);
+    if (!validate(cleanEmail)) return;
 
     setPending(true);
     try {
-      if (signingUp) await register(email.trim(), password, displayName.trim());
-      else await login(email.trim(), password);
+      if (signingUp) await register(cleanEmail, password, displayName.trim());
+      else await login(cleanEmail, password);
       const from = (location.state as { from?: string } | null)?.from;
       navigate(from && from !== '/sign-in' ? from : '/', { replace: true });
     } catch (error) {

@@ -8,13 +8,14 @@ import { clearSession, currentUser, issueSession, requireAuth, wantsToken } from
 import { asyncHandler, getContext } from '../middleware/context.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { verifyGoogleIdToken } from '../lib/googleIdToken.js';
+import { normalizeEmail } from '../shared.js';
 
-const emailSchema = z
-  .string()
-  .trim()
-  .min(3)
-  .max(254)
-  .email('Enter a valid email address.');
+// Normalised first: a phone keyboard can wrap the address in invisible
+// directional marks, which would otherwise be rejected as malformed.
+const emailSchema = z.preprocess(
+  (value) => (typeof value === 'string' ? normalizeEmail(value) : value),
+  z.string().trim().min(3).max(254).email('Enter a valid email address.'),
+);
 
 const passwordSchema = z
   .string()

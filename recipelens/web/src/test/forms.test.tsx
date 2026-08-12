@@ -51,7 +51,7 @@ describe('AuthPage validation', () => {
     await user.type(screen.getByLabelText(/password/i), 'short');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
-    expect(await screen.findByText('Enter a valid email address.')).toBeInTheDocument();
+    expect(await screen.findByText(/enter a valid email address/i)).toBeInTheDocument();
     expect(screen.getByText('Use at least 8 characters.')).toBeInTheDocument();
     expect(login).not.toHaveBeenCalled();
   });
@@ -66,6 +66,23 @@ describe('AuthPage validation', () => {
     );
 
     await user.type(screen.getByLabelText(/email/i), 'cook@example.test');
+    await user.type(screen.getByLabelText(/password/i), 'a-good-password');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    await waitFor(() => expect(login).toHaveBeenCalledWith('cook@example.test', 'a-good-password'));
+  });
+
+  it('accepts an address wrapped in the marks an RTL keyboard adds', async () => {
+    const user = userEvent.setup();
+    login.mockResolvedValue(undefined);
+    render(
+      <MemoryRouter>
+        <AuthPage mode="sign-in" />
+      </MemoryRouter>,
+    );
+
+    // Invisible on screen, and previously rejected as malformed.
+    await user.type(screen.getByLabelText(/email/i), '\u200Ecook@example.test\u200E');
     await user.type(screen.getByLabelText(/password/i), 'a-good-password');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
