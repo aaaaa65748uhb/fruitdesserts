@@ -37,8 +37,12 @@ export class NvidiaProvider extends OpenAIProvider {
     super({ ...options, baseUrl: options.baseUrl?.trim() || NVIDIA_DEFAULT_BASE_URL, model });
   }
 
-  /** A whole recipe does not fit in NIM's small default completion budget. */
+  /**
+   * A whole recipe does not fit in NIM's small default completion budget, and
+   * a reasoning model spends part of the same budget thinking before it writes
+   * anything — so the room has to cover both, or the recipe is cut off mid-way.
+   */
   protected override get defaultMaxTokens(): number {
-    return 4096;
+    return 8192;
   }
 }

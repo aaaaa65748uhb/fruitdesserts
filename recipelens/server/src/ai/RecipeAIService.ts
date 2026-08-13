@@ -13,6 +13,7 @@ import { createHash } from 'node:crypto';
 import type { ZodType } from 'zod';
 import { ApiError } from '../lib/errors.js';
 import { aiRecipeSchema, normalizeAiRecipe, type RecipeDraft, type SourceType } from '../shared.js';
+import { recordProviderFailure } from './failureLog.js';
 import { parseJsonLoose } from './json.js';
 import { sourceTextLength } from './prompt.js';
 import { AIProviderError, type AIProvider, type AnalyzeRecipeInput } from './providers/AIProvider.js';
@@ -89,6 +90,19 @@ export class RecipeAIService {
    */
   private remainingMs(startedAt: number): number {
     return Math.max(1000, this.budgetMs - (Date.now() - startedAt));
+  }
+
+  /** A failure in our own reading of the answer, not in reaching the model. */
+  private noteText(stage: 'parse' | 'schema', detail: string, model: string): void {
+    recordProviderFailure({
+      stage,
+      code: 'AI_INVALID_RESPONSE',
+      status: null,
+      provider: this.provider.name,
+      model,
+      endpoint: this.provider.endpoint,
+      detail,
+    });
   }
 
   private outOfTime(attempts: number): ApiError {
@@ -179,6 +193,9 @@ export class RecipeAIService {
 
       const parsed = parseJsonLoose(text);
       if (!parsed.ok) {
+        // Record what actually came back. Without it this failure is a dead
+        // end: nobody can tell a chatty preamble from a truncated answer.
+        this.noteText('parse', `${parsed.error} — answer began: ${text.slice(0, 200)}`, model);
         repairHint = `The response was not valid JSON (${parsed.error}). Reply with one JSON object only.`;
         lastError = new ApiError(502, 'AI_INVALID_RESPONSE', 'The AI returned a response that could not be read as JSON.', {
           retryable: true,
@@ -193,6 +210,7 @@ export class RecipeAIService {
           .slice(0, 8)
           .map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
           .join('; ');
+        this.noteText('schema', issues, model);
         repairHint = `Schema validation failed: ${issues}`;
         lastError = new ApiError(502, 'AI_INVALID_RESPONSE', 'The AI response did not match the required recipe structure.', {
           details: { issues },

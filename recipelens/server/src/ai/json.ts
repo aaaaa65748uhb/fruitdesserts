@@ -1,9 +1,14 @@
 /**
  * Recovery of a JSON object from a model's raw answer.
  *
- * Models wrap JSON in prose or code fences, emit trailing commas, or stop
- * mid-object. These are *safe* repairs: they only fix syntax, never content —
- * no field is ever filled in on the model's behalf.
+ * Models wrap JSON in prose or code fences, emit trailing commas, stop
+ * mid-object, put literal newlines inside strings, or think out loud first —
+ * and a reasoning model's thinking frequently contains braces of its own, so
+ * the first `{` in the response is not necessarily the answer.
+ *
+ * Every repair here is *syntactic*. Nothing is filled in on the model's
+ * behalf: a field the model did not write stays missing, and the schema
+ * rejects the result rather than inventing it.
  */
 
 export type JsonParseResult =
@@ -17,24 +22,94 @@ export function parseJsonLoose(raw: string): JsonParseResult {
   const direct = tryParse(text);
   if (direct.ok) return { ok: true, value: direct.value, repaired: false };
 
-  const candidates = [stripFences(text), extractBalancedObject(text), extractBalancedObject(stripFences(text))];
+  const thoughtless = stripReasoning(text);
+  const candidates = [
+    thoughtless,
+    stripFences(thoughtless),
+    ...extractBalancedObjects(thoughtless),
+    ...extractBalancedObjects(stripFences(thoughtless)),
+  ];
+
+  // Among the objects the model produced, take the largest that parses: a
+  // reasoning trace often contains a small illustrative object before the real
+  // answer, and the answer is the substantial one.
+  let best: { value: unknown; size: number } | null = null;
+  const consider = (candidate: string) => {
+    const parsed = tryParse(candidate);
+    if (parsed.ok && (!best || candidate.length > best.size)) best = { value: parsed.value, size: candidate.length };
+  };
+
   for (const candidate of candidates) {
     if (!candidate) continue;
-    const parsed = tryParse(candidate);
-    if (parsed.ok) return { ok: true, value: parsed.value, repaired: true };
-
-    const cleaned = removeTrailingCommas(candidate);
-    const parsedClean = tryParse(cleaned);
-    if (parsedClean.ok) return { ok: true, value: parsedClean.value, repaired: true };
-
+    consider(candidate);
+    const cleaned = removeTrailingCommas(escapeRawControlChars(candidate));
+    consider(cleaned);
     const closed = closeTruncated(cleaned);
-    if (closed) {
-      const parsedClosed = tryParse(closed);
-      if (parsedClosed.ok) return { ok: true, value: parsedClosed.value, repaired: true };
-    }
+    if (closed) consider(closed);
   }
 
+  if (best) return { ok: true, value: (best as { value: unknown }).value, repaired: true };
   return { ok: false, error: direct.error };
+}
+
+/**
+ * Remove a reasoning model's thinking. It is not part of the answer, and it
+ * routinely contains braces — so leaving it in makes the first `{` in the
+ * response point at the model's notes instead of its output.
+ */
+function stripReasoning(text: string): string {
+  const tagged = text.replace(/<(think|thinking|reasoning|scratchpad|analysis)>[\s\S]*?<\/\1>/gi, ' ').trim();
+  // An unclosed block means the thinking ran to the end of the response; keep
+  // whatever follows the last closing tag, if there is one.
+  const lastClose = tagged.lastIndexOf('</think>');
+  return (lastClose === -1 ? tagged : tagged.slice(lastClose + '</think>'.length)).trim() || tagged;
+}
+
+/**
+ * Literal newlines and tabs inside a JSON string are invalid, and models emit
+ * them in step instructions all the time. Escaping is a pure syntax repair —
+ * the characters stay, they just become legal.
+ */
+function escapeRawControlChars(text: string): string {
+  let out = '';
+  let inString = false;
+  let escaped = false;
+  for (const ch of text) {
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        out += ch;
+        continue;
+      }
+      if (ch === '\\') {
+        escaped = true;
+        out += ch;
+        continue;
+      }
+      if (ch === '"') {
+        inString = false;
+        out += ch;
+        continue;
+      }
+      if (ch === '\n') {
+        out += '\\n';
+        continue;
+      }
+      if (ch === '\r') {
+        out += '\\r';
+        continue;
+      }
+      if (ch === '\t') {
+        out += '\\t';
+        continue;
+      }
+      out += ch;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    out += ch;
+  }
+  return out;
 }
 
 function tryParse(text: string): { ok: true; value: unknown } | { ok: false; error: string } {
@@ -51,14 +126,19 @@ function stripFences(text: string): string {
   return text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
 }
 
-/** First top-level {...} block, respecting strings and escapes. */
-function extractBalancedObject(text: string): string | null {
-  const start = text.indexOf('{');
-  if (start === -1) return null;
+/**
+ * Every top-level {...} block, respecting strings and escapes, plus the
+ * trailing fragment when the response was cut off mid-object. More than one
+ * can appear — the caller decides which is the answer.
+ */
+function extractBalancedObjects(text: string): string[] {
+  const found: string[] = [];
   let depth = 0;
+  let start = -1;
   let inString = false;
   let escaped = false;
-  for (let i = start; i < text.length; i += 1) {
+
+  for (let i = 0; i < text.length; i += 1) {
     const ch = text[i];
     if (inString) {
       if (escaped) escaped = false;
@@ -67,13 +147,21 @@ function extractBalancedObject(text: string): string | null {
       continue;
     }
     if (ch === '"') inString = true;
-    else if (ch === '{') depth += 1;
-    else if (ch === '}') {
+    else if (ch === '{') {
+      if (depth === 0) start = i;
+      depth += 1;
+    } else if (ch === '}') {
       depth -= 1;
-      if (depth === 0) return text.slice(start, i + 1);
+      if (depth === 0 && start !== -1) {
+        found.push(text.slice(start, i + 1));
+        start = -1;
+      }
+      if (depth < 0) depth = 0;
     }
   }
-  return text.slice(start); // truncated — closeTruncated() may still rescue it
+  // Cut off mid-object: closeTruncated() may still rescue the tail.
+  if (depth > 0 && start !== -1) found.push(text.slice(start));
+  return found;
 }
 
 function removeTrailingCommas(text: string): string {

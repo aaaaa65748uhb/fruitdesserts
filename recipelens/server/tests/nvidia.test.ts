@@ -87,7 +87,9 @@ describe('NVIDIA provider over HTTP', () => {
 
       const body = JSON.parse(fixture.requests[0].body);
       expect(body.model).toBe(MODEL);
-      expect(body.max_tokens).toBe(4096); // a recipe does not fit in NIM's default
+      // Room for a whole recipe *and* for a reasoning model's thinking, which
+      // is drawn from the same budget.
+      expect(body.max_tokens).toBe(8192);
       expect(body.messages[0].role).toBe('system');
       expect(body.messages[1].role).toBe('user');
     } finally {

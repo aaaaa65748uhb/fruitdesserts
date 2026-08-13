@@ -11,7 +11,7 @@
  * through `redact()` first, and the buffer is capped so it cannot grow.
  */
 
-export type FailureStage = 'transport' | 'http' | 'envelope' | 'empty';
+export type FailureStage = 'transport' | 'http' | 'envelope' | 'empty' | 'parse' | 'schema';
 
 export interface ProviderFailure {
   at: string;
