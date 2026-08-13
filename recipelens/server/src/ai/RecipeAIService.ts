@@ -62,6 +62,16 @@ export class RecipeAIService {
     return this.provider.endpoint;
   }
 
+  /** Models this key can use, or null where the vendor exposes no catalogue. */
+  async availableModels(options: { signal?: AbortSignal } = {}): Promise<string[] | null> {
+    if (!this.provider.listModels) return null;
+    try {
+      return await this.provider.listModels(options);
+    } catch (error) {
+      throw toApiError(error);
+    }
+  }
+
   /** Stable fingerprint of the input, used for caching and de-duplication. */
   static fingerprint(input: AnalyzeRecipeInput): string {
     const canonical = JSON.stringify({
@@ -304,6 +314,14 @@ export function toApiError(error: unknown): ApiError {
         return new ApiError(502, 'AI_UNAVAILABLE', 'The AI provider rejected the server credentials.', { retryable: false });
       case 'not_configured':
         return new ApiError(503, 'AI_NOT_CONFIGURED', 'AI analysis is not configured on this server.', { retryable: false });
+      case 'model_unavailable':
+        return new ApiError(502, 'AI_MODEL_UNAVAILABLE', error.message, {
+          recovery: [
+            'Set AI_MODEL on the server to a model the provider still offers',
+            'Settings → Test AI connection lists the models this key can use',
+          ],
+          retryable: false,
+        });
       case 'bad_response':
         return new ApiError(502, 'AI_INVALID_RESPONSE', 'The AI provider returned an unusable response.', { retryable: true });
       case 'unavailable':

@@ -50,7 +50,15 @@ export interface AIProviderResult {
   usage?: { promptTokens?: number; completionTokens?: number } | null;
 }
 
-export type AIErrorCode = 'timeout' | 'rate_limited' | 'auth' | 'unavailable' | 'bad_response' | 'not_configured';
+export type AIErrorCode =
+  | 'timeout'
+  | 'rate_limited'
+  | 'auth'
+  | 'unavailable'
+  | 'bad_response'
+  | 'not_configured'
+  /** The endpoint is fine, the model named by AI_MODEL is not (retired, renamed, no access). */
+  | 'model_unavailable';
 
 export class AIProviderError extends Error {
   readonly code: AIErrorCode;
@@ -81,6 +89,12 @@ export interface AIProvider {
   analyzeRecipe(input: AnalyzeRecipeInput, options?: AnalyzeOptions): Promise<AIProviderResult>;
   /** Every other recipe AI task (nutrition, substitutions, chat, …). */
   complete(request: CompletionRequest, options?: AnalyzeOptions): Promise<AIProviderResult>;
+  /**
+   * Model ids this key can actually use, when the vendor exposes a catalogue.
+   * `null` from a provider that has no such endpoint. Existing to answer the
+   * one question a retired model raises: what should it be replaced with?
+   */
+  listModels?(options?: { signal?: AbortSignal }): Promise<string[] | null>;
 }
 
 export interface ProviderOptions {

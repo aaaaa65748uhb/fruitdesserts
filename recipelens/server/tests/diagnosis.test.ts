@@ -189,3 +189,55 @@ describe('a failed import explains itself', () => {
     }
   });
 });
+
+describe('a model the vendor has retired', () => {
+  it('is reported as a configuration problem, not a transient fault', async () => {
+    const fixture = await startFixtureServer((_req, res) => {
+      res.writeHead(410, { 'content-type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          type: 'about:blank',
+          title: 'Gone',
+          status: 410,
+          detail: `The model '${MODEL}' has reached its end of life on 2026-07-27T00:00:00Z and is no longer available.`,
+        }),
+      );
+    });
+    try {
+      await expect(provider(fixture.url).complete({ system: 's', user: 'u', json: true })).rejects.toMatchObject({
+        code: 'model_unavailable',
+        // Retrying a retired model can only fail again.
+        retryable: false,
+      });
+    } finally {
+      await fixture.close();
+    }
+  });
+
+  it('tells the user which model to use instead', async () => {
+    const fixture = await startFixtureServer((req, res) => {
+      if (req.url?.endsWith('/models')) {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ data: [{ id: 'meta/llama-3.3-70b-instruct' }, { id: 'a/other-model' }] }));
+        return;
+      }
+      res.writeHead(410, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ detail: 'has reached its end of life and is no longer available' }));
+    });
+    const harness = createHarness({ provider: provider(fixture.url) });
+    try {
+      const user = await registerUser(harness.app);
+      const response = await user.agent.get('/api/diagnostics/ai').expect(502);
+      const diagnosis = response.body.error.details;
+
+      expect(diagnosis.failure.code).toBe('AI_MODEL_UNAVAILABLE');
+      expect(diagnosis.modelIsAvailable).toBe(false);
+      expect(diagnosis.availableModels).toContain('meta/llama-3.3-70b-instruct');
+      // Sorted, so the list reads the same way twice.
+      expect(diagnosis.availableModels[0]).toBe('a/other-model');
+    } finally {
+      harness.close();
+      await fixture.close();
+    }
+  });
+});

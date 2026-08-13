@@ -235,6 +235,10 @@ export interface AiDiagnostics {
   checkedAt: string;
   extracted?: { title: string; ingredientCount: number; stepCount: number };
   failure?: { code: string; message: string; status: number };
+  /** What this key may actually use, straight from the vendor's catalogue. */
+  availableModels?: string[] | null;
+  modelsError?: string | null;
+  modelIsAvailable?: boolean | null;
   /** Redacted provider text — what the model's endpoint actually objected to. */
   recentFailures: Array<{
     at: string;

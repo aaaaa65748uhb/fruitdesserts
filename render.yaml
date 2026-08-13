@@ -44,5 +44,9 @@ services:
         value: nvidia
       - key: AI_API_BASE_URL
         value: https://integrate.api.nvidia.com/v1
+      # NVIDIA retires models on a schedule, and a retired one answers HTTP 410
+      # no matter how correct everything else is. meta/llama-4-maverick-17b-128e-instruct
+      # reached end of life on 2026-07-27. Set this to a model your key can
+      # currently use — Settings → Test AI connection lists them for you.
       - key: AI_MODEL
         value: meta/llama-4-maverick-17b-128e-instruct

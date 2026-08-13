@@ -148,6 +148,30 @@ export function SettingsPage() {
                 {diagnostics.failure.code}: {diagnostics.failure.message}
               </p>
             ) : null}
+            {diagnostics.modelIsAvailable === false ? (
+              <p className="text-red-700">
+                The provider no longer offers <span className="font-mono">{diagnostics.configuredModel}</span>. Set AI_MODEL on the
+                server to one of the models below and redeploy.
+              </p>
+            ) : null}
+
+            {diagnostics.availableModels?.length ? (
+              <details>
+                <summary className="cursor-pointer text-neutral-600">
+                  Models this key can use ({diagnostics.availableModels.length})
+                </summary>
+                <ul className="mt-1 max-h-56 overflow-y-auto rounded bg-white p-2 font-mono text-xs text-neutral-700">
+                  {diagnostics.availableModels.map((id) => (
+                    <li key={id} className="break-all py-0.5">
+                      {id}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : diagnostics.modelsError ? (
+              <p className="text-neutral-600">Could not list the provider&rsquo;s models: {diagnostics.modelsError}</p>
+            ) : null}
+
             {diagnostics.recentFailures.length ? (
               <div>
                 <p className="text-neutral-500">What the provider said:</p>

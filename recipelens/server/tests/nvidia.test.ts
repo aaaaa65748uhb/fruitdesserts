@@ -149,8 +149,10 @@ describe('GET /api/diagnostics/ai', () => {
       expect(response.body.provider).toBe('nvidia');
       expect(response.body.model).toBe(MODEL);
       expect(typeof response.body.latencyMs).toBe('number');
-      // The request really left the process.
-      expect(fixture.requests).toHaveLength(1);
+      // The requests really left the process: the completion, plus the model
+      // catalogue the check reports alongside it.
+      expect(fixture.requests.some((entry) => entry.url.endsWith('/chat/completions'))).toBe(true);
+      expect(fixture.requests.some((entry) => entry.url.endsWith('/models'))).toBe(true);
       // Nothing secret comes back.
       expect(JSON.stringify(response.body)).not.toContain('nvapi-test');
     } finally {

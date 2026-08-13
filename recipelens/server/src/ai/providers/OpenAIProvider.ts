@@ -41,6 +41,19 @@ export class OpenAIProvider extends BaseProvider {
     super(options, 'https://api.openai.com/v1');
   }
 
+  /**
+   * GET /models, which every OpenAI-compatible endpoint implements. This is
+   * the only authoritative answer to "what should the retired model become?" —
+   * it is the vendor's own list, for this key.
+   */
+  async listModels(options: { signal?: AbortSignal } = {}): Promise<string[] | null> {
+    const response = await this.get(`${this.baseUrl}/models`, { authorization: `Bearer ${this.apiKey}` }, options.signal);
+    if (!response.ok) throw this.toError(response.status, await safeText(response));
+    const payload = await this.readJson<{ data?: Array<{ id?: string }> }>(response);
+    const ids = (payload.data ?? []).map((entry) => entry.id).filter((id): id is string => Boolean(id));
+    return ids.sort((a, b) => a.localeCompare(b));
+  }
+
   override async complete(request: CompletionRequest, options: AnalyzeOptions = {}): Promise<AIProviderResult> {
     const images = (request.images ?? []).map(parseDataUrl).filter((i): i is NonNullable<typeof i> => i !== null);
     const content: string | ContentPart[] = images.length

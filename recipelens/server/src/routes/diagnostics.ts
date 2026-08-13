@@ -63,6 +63,16 @@ export function diagnosticsRoutes(): Router {
       const deep = req.query.deep === '1' || req.query.deep === 'true';
       const started = Date.now();
 
+      // Asked for alongside the check, because the question a failed check
+      // most often raises is "then what should AI_MODEL be?".
+      let models: string[] | null = null;
+      let modelsError: string | null = null;
+      try {
+        models = await ctx.ai.availableModels();
+      } catch (error) {
+        modelsError = error instanceof ApiError ? error.message : 'The provider did not return a model list.';
+      }
+
       const describe = (extra: Record<string, unknown>) => ({
         provider: ctx.ai!.providerName,
         configuredModel: ctx.ai!.model,
@@ -70,6 +80,9 @@ export function diagnosticsRoutes(): Router {
         checkedAt: new Date().toISOString(),
         // Redacted provider text — the only honest way to say what went wrong.
         recentFailures: recentProviderFailures(),
+        availableModels: models,
+        modelsError,
+        modelIsAvailable: models ? models.includes(ctx.ai!.model) : null,
         ...extra,
       });
 

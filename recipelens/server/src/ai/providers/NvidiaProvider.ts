@@ -13,6 +13,12 @@ import { OpenAIProvider } from './OpenAIProvider.js';
 import type { ProviderOptions } from './AIProvider.js';
 
 export const NVIDIA_DEFAULT_BASE_URL = 'https://integrate.api.nvidia.com/v1';
+/**
+ * A starting point only. NVIDIA retires models on a published schedule — this
+ * one reached end of life on 2026-07-27 — and a retired model answers HTTP 410
+ * whatever else is configured. Always set AI_MODEL explicitly; the deployed
+ * server lists what the key can currently use via GET /api/diagnostics/ai.
+ */
 export const NVIDIA_DEFAULT_MODEL = 'meta/llama-4-maverick-17b-128e-instruct';
 
 export class NvidiaProvider extends OpenAIProvider {

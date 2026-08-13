@@ -106,6 +106,26 @@ export abstract class BaseProvider implements AIProvider {
     });
   }
 
+  /** GET with the same timeout and transport-error mapping as `post`. */
+  protected async get(url: string, headers: Record<string, string>, external?: AbortSignal): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(new Error('timeout')), this.timeoutMs);
+    const onAbort = () => controller.abort(new Error('aborted'));
+    external?.addEventListener('abort', onAbort, { once: true });
+
+    try {
+      return await this.fetchImpl(url, { method: 'GET', headers, signal: controller.signal });
+    } catch (cause) {
+      if (controller.signal.aborted && !external?.aborted) {
+        throw new AIProviderError('timeout', `AI request timed out after ${this.timeoutMs} ms.`, { cause, retryable: true });
+      }
+      throw new AIProviderError('unavailable', 'Could not reach the AI provider.', { cause, retryable: true });
+    } finally {
+      clearTimeout(timer);
+      external?.removeEventListener('abort', onAbort);
+    }
+  }
+
   protected toError(status: number, detail: string): AIProviderError {
     // `detail` is provider text: classified here, recorded for diagnostics, and
     // never returned to an unauthenticated caller.
@@ -121,6 +141,15 @@ export abstract class BaseProvider implements AIProvider {
     }
     if (status >= 500) {
       return new AIProviderError('unavailable', `The AI provider is unavailable (HTTP ${status}).`, { status, retryable: true });
+    }
+    // 410 Gone is how a vendor retires a model. Retrying cannot help, and the
+    // fix is a configuration change, so it must not read as a transient fault.
+    if (status === 410 || /end of life|no longer available|model.{0,20}(not found|does not exist|unavailable|retired)/i.test(detail)) {
+      return new AIProviderError(
+        'model_unavailable',
+        `The model "${this.model}" is not available from this provider any more.`,
+        { status, retryable: false },
+      );
     }
     return new AIProviderError('bad_response', `The AI provider rejected the request (HTTP ${status}).`, {
       status,

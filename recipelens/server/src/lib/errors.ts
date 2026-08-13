@@ -18,6 +18,8 @@ export type ErrorCode =
   | 'AI_TIMEOUT'
   | 'AI_RATE_LIMITED'
   | 'AI_INVALID_RESPONSE'
+  /** The endpoint answered, but AI_MODEL names something it will not serve. */
+  | 'AI_MODEL_UNAVAILABLE'
   | 'SOURCE_UNREACHABLE'
   | 'SOURCE_UNSUPPORTED'
   | 'INSUFFICIENT_SOURCE_DATA'
