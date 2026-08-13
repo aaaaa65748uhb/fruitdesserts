@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { clearProviderFailures, recentProviderFailures, redact } from '../src/ai/failureLog.js';
 import { NvidiaProvider } from '../src/ai/providers/NvidiaProvider.js';
 import { createHarness, registerUser, startFixtureServer, validAiJson, type TestHarness } from './helpers.js';
+import { RecipeAIService } from '../src/ai/RecipeAIService.js';
 
 const MODEL = 'meta/llama-4-maverick-17b-128e-instruct';
 
@@ -273,6 +274,64 @@ describe('a call that outlasts its allowance', () => {
         code: 'timeout',
       });
       expect(recentProviderFailures()[0].detail).toContain('250 ms');
+    } finally {
+      await fixture.close();
+    }
+  });
+});
+
+describe('a model that spent its allowance thinking', () => {
+  it('is told apart from a model that simply answered badly', async () => {
+    const fixture = await startFixtureServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          model: MODEL,
+          choices: [
+            {
+              // Ran out of room part-way through the thinking, so nothing
+              // resembling an answer was ever written.
+              message: { content: '<think>Let me consider the ingredients one by one. First the' },
+              finish_reason: 'length',
+            },
+          ],
+          usage: { prompt_tokens: 2000, completion_tokens: 8192 },
+        }),
+      );
+    });
+    const service = new RecipeAIService(provider(fixture.url), { maxRetries: 0, budgetMs: 20_000 });
+    try {
+      await expect(service.analyze({ sourceType: 'text', pastedText: 'x'.repeat(80) })).rejects.toMatchObject({
+        message: /ran out of room/i,
+      });
+
+      const [failure] = recentProviderFailures();
+      expect(failure.stage).toBe('parse');
+      expect(failure.detail).toContain('finish_reason=length');
+      // The number that ends the argument about why it was slow.
+      expect(failure.detail).toContain('8192 tokens');
+    } finally {
+      await fixture.close();
+    }
+  });
+
+  it('reports an ordinary bad answer without blaming the token budget', async () => {
+    const fixture = await startFixtureServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          model: MODEL,
+          choices: [{ message: { content: 'I could not find a recipe.' }, finish_reason: 'stop' }],
+          usage: { prompt_tokens: 2000, completion_tokens: 7 },
+        }),
+      );
+    });
+    const service = new RecipeAIService(provider(fixture.url), { maxRetries: 0, budgetMs: 20_000 });
+    try {
+      await expect(service.analyze({ sourceType: 'text', pastedText: 'x'.repeat(80) })).rejects.toMatchObject({
+        message: /could not be read as JSON/i,
+      });
+      expect(recentProviderFailures()[0].detail).toContain('finish_reason=stop');
     } finally {
       await fixture.close();
     }

@@ -175,6 +175,8 @@ export class RecipeAIService {
       }
       let text: string;
       let model = this.provider.model;
+      let finishReason: string | null = null;
+      let completionTokens: number | undefined;
       try {
         const result = await this.provider.analyzeRecipe(input, {
           repairHint,
@@ -183,6 +185,8 @@ export class RecipeAIService {
         });
         text = result.text;
         model = result.model;
+        finishReason = result.finishReason ?? null;
+        completionTokens = result.usage?.completionTokens;
       } catch (error) {
         const apiError = toApiError(error);
         lastError = apiError;
@@ -193,13 +197,30 @@ export class RecipeAIService {
 
       const parsed = parseJsonLoose(text);
       if (!parsed.ok) {
-        // Record what actually came back. Without it this failure is a dead
-        // end: nobody can tell a chatty preamble from a truncated answer.
-        this.noteText('parse', `${parsed.error} — answer began: ${text.slice(0, 200)}`, model);
-        repairHint = `The response was not valid JSON (${parsed.error}). Reply with one JSON object only.`;
-        lastError = new ApiError(502, 'AI_INVALID_RESPONSE', 'The AI returned a response that could not be read as JSON.', {
-          retryable: true,
-        });
+        // Record what actually came back, and how much of it there was. The
+        // token count separates the two very different causes: a model that
+        // answered badly, and a model that spent its whole allowance thinking.
+        const spent = completionTokens != null ? `${completionTokens} tokens` : `${text.length} chars`;
+        this.noteText('parse', `${parsed.error} — finish_reason=${finishReason ?? 'none'}, wrote ${spent}, began: ${text.slice(0, 160)}`, model);
+
+        // Cut off by the token budget is not a formatting mistake, and asking
+        // the same model to "reply with JSON only" cannot fix it.
+        if (finishReason === 'length') {
+          lastError = new ApiError(502, 'AI_INVALID_RESPONSE', 'The model ran out of room before it finished the recipe.', {
+            details: { finishReason, completionTokens },
+            recovery: [
+              'Use a model that answers directly instead of reasoning at length',
+              'Raise the completion budget on the server',
+              'Paste the recipe text instead',
+            ],
+            retryable: true,
+          });
+        } else {
+          lastError = new ApiError(502, 'AI_INVALID_RESPONSE', 'The AI returned a response that could not be read as JSON.', {
+            retryable: true,
+          });
+        }
+        repairHint = `The response was not valid JSON (${parsed.error}). Reply with one JSON object only. Do not explain your reasoning.`;
         if (attempt > this.maxRetries) break;
         continue;
       }
