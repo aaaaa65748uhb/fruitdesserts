@@ -20,6 +20,34 @@ const TABS: Array<{ id: Tab; label: string; icon: typeof Link2 }> = [
 /** Shown before the server has reported its first phase. */
 const INITIAL_PHASE = { phase: 'received', label: 'Sending the source to RecipeLens' };
 
+/**
+ * After a request gave up waiting, ask the server whether the import finished
+ * anyway. Free hosting plus a large model can easily outlast one HTTP request,
+ * and the recipe is already saved by then — reporting a failure would lose it
+ * and invite a duplicate on the retry.
+ */
+async function collectFinishedImport(requestId: string, waitMs = 90_000): Promise<ImportResult | null> {
+  const deadline = Date.now() + waitMs;
+  while (Date.now() < deadline) {
+    try {
+      const status = await api.import.progress(requestId);
+      if (status.recipe) {
+        return {
+          recipe: status.recipe,
+          analysis: { id: requestId, source: 'ai', provider: '', model: '', attempts: 1, durationMs: 0, cached: false },
+          warnings: ['This import took longer than the app waited, so it was collected afterwards.'],
+        };
+      }
+      if (status.known && status.finished) return null; // finished, but failed
+      if (!status.known) return null; // the server forgot it, or never had it
+    } catch {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+  return null;
+}
+
 export function ImportPage() {
   const navigate = useNavigate();
   const capabilities = useAsync<ImportCapabilities>(() => api.import.capabilities(), []);
@@ -195,7 +223,15 @@ export function ImportPage() {
       setResult(response);
     } catch (caught) {
       if (controller.signal.aborted) return;
-      setError(caught instanceof ApiError ? caught : new ApiError(0, 'UNKNOWN', 'Import failed. Please try again.'));
+      // A request that ran out of time is not the same as a request that
+      // failed: the server may well have finished and saved the recipe. Ask it
+      // before telling anyone the import did not work.
+      const rescued = caught instanceof ApiError && caught.code === 'TIMEOUT' ? await collectFinishedImport(id) : null;
+      if (rescued) {
+        setResult(rescued);
+      } else {
+        setError(caught instanceof ApiError ? caught : new ApiError(0, 'UNKNOWN', 'Import failed. Please try again.'));
+      }
     } finally {
       setPending(false);
       abortRef.current = null;

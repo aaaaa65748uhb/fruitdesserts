@@ -45,8 +45,15 @@ const envSchema = z.object({
   AI_API_KEY: z.string().optional(),
   AI_API_BASE_URL: z.string().optional(),
   AI_MODEL: z.string().optional(),
-  AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(300000).default(45000),
-  AI_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
+  // One attempt. Large models take a while to produce a whole recipe, so this
+  // is generous; the total budget below is what actually bounds a request.
+  AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(300000).default(60000),
+  // Retries exist to repair invalid JSON, not to outwait a slow model.
+  AI_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(1),
+  // Everything one analysis may spend, across all its attempts. It must stay
+  // below the client's patience, or the client abandons work the server is
+  // still doing — see web/src/lib/api.ts.
+  AI_TOTAL_BUDGET_MS: z.coerce.number().int().min(5000).max(600000).default(150000),
   MAX_UPLOAD_BYTES: z.coerce.number().int().min(1024).max(100 * 1024 * 1024).default(10 * 1024 * 1024),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_JWKS_URL: z.string().optional(),
@@ -58,6 +65,8 @@ export interface AiConfig {
   baseUrl: string;
   model: string;
   timeoutMs: number;
+  /** Ceiling on one analysis, attempts and backoff included. */
+  totalBudgetMs: number;
   maxRetries: number;
   /** False when credentials are absent — routes answer 503, never fake data. */
   configured: boolean;
@@ -141,6 +150,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     baseUrl,
     model,
     timeoutMs: e.AI_TIMEOUT_MS,
+    totalBudgetMs: e.AI_TOTAL_BUDGET_MS,
     maxRetries: e.AI_MAX_RETRIES,
     configured,
     disabledReason: configured

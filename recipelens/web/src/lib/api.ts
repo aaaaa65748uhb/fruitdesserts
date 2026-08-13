@@ -84,6 +84,16 @@ export interface ImportCapabilities {
   notes: string[];
 }
 
+export interface ImportProgress {
+  known: boolean;
+  phases: Array<{ phase: string; label: string; at: number }>;
+  finished: boolean;
+  error: string | null;
+  /** Set once the import produced a recipe, even if nobody was still waiting. */
+  recipeId?: string | null;
+  recipe?: Recipe | null;
+}
+
 export interface ImportResult {
   recipe: Recipe;
   analysis: {
@@ -173,7 +183,12 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   } catch (error) {
     if (signal?.aborted) throw error;
     if (controller.signal.aborted) {
-      throw new ApiError(0, 'TIMEOUT', 'The request took too long. Check your connection and try again.', { retryable: true });
+      throw new ApiError(
+        0,
+        'TIMEOUT',
+        'The server did not answer in time. A server that has been idle can take a minute to wake up — try again.',
+        { retryable: true },
+      );
     }
     throw new ApiError(0, 'NETWORK_ERROR', 'Could not reach RecipeLens. Check your connection and try again.', {
       retryable: true,
@@ -369,10 +384,7 @@ export const api = {
   import: {
     capabilities: () => request<ImportCapabilities>('/import/capabilities'),
     progress: (requestId: string) =>
-      request<{ known: boolean; phases: Array<{ phase: string; label: string; at: number }>; finished: boolean; error: string | null }>(
-        `/import/progress/${requestId}`,
-        { timeoutMs: 15_000 },
-      ),
+      request<ImportProgress>(`/import/progress/${requestId}`, { timeoutMs: 15_000 }),
     analyze: (
       body:
         | { type: 'url'; url: string; language?: string }
@@ -386,7 +398,10 @@ export const api = {
         method: 'POST',
         body,
         signal,
-        timeoutMs: 120_000,
+        // Deliberately more patient than the server's own AI budget
+        // (AI_TOTAL_BUDGET_MS), so the client is never the first to give up on
+        // work the server is still doing.
+        timeoutMs: 240_000,
         headers: requestId ? { 'x-request-id': requestId } : undefined,
       }),
   },

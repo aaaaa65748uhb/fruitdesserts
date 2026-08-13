@@ -68,7 +68,7 @@ export function createContext(options: CreateContextOptions): AppContext {
   }
 
   if (provider) {
-    ai = new RecipeAIService(provider, { maxRetries: config.ai.maxRetries });
+    ai = new RecipeAIService(provider, { maxRetries: config.ai.maxRetries, budgetMs: config.ai.totalBudgetMs });
     aiDisabledReason = null;
   }
 

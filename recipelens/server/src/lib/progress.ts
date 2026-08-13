@@ -38,6 +38,12 @@ export interface ProgressRecord {
   entries: ProgressEntry[];
   finished: boolean;
   error: string | null;
+  /**
+   * The recipe the import produced. A client that stopped waiting — a phone
+   * that slept, a request that outlasted its own timeout — can still collect
+   * the result instead of being told the import failed when it did not.
+   */
+  recipeId: string | null;
   updatedAt: number;
 }
 
@@ -63,6 +69,7 @@ export class ProgressTracker {
       entries: [{ phase: 'received', label: PHASE_LABELS.received, at: Date.now() }],
       finished: false,
       error: null,
+      recipeId: null,
       updatedAt: Date.now(),
     });
   }
@@ -74,6 +81,15 @@ export class ProgressTracker {
     record.entries.push({ phase, label: PHASE_LABELS[phase], at: Date.now() });
     record.updatedAt = Date.now();
     if (phase === 'done' || phase === 'failed') record.finished = true;
+  }
+
+  /** Marks the import done and remembers what it produced. */
+  succeed(id: string | null, recipeId: string): void {
+    if (!id) return;
+    const record = this.records.get(id);
+    if (!record) return;
+    record.recipeId = recipeId;
+    this.push(id, 'done');
   }
 
   fail(id: string | null, message: string): void {

@@ -145,6 +145,31 @@ export function importRoutes(): Router {
       const input = importSchema.parse(req.body);
       const warnings: string[] = [];
       const progressId = ProgressTracker.normalizeId(req.get('x-request-id'));
+
+      // A client that stopped waiting will send the same request id again. If
+      // that import already produced a recipe, hand back the same one rather
+      // than analysing afresh and leaving two copies in the library.
+      const previous = progressId ? ctx.progress.get(progressId, userId) : null;
+      if (previous?.recipeId) {
+        const existing = ctx.recipes.findById(userId, previous.recipeId);
+        if (existing) {
+          res.status(200).json({
+            recipe: existing,
+            analysis: {
+              id: previous.recipeId,
+              source: 'cache',
+              provider: ctx.ai?.providerName ?? 'unknown',
+              model: ctx.ai?.model ?? 'unknown',
+              attempts: 1,
+              durationMs: 0,
+              cached: true,
+            },
+            warnings: ['This import had already finished — the recipe it produced was returned.'],
+          });
+          return;
+        }
+      }
+
       ctx.progress.start(progressId, userId);
 
       let aiInput: AnalyzeRecipeInput;
@@ -257,6 +282,7 @@ export function importRoutes(): Router {
         });
         const recipe = ctx.recipes.create(userId, recipeDraftSchema.parse(draft));
         ctx.analyses.attachRecipe(analysis.id, recipe.id);
+        ctx.progress.succeed(progressId, recipe.id);
         res.status(201).json({
           recipe,
           analysis: {
@@ -282,6 +308,7 @@ export function importRoutes(): Router {
         const parsed = recipeDraftSchema.safeParse(JSON.parse(cached.resultJson));
         if (parsed.success) {
           const recipe = ctx.recipes.create(userId, { ...parsed.data, imageUrl: parsed.data.imageUrl ?? imageUrl });
+          ctx.progress.succeed(progressId, recipe.id);
           res.status(201).json({
             recipe,
             analysis: {
@@ -324,7 +351,7 @@ export function importRoutes(): Router {
         ctx.progress.push(progressId, 'saving');
         const recipe = ctx.recipes.create(userId, recipeDraftSchema.parse(draft));
         ctx.analyses.attachRecipe(analysis.id, recipe.id);
-        ctx.progress.push(progressId, 'done');
+        ctx.progress.succeed(progressId, recipe.id);
 
         if (draft.missingInfo.length > 0) {
           warnings.push(`The source did not state: ${draft.missingInfo.join(', ')}. Add the details yourself when you edit.`);
@@ -403,14 +430,19 @@ export function importRoutes(): Router {
       const id = ProgressTracker.normalizeId(req.params.id);
       const record = id ? ctx.progress.get(id, currentUser(req).id) : null;
       if (!record) {
-        res.json({ known: false, phases: [], finished: false, error: null });
+        res.json({ known: false, phases: [], finished: false, error: null, recipeId: null, recipe: null });
         return;
       }
+      // The recipe travels with the progress, so a client whose request timed
+      // out can collect the result instead of reporting a failure.
+      const recipe = record.recipeId ? ctx.recipes.findById(currentUser(req).id, record.recipeId) : null;
       res.json({
         known: true,
         phases: record.entries.map((entry) => ({ phase: entry.phase, label: entry.label, at: entry.at })),
         finished: record.finished,
         error: record.error,
+        recipeId: record.recipeId,
+        recipe,
       });
     }),
   );

@@ -33,14 +33,22 @@ export interface RecipeAIServiceOptions {
   maxRetries?: number;
   /** Minimum characters of readable source text before the model is called. */
   minSourceChars?: number;
+  /**
+   * Everything one analysis may spend. Counting attempts is not enough: with a
+   * slow model, three attempts of a minute each outlast any client's patience,
+   * and work the client has stopped waiting for is work thrown away.
+   */
+  budgetMs?: number;
 }
 
 const DEFAULT_MIN_SOURCE_CHARS = 40;
+const DEFAULT_BUDGET_MS = 150_000;
 
 export class RecipeAIService {
   private readonly provider: AIProvider;
   private readonly maxRetries: number;
   private readonly minSourceChars: number;
+  private readonly budgetMs: number;
   /** De-duplicates identical analyses that are already running. */
   private readonly inFlight = new Map<string, Promise<AnalysisOutcome>>();
 
@@ -48,6 +56,7 @@ export class RecipeAIService {
     this.provider = provider;
     this.maxRetries = options.maxRetries ?? 2;
     this.minSourceChars = options.minSourceChars ?? DEFAULT_MIN_SOURCE_CHARS;
+    this.budgetMs = options.budgetMs ?? DEFAULT_BUDGET_MS;
   }
 
   get providerName(): string {
@@ -70,6 +79,18 @@ export class RecipeAIService {
     } catch (error) {
       throw toApiError(error);
     }
+  }
+
+  private outOfTime(attempts: number): ApiError {
+    return new ApiError(
+      504,
+      'AI_TIMEOUT',
+      `The model did not finish within ${Math.round(this.budgetMs / 1000)} seconds (${attempts} attempt${attempts === 1 ? '' : 's'}).`,
+      {
+        recovery: ['Try again — the model may be faster now', 'Paste the recipe text instead', 'Choose a smaller model on the server'],
+        retryable: true,
+      },
+    );
   }
 
   /** Stable fingerprint of the input, used for caching and de-duplication. */
@@ -123,6 +144,11 @@ export class RecipeAIService {
     let lastError: ApiError | null = null;
 
     for (let attempt = 1; attempt <= this.maxRetries + 1; attempt += 1) {
+      // Never start an attempt there is no time left to finish.
+      if (attempt > 1 && Date.now() - started >= this.budgetMs) {
+        lastError = this.outOfTime(attempt - 1);
+        break;
+      }
       let text: string;
       let model = this.provider.model;
       try {
@@ -215,6 +241,10 @@ export class RecipeAIService {
     let lastError: ApiError | null = null;
 
     for (let attempt = 1; attempt <= this.maxRetries + 1; attempt += 1) {
+      if (attempt > 1 && Date.now() - started >= this.budgetMs) {
+        lastError = this.outOfTime(attempt - 1);
+        break;
+      }
       let text: string;
       let model = this.provider.model;
       try {

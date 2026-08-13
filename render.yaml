@@ -50,3 +50,12 @@ services:
       # currently use — Settings → Test AI connection lists them for you.
       - key: AI_MODEL
         value: meta/llama-4-maverick-17b-128e-instruct
+      # How long one analysis may take in total, attempts included. It must stay
+      # below what the app waits for (240s), so the app is never the first to
+      # give up on work this server is still doing. Raise it for a large model.
+      - key: AI_TOTAL_BUDGET_MS
+        value: "150000"
+      # One attempt. Retries exist to repair invalid JSON, not to outwait a
+      # slow model — the budget above is what actually bounds a request.
+      - key: AI_TIMEOUT_MS
+        value: "60000"
