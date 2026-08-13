@@ -28,9 +28,30 @@ const ANGLE_WRAPPED = /<([^<>]+)>\s*$/;
 export function normalizeEmail(input: string): string {
   let text = input.normalize('NFKC').replace(INVISIBLE, '').replace(NBSP, ' ').trim();
   text = text.replace(/^mailto:/i, '').trim();
+  // Unwrap before stripping spaces, because the wrapper needs them to be found.
   const wrapped = ANGLE_WRAPPED.exec(text);
   if (wrapped?.[1]) text = wrapped[1].trim();
-  return text;
+  // An unquoted address cannot contain a space, so one is always a typo — most
+  // often autocorrect adding a space after a dot. Repairing beats rejecting.
+  return text.replace(/\s+/g, '');
+}
+
+/**
+ * Why an address was rejected, in words that point at the fix. A form that can
+ * only say "invalid" is useless when what is wrong is invisible.
+ */
+export function describeEmailProblem(input: string): string | null {
+  const text = normalizeEmail(input);
+  if (!text) return 'Enter your email address.';
+  const at = text.indexOf('@');
+  if (at === -1) return 'An email address needs an @ — for example name@example.com.';
+  if (text.indexOf('@', at + 1) !== -1) return 'An email address can only contain one @.';
+  if (at === 0) return 'Add the part before the @ — for example name@example.com.';
+  const domain = text.slice(at + 1);
+  if (!domain) return 'Add the part after the @ — for example name@example.com.';
+  if (!domain.includes('.')) return 'The part after the @ needs a dot — for example example.com.';
+  if (domain.startsWith('.') || domain.endsWith('.')) return 'The part after the @ cannot start or end with a dot.';
+  return EMAIL_PATTERN.test(text) ? null : 'Enter a valid email address, for example name@example.com.';
 }
 
 /**

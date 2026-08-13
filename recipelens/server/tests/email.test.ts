@@ -8,7 +8,7 @@
  */
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { isLikelyEmail, normalizeEmail } from '../src/shared.js';
+import { describeEmailProblem, isLikelyEmail, normalizeEmail } from '../src/shared.js';
 import { createHarness, type TestHarness } from './helpers.js';
 
 const LRM = '\u200E';
@@ -39,6 +39,11 @@ describe('normalizeEmail', () => {
     expect(normalizeEmail(' cook@example.com ')).toBe('cook@example.com');
   });
 
+  it('removes a space autocorrect put in the middle', () => {
+    expect(normalizeEmail('cook. two@example.com')).toBe('cook.two@example.com');
+    expect(normalizeEmail('cook @ example.com')).toBe('cook@example.com');
+  });
+
   it('leaves a clean address exactly as it was', () => {
     expect(normalizeEmail('cook+recipes@example.co.uk')).toBe('cook+recipes@example.co.uk');
   });
@@ -47,6 +52,21 @@ describe('normalizeEmail', () => {
     expect(isLikelyEmail(`${LRM}not an address${LRM}`)).toBe(false);
     expect(isLikelyEmail('cook@localhost')).toBe(false);
     expect(isLikelyEmail('')).toBe(false);
+  });
+});
+
+describe('describeEmailProblem', () => {
+  it('names the missing piece instead of saying "invalid"', () => {
+    expect(describeEmailProblem('cook')).toMatch(/needs an @/i);
+    expect(describeEmailProblem('cook@example')).toMatch(/needs a dot/i);
+    expect(describeEmailProblem('@example.com')).toMatch(/before the @/i);
+    expect(describeEmailProblem('a@b@c.com')).toMatch(/only contain one @/i);
+    expect(describeEmailProblem('')).toMatch(/enter your email/i);
+  });
+
+  it('is silent about an address that is fine', () => {
+    expect(describeEmailProblem('cook@example.com')).toBeNull();
+    expect(describeEmailProblem(`${LRM}cook@example.com${LRM}`)).toBeNull();
   });
 });
 

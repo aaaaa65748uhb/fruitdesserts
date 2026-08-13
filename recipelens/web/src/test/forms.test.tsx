@@ -51,7 +51,7 @@ describe('AuthPage validation', () => {
     await user.type(screen.getByLabelText(/password/i), 'short');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
-    expect(await screen.findByText(/enter a valid email address/i)).toBeInTheDocument();
+    expect(await screen.findByText(/needs an @/i)).toBeInTheDocument();
     expect(screen.getByText('Use at least 8 characters.')).toBeInTheDocument();
     expect(login).not.toHaveBeenCalled();
   });
@@ -70,6 +70,59 @@ describe('AuthPage validation', () => {
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => expect(login).toHaveBeenCalledWith('cook@example.test', 'a-good-password'));
+  });
+
+  it('uses what is in the field when autofill bypassed React', async () => {
+    const user = userEvent.setup();
+    login.mockResolvedValue(undefined);
+    render(
+      <MemoryRouter>
+        <AuthPage mode="sign-in" />
+      </MemoryRouter>,
+    );
+
+    // Android autofill and some password managers assign .value directly, so
+    // no React event ever fires and the controlled state stays empty.
+    const email = screen.getByLabelText(/email/i) as HTMLInputElement;
+    const password = screen.getByLabelText(/password/i) as HTMLInputElement;
+    email.value = 'cook@example.test';
+    password.value = 'a-good-password';
+
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    await waitFor(() => expect(login).toHaveBeenCalledWith('cook@example.test', 'a-good-password'));
+  });
+
+  it('repairs a space autocorrect dropped into the address', async () => {
+    const user = userEvent.setup();
+    login.mockResolvedValue(undefined);
+    render(
+      <MemoryRouter>
+        <AuthPage mode="sign-in" />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText(/email/i), 'cook. two@example.test');
+    await user.type(screen.getByLabelText(/password/i), 'a-good-password');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    await waitFor(() => expect(login).toHaveBeenCalledWith('cook.two@example.test', 'a-good-password'));
+  });
+
+  it('says what is wrong with the address, not just that it is wrong', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AuthPage mode="sign-in" />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText(/email/i), 'cook@example');
+    await user.type(screen.getByLabelText(/password/i), 'a-good-password');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByText(/needs a dot/i)).toBeInTheDocument();
+    expect(login).not.toHaveBeenCalled();
   });
 
   it('accepts an address wrapped in the marks an RTL keyboard adds', async () => {

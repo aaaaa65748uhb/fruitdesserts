@@ -6,7 +6,7 @@ import { api, ApiError } from '../lib/api.js';
 import { useAsync } from '../lib/useAsync.js';
 import { GoogleSignInButton } from '../components/GoogleSignIn.js';
 import { useAuth } from '../state/AuthContext.js';
-import { isLikelyEmail, normalizeEmail } from '../shared.js';
+import { describeEmailProblem, normalizeEmail } from '../shared.js';
 
 interface FieldErrors {
   email?: string;
@@ -29,28 +29,48 @@ export function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   // Google is offered only when the server can actually verify its tokens.
   const health = useAsync(() => api.health(), []);
 
-  function validate(cleanEmail: string): boolean {
+  function validate(values: { email: string; password: string; displayName: string }): boolean {
     const errors: FieldErrors = {};
-    if (!isLikelyEmail(cleanEmail)) errors.email = 'Enter a valid email address, for example name@example.com.';
-    if (password.length < 8) errors.password = 'Use at least 8 characters.';
-    if (signingUp && displayName.trim().length === 0) errors.displayName = 'Tell us what to call you.';
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+    // Says what is wrong, not just that something is — the usual culprits here
+    // are invisible or come from autocorrect, so "invalid" is no help at all.
+    errors.email = describeEmailProblem(values.email) ?? undefined;
+    if (values.password.length < 8) errors.password = 'Use at least 8 characters.';
+    if (signingUp && values.displayName.trim().length === 0) errors.displayName = 'Tell us what to call you.';
+    const present = Object.fromEntries(Object.entries(errors).filter(([, message]) => message));
+    setFieldErrors(present);
+    return Object.keys(present).length === 0;
   }
 
-  async function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
-    // What the keyboard produced is not always what the address is: strip the
-    // invisible marks an RTL keyboard adds before judging or sending it.
-    const cleanEmail = normalizeEmail(email);
-    if (cleanEmail !== email) setEmail(cleanEmail);
-    if (!validate(cleanEmail)) return;
+
+    // Read the fields themselves rather than trusting React's copy. Android
+    // autofill and some password managers assign input.value directly, which
+    // leaves the controlled state empty — the form then rejects an address that
+    // is plainly visible on screen, on both sign-in and sign-up.
+    const form = new FormData(event.currentTarget);
+    const read = (name: string, fallback: string) => {
+      const value = form.get(name);
+      return typeof value === 'string' && value ? value : fallback;
+    };
+
+    const values = {
+      email: normalizeEmail(read('email', email)),
+      password: read('password', password),
+      displayName: read('displayName', displayName),
+    };
+    // Show the cleaned address, so what was sent is what is on screen.
+    if (values.email !== email) setEmail(values.email);
+    if (values.password !== password) setPassword(values.password);
+    if (values.displayName !== displayName) setDisplayName(values.displayName);
+
+    if (!validate(values)) return;
 
     setPending(true);
     try {
-      if (signingUp) await register(cleanEmail, password, displayName.trim());
-      else await login(cleanEmail, password);
+      if (signingUp) await register(values.email, values.password, values.displayName.trim());
+      else await login(values.email, values.password);
       const from = (location.state as { from?: string } | null)?.from;
       navigate(from && from !== '/sign-in' ? from : '/', { replace: true });
     } catch (error) {
@@ -79,6 +99,7 @@ export function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
             </label>
             <input
               id="displayName"
+              name="displayName"
               className="field"
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
@@ -96,6 +117,7 @@ export function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
           </label>
           <input
             id="email"
+            name="email"
             type="email"
             inputMode="email"
             className="field"
@@ -113,6 +135,7 @@ export function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
           </label>
           <input
             id="password"
+            name="password"
             type="password"
             className="field"
             value={password}
