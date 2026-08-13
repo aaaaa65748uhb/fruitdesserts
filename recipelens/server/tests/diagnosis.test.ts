@@ -161,3 +161,31 @@ describe('GET /api/diagnostics/ai', () => {
     expect(JSON.stringify(response.body)).not.toContain('test-key');
   });
 });
+
+describe('a failed import explains itself', () => {
+  let harness: TestHarness;
+  afterEach(() => harness.close());
+
+  it('carries what the provider said back to the screen', async () => {
+    const fixture = await startFixtureServer((_req, res) => {
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ object: 'error', message: 'model not found', type: 'invalid_request_error' }));
+    });
+    harness = createHarness({ provider: provider(fixture.url) });
+    try {
+      const user = await registerUser(harness.app);
+      const response = await user.agent
+        .post('/api/import/analyze')
+        .send({ type: 'text', text: 'Mash 100 g of butter with 2 grated garlic cloves. Chill for 30 minutes. Serves 2.' })
+        .expect(502);
+
+      const details = response.body.error.details;
+      expect(details.providerStatus).toBe(404);
+      expect(details.providerSaid).toContain('model not found');
+      expect(details.provider).toBe('nvidia');
+      expect(JSON.stringify(response.body)).not.toContain('test-key');
+    } finally {
+      await fixture.close();
+    }
+  });
+});

@@ -113,3 +113,39 @@ describe('Test AI connection', () => {
     expect(await screen.findByText(/could not reach recipelens/i)).toBeInTheDocument();
   });
 });
+
+describe('a failed import on screen', () => {
+  it('shows what the provider said, so the reason is not lost', async () => {
+    const { ErrorState } = await import('../components/feedback.js');
+    const { ApiError } = await import('../lib/api.js');
+    const user = userEvent.setup();
+
+    render(
+      <ErrorState
+        error={
+          new ApiError(502, 'AI_INVALID_RESPONSE', 'The AI provider returned an unusable response.', {
+            details: {
+              provider: 'nvidia',
+              model: 'meta/llama-4-maverick-17b-128e-instruct',
+              endpoint: 'integrate.api.nvidia.com',
+              providerStatus: 404,
+              providerSaid: '{"message":"model not found"}',
+            },
+          })
+        }
+      />,
+    );
+
+    await user.click(screen.getByText(/what the ai provider said/i));
+    expect(screen.getByText(/HTTP 404/)).toBeInTheDocument();
+    expect(screen.getByText(/model not found/)).toBeInTheDocument();
+    expect(screen.getByText(/integrate\.api\.nvidia\.com/)).toBeInTheDocument();
+  });
+
+  it('stays quiet when there is nothing extra to say', async () => {
+    const { ErrorState } = await import('../components/feedback.js');
+    const { ApiError } = await import('../lib/api.js');
+    render(<ErrorState error={new ApiError(500, 'INTERNAL_ERROR', 'Something went wrong.')} />);
+    expect(screen.queryByText(/what the ai provider said/i)).not.toBeInTheDocument();
+  });
+});

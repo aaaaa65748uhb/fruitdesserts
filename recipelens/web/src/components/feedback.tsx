@@ -60,6 +60,7 @@ export function ErrorState({
               ))}
             </ul>
           ) : null}
+          <ProviderReason details={error.details} />
           {(onRetry && error.retryable) || actions ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {onRetry && error.retryable ? (
@@ -74,6 +75,39 @@ export function ErrorState({
         </div>
       </div>
     </div>
+  );
+}
+
+interface ProviderDetails {
+  provider?: string;
+  model?: string;
+  endpoint?: string;
+  providerStatus?: number | null;
+  providerSaid?: string;
+}
+
+/**
+ * What the model's own endpoint said, when it said anything. This is the
+ * difference between "something went wrong" and "that model is not available
+ * to this key" — and it is the only clue the person in front of the screen
+ * can act on or pass along. Redacted server-side before it is ever sent.
+ */
+function ProviderReason({ details }: { details: unknown }) {
+  const info = details as ProviderDetails | null;
+  if (!info?.providerSaid && !info?.providerStatus) return null;
+  return (
+    <details className="mt-3 text-sm text-red-900">
+      <summary className="cursor-pointer font-medium">What the AI provider said</summary>
+      <p className="mt-1 text-red-800">
+        {info.provider ?? 'provider'}
+        {info.model ? ` · ${info.model}` : ''}
+        {info.endpoint ? ` · ${info.endpoint}` : ''}
+      </p>
+      <p className="mt-1 break-all rounded bg-white/70 p-2 font-mono text-xs">
+        {info.providerStatus ? `HTTP ${info.providerStatus} — ` : ''}
+        {info.providerSaid || 'no message'}
+      </p>
+    </details>
   );
 }
 

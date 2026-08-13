@@ -12,6 +12,7 @@
  */
 import { Router } from 'express';
 import { z } from 'zod';
+import { recentProviderFailures } from '../ai/failureLog.js';
 import { ApiError } from '../lib/errors.js';
 import { currentUser, requireAuth } from '../middleware/auth.js';
 import { asyncHandler, getContext } from '../middleware/context.js';
@@ -345,6 +346,27 @@ export function importRoutes(): Router {
         });
       } catch (error) {
         let apiError = error instanceof ApiError ? error : new ApiError(500, 'INTERNAL_ERROR', 'Import failed.');
+        // When the model's endpoint refused us, say what it said. Without this
+        // a rejected key, an unavailable model and a malformed request are all
+        // the same sentence on screen, and only the server ever knows which.
+        if (apiError.code.startsWith('AI_')) {
+          const [latest] = recentProviderFailures();
+          if (latest) {
+            apiError = new ApiError(apiError.status, apiError.code, apiError.message, {
+              retryable: apiError.retryable,
+              recovery: apiError.recovery,
+              details: {
+                ...(typeof apiError.details === 'object' && apiError.details ? apiError.details : {}),
+                provider: latest.provider,
+                model: latest.model,
+                endpoint: latest.endpoint,
+                providerStatus: latest.status,
+                // Redacted at the point of capture — never carries a credential.
+                providerSaid: latest.detail,
+              },
+            });
+          }
+        }
         if (apiError.code === 'INSUFFICIENT_SOURCE_DATA' && platform) {
           const guidance = platformGuidance(platform);
           apiError = new ApiError(422, 'INSUFFICIENT_SOURCE_DATA', "We couldn't extract enough information from this video.", {
