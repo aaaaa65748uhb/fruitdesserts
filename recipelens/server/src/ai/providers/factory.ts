@@ -1,7 +1,7 @@
 import type { AiConfig } from '../../config/env.js';
 import { AnthropicProvider } from './AnthropicProvider.js';
 import { GeminiProvider } from './GeminiProvider.js';
-import { NvidiaProvider, NVIDIA_DEFAULT_BASE_URL, NVIDIA_DEFAULT_MODEL } from './NvidiaProvider.js';
+import { NvidiaProvider, NVIDIA_DEFAULT_BASE_URL } from './NvidiaProvider.js';
 import { OpenAICompatibleProvider, OpenAIProvider } from './OpenAIProvider.js';
 import { AIProviderError, type AIProvider } from './AIProvider.js';
 
@@ -15,7 +15,8 @@ export type SupportedProvider = (typeof SUPPORTED_PROVIDERS)[number];
 export const PROVIDER_DEFAULTS: Record<string, { baseUrl: string; model: string }> = {
   openai: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
   'openai-compatible': { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
-  nvidia: { baseUrl: NVIDIA_DEFAULT_BASE_URL, model: NVIDIA_DEFAULT_MODEL },
+  // No model default: see NvidiaProvider — any name here is a dated outage.
+  nvidia: { baseUrl: NVIDIA_DEFAULT_BASE_URL, model: '' },
   anthropic: { baseUrl: 'https://api.anthropic.com', model: 'claude-sonnet-4-5' },
   gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-2.5-flash' },
   google: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-2.5-flash' },

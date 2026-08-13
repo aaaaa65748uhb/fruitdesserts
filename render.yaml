@@ -44,12 +44,17 @@ services:
         value: nvidia
       - key: AI_API_BASE_URL
         value: https://integrate.api.nvidia.com/v1
-      # NVIDIA retires models on a schedule, and a retired one answers HTTP 410
-      # no matter how correct everything else is. meta/llama-4-maverick-17b-128e-instruct
-      # reached end of life on 2026-07-27. Set this to a model your key can
-      # currently use — Settings → Test AI connection lists them for you.
+      # Which model to use is an operator's choice, not the repository's, so it
+      # is deliberately NOT given a value here: Render re-syncs blueprint values
+      # on every deploy, and a value here would overwrite the one you set in the
+      # dashboard the next time this file changes.
+      #
+      # Set it under Environment in the Render dashboard. It must name a model
+      # your key can currently use — vendors retire models on a schedule, and a
+      # retired one answers HTTP 410 however correct everything else is.
+      # Settings → Test AI connection lists what the key can use right now.
       - key: AI_MODEL
-        value: meta/llama-4-maverick-17b-128e-instruct
+        sync: false
       # How long one analysis may take in total, attempts included. It must stay
       # below what the app waits for (240s), so the app is never the first to
       # give up on work this server is still doing. Raise it for a large model.

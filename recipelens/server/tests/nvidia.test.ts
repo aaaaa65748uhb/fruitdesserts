@@ -9,7 +9,7 @@
  */
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
-import { NvidiaProvider, NVIDIA_DEFAULT_BASE_URL, NVIDIA_DEFAULT_MODEL } from '../src/ai/providers/NvidiaProvider.js';
+import { NvidiaProvider, NVIDIA_DEFAULT_BASE_URL } from '../src/ai/providers/NvidiaProvider.js';
 import { createProvider, PROVIDER_DEFAULTS } from '../src/ai/providers/factory.js';
 import { loadConfig } from '../src/config/env.js';
 import { createHarness, registerUser, startFixtureServer, TEST_ENV, validAiJson } from './helpers.js';
@@ -27,13 +27,19 @@ function nvidiaConfig(overrides: Record<string, string | undefined> = {}) {
 }
 
 describe('NVIDIA provider wiring', () => {
-  it('is built from AI_PROVIDER=nvidia with NVIDIA defaults', () => {
-    const provider = createProvider(nvidiaConfig());
+  it('is built from AI_PROVIDER=nvidia with the NVIDIA endpoint', () => {
+    const provider = createProvider(nvidiaConfig({ AI_MODEL: MODEL }));
     expect(provider).toBeInstanceOf(NvidiaProvider);
     expect(provider.name).toBe('nvidia');
     expect(provider.endpoint).toBe('integrate.api.nvidia.com');
-    expect(provider.model).toBe(NVIDIA_DEFAULT_MODEL);
     expect(PROVIDER_DEFAULTS.nvidia.baseUrl).toBe(NVIDIA_DEFAULT_BASE_URL);
+  });
+
+  it('refuses to guess a model, because a guessed one expires', () => {
+    // A default here would be an outage with a date on it: NVIDIA retires
+    // models, and a retired one answers 410 while looking correctly configured.
+    expect(PROVIDER_DEFAULTS.nvidia.model).toBe('');
+    expect(() => createProvider(nvidiaConfig())).toThrow(/AI_MODEL must name a model/i);
   });
 
   it('lets the environment override the endpoint and the model', () => {
@@ -44,8 +50,8 @@ describe('NVIDIA provider wiring', () => {
     expect(provider.endpoint).toBe('integrate.api.nvidia.com');
   });
 
-  it('never falls back to OpenAI when only AI_PROVIDER is set', () => {
-    const provider = createProvider(nvidiaConfig());
+  it('never falls back to OpenAI when only AI_PROVIDER and AI_MODEL are set', () => {
+    const provider = createProvider(nvidiaConfig({ AI_MODEL: MODEL }));
     expect(provider.endpoint).not.toContain('openai');
   });
 
