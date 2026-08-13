@@ -42,7 +42,7 @@ export interface RecipeAIServiceOptions {
 }
 
 const DEFAULT_MIN_SOURCE_CHARS = 40;
-const DEFAULT_BUDGET_MS = 150_000;
+const DEFAULT_BUDGET_MS = 210_000;
 
 export class RecipeAIService {
   private readonly provider: AIProvider;
@@ -79,6 +79,16 @@ export class RecipeAIService {
     } catch (error) {
       throw toApiError(error);
     }
+  }
+
+  /**
+   * What is left of the budget, handed to the provider as this call's ceiling.
+   * A fixed per-call limit below what the model needs fails every attempt at
+   * exactly the same point, and no number of retries can rescue that — so an
+   * attempt is allowed to use the time that remains.
+   */
+  private remainingMs(startedAt: number): number {
+    return Math.max(1000, this.budgetMs - (Date.now() - startedAt));
   }
 
   private outOfTime(attempts: number): ApiError {
@@ -152,7 +162,11 @@ export class RecipeAIService {
       let text: string;
       let model = this.provider.model;
       try {
-        const result = await this.provider.analyzeRecipe(input, { repairHint, signal: options.signal });
+        const result = await this.provider.analyzeRecipe(input, {
+          repairHint,
+          signal: options.signal,
+          timeoutMs: this.remainingMs(started),
+        });
         text = result.text;
         model = result.model;
       } catch (error) {
@@ -256,7 +270,7 @@ export class RecipeAIService {
             temperature: options.temperature,
             maxTokens: options.maxTokens,
           },
-          { signal: options.signal, repairHint },
+          { signal: options.signal, repairHint, timeoutMs: this.remainingMs(started) },
         );
         text = result.text;
         model = result.model;

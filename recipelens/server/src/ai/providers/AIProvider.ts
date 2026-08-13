@@ -78,6 +78,12 @@ export interface AnalyzeOptions {
   /** Validation feedback from a previous attempt, used to repair the answer. */
   repairHint?: string | null;
   signal?: AbortSignal;
+  /**
+   * How long *this* call may take. The caller knows how much of the overall
+   * budget is left; a fixed per-call ceiling below what the model needs would
+   * fail every attempt identically, and no number of retries would help.
+   */
+  timeoutMs?: number;
 }
 
 export interface AIProvider {

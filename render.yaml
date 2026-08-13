@@ -55,12 +55,13 @@ services:
       # Settings → Test AI connection lists what the key can use right now.
       - key: AI_MODEL
         sync: false
-      # How long one analysis may take in total, attempts included. It must stay
-      # below what the app waits for (240s), so the app is never the first to
-      # give up on work this server is still doing. Raise it for a large model.
+      # How long one analysis may take in total, attempts included. A 120B-class
+      # model writing a whole recipe can need minutes; the tiny connection check
+      # is no guide to that. Lower it only if you also move to a smaller model.
       - key: AI_TOTAL_BUDGET_MS
-        value: "150000"
-      # One attempt. Retries exist to repair invalid JSON, not to outwait a
-      # slow model — the budget above is what actually bounds a request.
+        value: "210000"
+      # Upper bound for a single call. Each attempt gets whatever is left of the
+      # budget, up to this — a ceiling below what the model needs would fail
+      # every attempt at the same point, and no retry could rescue it.
       - key: AI_TIMEOUT_MS
-        value: "60000"
+        value: "180000"

@@ -76,7 +76,7 @@ export class OpenAIProvider extends BaseProvider {
     if (request.json && !this.jsonModeUnsupported) body.response_format = { type: 'json_object' };
 
     const url = `${this.baseUrl}/chat/completions`;
-    let response = await this.post(url, body, { authorization: `Bearer ${this.apiKey}` }, options.signal);
+    let response = await this.post(url, body, { authorization: `Bearer ${this.apiKey}` }, options.signal, options.timeoutMs);
 
     // JSON mode is the most common thing an OpenAI-compatible endpoint refuses,
     // and every endpoint words that refusal differently. Rather than guess at
@@ -87,7 +87,7 @@ export class OpenAIProvider extends BaseProvider {
       this.note('http', String(response.status), response.status, `with response_format: ${text}`);
       this.jsonModeUnsupported = true;
       delete body.response_format;
-      response = await this.post(url, body, { authorization: `Bearer ${this.apiKey}` }, options.signal);
+      response = await this.post(url, body, { authorization: `Bearer ${this.apiKey}` }, options.signal, options.timeoutMs);
     }
 
     if (!response.ok) throw this.toError(response.status, await safeText(response));

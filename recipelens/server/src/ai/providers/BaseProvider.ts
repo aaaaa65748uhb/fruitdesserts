@@ -50,6 +50,12 @@ export abstract class BaseProvider implements AIProvider {
     );
   }
 
+  /** The ceiling for one call: what the caller allows, bounded by our own. */
+  protected callTimeout(requested?: number): number {
+    if (!requested || requested <= 0) return this.timeoutMs;
+    return Math.min(requested, this.timeoutMs);
+  }
+
   /** Hostname only — safe to show in a diagnostics response. */
   get endpoint(): string {
     try {
@@ -62,9 +68,16 @@ export abstract class BaseProvider implements AIProvider {
   abstract complete(request: CompletionRequest, options?: AnalyzeOptions): Promise<AIProviderResult>;
 
   /** POST JSON with a hard timeout and uniform transport error mapping. */
-  protected async post(url: string, body: unknown, headers: Record<string, string>, external?: AbortSignal): Promise<Response> {
+  protected async post(
+    url: string,
+    body: unknown,
+    headers: Record<string, string>,
+    external?: AbortSignal,
+    timeoutMs?: number,
+  ): Promise<Response> {
+    const budget = this.callTimeout(timeoutMs);
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(new Error('timeout')), this.timeoutMs);
+    const timer = setTimeout(() => controller.abort(new Error('timeout')), budget);
     const onAbort = () => controller.abort(new Error('aborted'));
     external?.addEventListener('abort', onAbort, { once: true });
 
@@ -77,8 +90,8 @@ export abstract class BaseProvider implements AIProvider {
       });
     } catch (cause) {
       if (controller.signal.aborted && !external?.aborted) {
-        this.note('transport', 'timeout', null, `no response within ${this.timeoutMs} ms`);
-        throw new AIProviderError('timeout', `AI request timed out after ${this.timeoutMs} ms.`, { cause, retryable: true });
+        this.note('transport', 'timeout', null, `no response within ${budget} ms`);
+        throw new AIProviderError('timeout', `AI request timed out after ${budget} ms.`, { cause, retryable: true });
       }
       if (!external?.aborted) {
         this.note('transport', 'unavailable', null, cause instanceof Error ? cause.message : String(cause));

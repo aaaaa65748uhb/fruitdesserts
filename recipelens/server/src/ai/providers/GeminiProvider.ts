@@ -50,6 +50,7 @@ export class GeminiProvider extends BaseProvider {
       body,
       { 'x-goog-api-key': this.apiKey },
       options.signal,
+      options.timeoutMs,
     );
 
     if (!response.ok) throw this.toError(response.status, await safeText(response));

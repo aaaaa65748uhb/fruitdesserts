@@ -241,3 +241,40 @@ describe('a model the vendor has retired', () => {
     }
   });
 });
+
+describe('a call that outlasts its allowance', () => {
+  it('is reported as a timeout naming the time it was given', async () => {
+    const fixture = await startFixtureServer((_req, res) => {
+      // Never answers: the caller's own clock has to end this.
+      void res;
+    });
+    try {
+      const slow = new NvidiaProvider({ apiKey: 'k', baseUrl: fixture.url, model: MODEL, timeoutMs: 5000 });
+      await expect(slow.complete({ system: 's', user: 'u' }, { timeoutMs: 300 })).rejects.toMatchObject({
+        code: 'timeout',
+      });
+
+      const [failure] = recentProviderFailures();
+      expect(failure.stage).toBe('transport');
+      // The allowance the caller passed, not the provider's own ceiling.
+      expect(failure.detail).toContain('300 ms');
+    } finally {
+      await fixture.close();
+    }
+  });
+
+  it('never exceeds the provider\'s own ceiling, however generous the caller', async () => {
+    const fixture = await startFixtureServer((_req, res) => {
+      void res;
+    });
+    try {
+      const slow = new NvidiaProvider({ apiKey: 'k', baseUrl: fixture.url, model: MODEL, timeoutMs: 250 });
+      await expect(slow.complete({ system: 's', user: 'u' }, { timeoutMs: 60_000 })).rejects.toMatchObject({
+        code: 'timeout',
+      });
+      expect(recentProviderFailures()[0].detail).toContain('250 ms');
+    } finally {
+      await fixture.close();
+    }
+  });
+});

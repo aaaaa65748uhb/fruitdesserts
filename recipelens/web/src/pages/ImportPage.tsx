@@ -26,7 +26,7 @@ const INITIAL_PHASE = { phase: 'received', label: 'Sending the source to RecipeL
  * and the recipe is already saved by then — reporting a failure would lose it
  * and invite a duplicate on the retry.
  */
-async function collectFinishedImport(requestId: string, waitMs = 90_000): Promise<ImportResult | null> {
+async function collectFinishedImport(requestId: string, waitMs = 180_000): Promise<ImportResult | null> {
   const deadline = Date.now() + waitMs;
   while (Date.now() < deadline) {
     try {
@@ -226,7 +226,10 @@ export function ImportPage() {
       // A request that ran out of time is not the same as a request that
       // failed: the server may well have finished and saved the recipe. Ask it
       // before telling anyone the import did not work.
-      const rescued = caught instanceof ApiError && caught.code === 'TIMEOUT' ? await collectFinishedImport(id) : null;
+      // A dropped connection looks like a network error from here, but the
+      // server carries on regardless — so both cases are worth checking.
+      const gaveUpWaiting = caught instanceof ApiError && (caught.code === 'TIMEOUT' || caught.code === 'NETWORK_ERROR');
+      const rescued = gaveUpWaiting ? await collectFinishedImport(id) : null;
       if (rescued) {
         setResult(rescued);
       } else {

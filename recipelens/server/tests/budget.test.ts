@@ -19,17 +19,20 @@ class SlowProvider implements AIProvider {
   readonly model = 'slow-model';
   readonly endpoint = 'slow.invalid';
   calls = 0;
+  /** What each call was told it had to work with. */
+  readonly allowances: Array<number | undefined> = [];
 
   constructor(private readonly delayMs: number) {}
 
-  async analyzeRecipe(): Promise<AIProviderResult> {
-    return this.answer();
+  async analyzeRecipe(_input: unknown, options: { timeoutMs?: number } = {}): Promise<AIProviderResult> {
+    return this.answer(options.timeoutMs);
   }
-  async complete(): Promise<AIProviderResult> {
-    return this.answer();
+  async complete(_request: unknown, options: { timeoutMs?: number } = {}): Promise<AIProviderResult> {
+    return this.answer(options.timeoutMs);
   }
-  private async answer(): Promise<AIProviderResult> {
+  private async answer(timeoutMs?: number): Promise<AIProviderResult> {
     this.calls += 1;
+    this.allowances.push(timeoutMs);
     await new Promise((resolve) => setTimeout(resolve, this.delayMs));
     return { text: 'not json at all', model: this.model, finishReason: 'stop' };
   }
@@ -55,6 +58,20 @@ describe('the analysis budget', () => {
       code: 'AI_INVALID_RESPONSE',
     });
     expect(provider.calls).toBe(3);
+  });
+
+  it('gives each attempt the time that is left, not a fixed slice', async () => {
+    // The bug this pins: a per-call ceiling below what the model needs fails
+    // every attempt at the same point, so retrying can never succeed.
+    const provider = new SlowProvider(1);
+    const service = new RecipeAIService(provider, { maxRetries: 1, budgetMs: 20_000 });
+
+    await expect(service.analyze({ sourceType: 'text', pastedText: 'x'.repeat(80) })).rejects.toBeTruthy();
+
+    expect(provider.allowances).toHaveLength(2);
+    expect(provider.allowances[0]).toBeGreaterThan(15_000);
+    // The second attempt gets what the first left behind — less, never more.
+    expect(provider.allowances[1]!).toBeLessThanOrEqual(provider.allowances[0]!);
   });
 
   it('is configured from the environment, below what the client waits for', () => {

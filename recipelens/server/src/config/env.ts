@@ -45,15 +45,17 @@ const envSchema = z.object({
   AI_API_KEY: z.string().optional(),
   AI_API_BASE_URL: z.string().optional(),
   AI_MODEL: z.string().optional(),
-  // One attempt. Large models take a while to produce a whole recipe, so this
-  // is generous; the total budget below is what actually bounds a request.
-  AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(300000).default(60000),
+  // Ceiling for one call. It is an upper bound, not the working value: each
+  // attempt gets whatever is left of the total budget, up to this. A large
+  // model writing a whole recipe can take minutes, and a limit below what it
+  // needs would fail every attempt at the same point.
+  AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600000).default(180000),
   // Retries exist to repair invalid JSON, not to outwait a slow model.
   AI_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(1),
   // Everything one analysis may spend, across all its attempts. It must stay
   // below the client's patience, or the client abandons work the server is
   // still doing — see web/src/lib/api.ts.
-  AI_TOTAL_BUDGET_MS: z.coerce.number().int().min(5000).max(600000).default(150000),
+  AI_TOTAL_BUDGET_MS: z.coerce.number().int().min(5000).max(600000).default(210000),
   MAX_UPLOAD_BYTES: z.coerce.number().int().min(1024).max(100 * 1024 * 1024).default(10 * 1024 * 1024),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_JWKS_URL: z.string().optional(),

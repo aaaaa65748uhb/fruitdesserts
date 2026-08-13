@@ -51,6 +51,7 @@ export class AnthropicProvider extends BaseProvider {
       body,
       { 'x-api-key': this.apiKey, 'anthropic-version': '2023-06-01' },
       options.signal,
+      options.timeoutMs,
     );
 
     if (!response.ok) throw this.toError(response.status, await safeText(response));
