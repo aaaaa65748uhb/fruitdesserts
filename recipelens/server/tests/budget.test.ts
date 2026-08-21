@@ -12,6 +12,7 @@ import { RecipeAIService } from '../src/ai/RecipeAIService.js';
 import type { AIProvider, AIProviderResult } from '../src/ai/providers/AIProvider.js';
 import { loadConfig } from '../src/config/env.js';
 import { createHarness, registerUser, TEST_ENV, validAiJson, type TestHarness } from './helpers.js';
+import { AI_CLIENT_TIMEOUT_MS } from '../src/shared.js';
 
 /** Answers slowly, and always with something the validator rejects. */
 class SlowProvider implements AIProvider {
@@ -76,7 +77,10 @@ describe('the analysis budget', () => {
 
   it('is configured from the environment, below what the client waits for', () => {
     const config = loadConfig(TEST_ENV as NodeJS.ProcessEnv);
-    expect(config.ai.totalBudgetMs).toBeLessThan(240_000); // web/src/lib/api.ts
+    // The invariant, against the very constant the client uses: a server that
+    // may work for longer than the client waits reports failures for requests
+    // that were about to succeed.
+    expect(config.ai.totalBudgetMs).toBeLessThan(AI_CLIENT_TIMEOUT_MS);
     expect(config.ai.totalBudgetMs).toBeGreaterThanOrEqual(config.ai.timeoutMs);
 
     const custom = loadConfig({ ...TEST_ENV, AI_TOTAL_BUDGET_MS: '90000' } as NodeJS.ProcessEnv);

@@ -5,6 +5,7 @@
  * is identical everywhere and the server's error envelope
  * ({ error: { code, message, recovery, retryable } }) is preserved.
  */
+import { AI_CLIENT_TIMEOUT_MS } from '../shared.js';
 import type { ChatAnswer, Customization, CustomizationGoal, Ingredient, Nutrition, RecipeDraft, Step, Substitution } from '../shared.js';
 import { apiBaseUrl, isNative, tokenStore } from './runtime.js';
 
@@ -306,7 +307,7 @@ export const api = {
      */
     ai: async (deep = false): Promise<AiDiagnostics> => {
       try {
-        return await request<AiDiagnostics>(`/diagnostics/ai${deep ? '?deep=1' : ''}`, { timeoutMs: 120_000 });
+        return await request<AiDiagnostics>(`/diagnostics/ai${deep ? '?deep=1' : ''}`, { timeoutMs: AI_CLIENT_TIMEOUT_MS });
       } catch (error) {
         if (error instanceof ApiError && isAiDiagnostics(error.details)) return error.details;
         throw error;
@@ -368,20 +369,20 @@ export const api = {
       request<{ nutrition: Nutrition; disclaimer: string }>(`/assist/${recipeId}/nutrition`, {
         method: 'POST',
         body: { servings },
-        timeoutMs: 120_000,
+        timeoutMs: AI_CLIENT_TIMEOUT_MS,
       }),
     substitutions: (recipeId: string, ingredientId: string, reason?: string) =>
       request<{ ingredient: { id: string; name: string }; substitutions: Substitution[]; disclaimer: string }>(
         `/assist/${recipeId}/substitutions`,
-        { method: 'POST', body: { ingredientId, reason }, timeoutMs: 120_000 },
+        { method: 'POST', body: { ingredientId, reason }, timeoutMs: AI_CLIENT_TIMEOUT_MS },
       ),
     customize: (recipeId: string, goals: CustomizationGoal[], options: { notes?: string; save?: boolean } = {}) =>
       request<{ customization: Customization; goals: CustomizationGoal[]; recipe: Recipe | null; disclaimer: string }>(
         `/assist/${recipeId}/customize`,
-        { method: 'POST', body: { goals, ...options }, timeoutMs: 180_000 },
+        { method: 'POST', body: { goals, ...options }, timeoutMs: AI_CLIENT_TIMEOUT_MS },
       ),
     chat: (recipeId: string, question: string, history: Array<{ role: 'user' | 'assistant'; content: string }> = []) =>
-      request<ChatAnswer>(`/assist/${recipeId}/chat`, { method: 'POST', body: { question, history }, timeoutMs: 120_000 }),
+      request<ChatAnswer>(`/assist/${recipeId}/chat`, { method: 'POST', body: { question, history }, timeoutMs: AI_CLIENT_TIMEOUT_MS }),
   },
   import: {
     capabilities: () => request<ImportCapabilities>('/import/capabilities'),
@@ -400,10 +401,10 @@ export const api = {
         method: 'POST',
         body,
         signal,
-        // Deliberately more patient than the server's own AI budget
-        // (AI_TOTAL_BUDGET_MS), so the client is never the first to give up on
-        // work the server is still doing.
-        timeoutMs: 240_000,
+        // More patient than the server's own AI budget (AI_TOTAL_BUDGET_MS),
+        // so the client is never the first to give up on work the server is
+        // still doing. Shared, because every AI-backed call needs the same.
+        timeoutMs: AI_CLIENT_TIMEOUT_MS,
         headers: requestId ? { 'x-request-id': requestId } : undefined,
       }),
   },
