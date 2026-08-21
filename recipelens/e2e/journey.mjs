@@ -55,11 +55,33 @@ async function waitForHttp(url, timeoutMs = 30000) {
   }
 }
 
+/**
+ * `detached` makes the child a process-group leader, which is what lets the
+ * whole tree be killed later. `npm run start` is a wrapper: signalling it
+ * leaves the actual server running, holding this run's port and — because its
+ * stdio pipes stay open here — keeping this process alive after the results
+ * have already been printed.
+ */
 function startProcess(command, args, options) {
-  const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'], ...options });
+  const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'], detached: true, ...options });
   child.stdout.on('data', (data) => process.env.E2E_VERBOSE && process.stdout.write(`[${options.label}] ${data}`));
   child.stderr.on('data', (data) => process.env.E2E_VERBOSE && process.stderr.write(`[${options.label}] ${data}`));
   return child;
+}
+
+/** Kill the child and everything it started, then let go of its pipes. */
+function stopProcess(child) {
+  try {
+    process.kill(-child.pid, 'SIGTERM');
+  } catch {
+    try {
+      child.kill('SIGTERM');
+    } catch {
+      /* already gone */
+    }
+  }
+  child.stdout?.destroy();
+  child.stderr?.destroy();
 }
 
 const RECIPE_TEXT = `Creamy garlic pasta for two.
@@ -283,8 +305,8 @@ async function main() {
     check('no unexpected console errors', realErrors.length === 0, realErrors.join(' | ').slice(0, 300));
   } finally {
     await browser.close();
-    server.kill('SIGTERM');
-    mockAi.kill('SIGTERM');
+    stopProcess(server);
+    stopProcess(mockAi);
     try {
       rmSync(path.dirname(dbFile), { recursive: true, force: true });
     } catch {
