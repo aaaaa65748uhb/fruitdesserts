@@ -28,6 +28,12 @@ export interface AnalysisOutcome {
   repaired: boolean;
   /** True when the result was served from the recent-analysis cache. */
   cached: boolean;
+  /**
+   * Tokens the model wrote. The number that separates a model which answered
+   * from one which spent its allowance thinking, and the fair way to compare
+   * two models on the same input.
+   */
+  completionTokens?: number;
 }
 
 export interface RecipeAIServiceOptions {
@@ -254,6 +260,7 @@ export class RecipeAIService {
           provider: this.provider.name,
           repaired: parsed.repaired,
           cached: false,
+          completionTokens,
         };
       } catch (error) {
         // Normalisation only fails when the payload is unusable (e.g. every

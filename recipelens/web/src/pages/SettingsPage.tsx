@@ -142,6 +142,13 @@ export function SettingsPage() {
                   </dd>
                 </>
               ) : null}
+              {diagnostics.completionTokens ? (
+                <>
+                  <dt className="text-neutral-500">Wrote</dt>
+                  {/* Same source text every time, so this compares models fairly. */}
+                  <dd>{diagnostics.completionTokens} tokens</dd>
+                </>
+              ) : null}
             </dl>
             {diagnostics.failure ? (
               <p className="text-red-700">

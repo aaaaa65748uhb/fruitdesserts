@@ -103,6 +103,9 @@ export function diagnosticsRoutes(): Router {
               attempts: outcome.attempts,
               repairedJson: outcome.repaired,
               latencyMs: Date.now() - started,
+              // Latency alone does not explain itself; tokens written do.
+              // The same fixed source every time, so two models compare fairly.
+              completionTokens: outcome.completionTokens ?? null,
               extracted: {
                 title: outcome.draft.title,
                 ingredientCount: outcome.draft.ingredients.length,

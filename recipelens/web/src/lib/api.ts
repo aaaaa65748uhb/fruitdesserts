@@ -249,6 +249,8 @@ export interface AiDiagnostics {
   latencyMs?: number;
   checkedAt: string;
   extracted?: { title: string; ingredientCount: number; stepCount: number };
+  /** Tokens the model wrote — the fair way to compare two models. */
+  completionTokens?: number | null;
   failure?: { code: string; message: string; status: number };
   /** What this key may actually use, straight from the vendor's catalogue. */
   availableModels?: string[] | null;
