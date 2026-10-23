@@ -1,0 +1,111 @@
+// SUPERIL persistent data model. Product identity is separate from retailer offers.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id                 String       @id
+  nameHe             String
+  nameEn             String?
+  brand              String
+  category           String
+  barcode            String?      @unique
+  packageSize        Float
+  packageUnit        String
+  multipack          Int?
+  imageUrl           String?
+  imageSource        String?
+  imageLicense       String?
+  manufacturer       String?
+  dietaryTags        String[]
+  productDescription String?
+  provenance         String
+  packagingShape     String       @default("box")
+  packagingColor     String       @default("#e2e8f0")
+  packagingAccent    String       @default("#334155")
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  offers             PriceOffer[]
+
+  @@index([category])
+  @@index([brand])
+}
+
+model Retailer {
+  id              String       @id
+  nameHe          String
+  nameEn          String
+  homepageUrl     String
+  homepageVerified Boolean     @default(false)
+  integration     String
+  deliveryFee     Float?
+  minimumOrder    Float?
+  branches        Branch[]
+  offers          PriceOffer[]
+}
+
+model Branch {
+  id         String       @id
+  retailerId String
+  retailer   Retailer     @relation(fields: [retailerId], references: [id])
+  name       String
+  city       String
+  address    String?
+  zipCode    String?
+  source     String
+  offers     PriceOffer[]
+
+  @@index([retailerId, city])
+}
+
+model PriceOffer {
+  id               String    @id
+  productId        String
+  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  retailerId       String
+  retailer         Retailer  @relation(fields: [retailerId], references: [id])
+  branchId         String?
+  branch           Branch?   @relation(fields: [branchId], references: [id])
+  price            Float
+  unitPrice        Float?
+  unitPriceBasis   String?
+  currency         String    @default("ILS")
+  promotionJson    Json?
+  availability     String    @default("unknown")
+  sourceProvider   String
+  sourceUrl        String?
+  lastVerifiedAt   DateTime?
+  freshness        String
+  matchConfidence  Float     @default(1)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([productId])
+  @@index([retailerId, branchId])
+}
+
+/** Guest carts can be persisted server-side when a user opts in to an account later. */
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  lines     CartLine[]
+}
+
+model CartLine {
+  id                 String  @id @default(cuid())
+  cartId             String
+  cart               Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId          String
+  quantity           Int
+  selectedRetailerId String?
+
+  @@unique([cartId, productId])
+}

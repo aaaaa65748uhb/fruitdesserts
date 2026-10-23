@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+  --color-sun-400: #fbbf24;
+  --color-sun-500: #f59e0b;
+  --color-ink: #0f172a;
+  --font-sans: "Rubik", "Assistant", "Segoe UI", "Arial Hebrew", Arial, system-ui, sans-serif;
+  --shadow-float: 0 10px 40px -12px rgb(15 23 42 / 0.35);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background: #f6f7f4;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Keep numbers/prices readable inside RTL text */
+.num {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
+
+.glass {
+  background: rgb(255 255 255 / 0.82);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+}
+
+.glass-dark {
+  background: rgb(15 23 42 / 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.animate-pop { animation: pop-in 0.22s ease-out both; }
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}
+.animate-drawer { animation: slide-in-left 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@keyframes bump {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.18); }
+}
+.animate-bump { animation: bump 0.35s ease-out; }
+
+:focus-visible {
+  outline: 3px solid var(--color-sun-400);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

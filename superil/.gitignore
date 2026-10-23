@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+.env
+.env.local
+*.tsbuildinfo
+next-env.d.ts
+data/imported/*.json
+data/price-feeds/**
+!data/price-feeds/README.md
+screenshots/

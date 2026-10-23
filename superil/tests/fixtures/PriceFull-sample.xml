@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TEST FIXTURE: structure follows the price-transparency PriceFull format; values are synthetic test data. -->
+<Root>
+  <ChainId>7290000000003</ChainId>
+  <SubChainId>001</SubChainId>
+  <StoreId>042</StoreId>
+  <Items Count="4">
+    <Item>
+      <PriceUpdateDate>2026-10-20 08:15:00</PriceUpdateDate>
+      <ItemCode>4006381333931</ItemCode>
+      <ItemType>1</ItemType>
+      <ItemName>מוצר בדיקה 500 גרם</ItemName>
+      <ManufacturerName>יצרן בדיקה</ManufacturerName>
+      <UnitQty>גרמים</UnitQty>
+      <Quantity>500.00</Quantity>
+      <bIsWeighted>0</bIsWeighted>
+      <ItemPrice>12.90</ItemPrice>
+      <UnitOfMeasurePrice>2.58</UnitOfMeasurePrice>
+    </Item>
+    <Item>
+      <PriceUpdateDate>2026-10-21 10:00:00</PriceUpdateDate>
+      <ItemCode>0012345678905</ItemCode>
+      <ItemType>1</ItemType>
+      <ItemName>משקה בדיקה</ItemName>
+      <ManufacturerName>לא ידוע</ManufacturerName>
+      <UnitQty>ליטרים</UnitQty>
+      <Quantity>1.5</Quantity>
+      <bIsWeighted>0</bIsWeighted>
+      <ItemPrice>7.90</ItemPrice>
+    </Item>
+    <Item>
+      <PriceUpdateDate>2026-10-21 10:00:00</PriceUpdateDate>
+      <ItemCode>7001</ItemCode>
+      <ItemType>0</ItemType>
+      <ItemName>עגבניות במשקל</ItemName>
+      <UnitQty>קילוגרמים</UnitQty>
+      <Quantity>1</Quantity>
+      <bIsWeighted>1</bIsWeighted>
+      <ItemPrice>6.90</ItemPrice>
+    </Item>
+    <Item>
+      <ItemCode>1234</ItemCode>
+      <ItemName>שורה פגומה ללא מחיר</ItemName>
+    </Item>
+  </Items>
+</Root>
