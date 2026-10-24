@@ -17,7 +17,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "start:prod": "prisma migrate deploy && next start",
-    "check": "npm run lint && npm run typecheck && npm test && npm run build"
+    "check": "npm run lint && npm run typecheck && npm test && npm run build",
+    "build:static": "node scripts/build-static.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

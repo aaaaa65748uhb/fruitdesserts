@@ -5,6 +5,11 @@ import type { CheckoutHandoff } from "@/lib/checkout";
 import type { Branch, CategoryId, PriceOffer, Product, ProviderStatus, Retailer } from "@/lib/types";
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
+  // Static demo build (no server, e.g. Netlify Drop): answer from the bundled catalog with sample prices.
+  if (process.env.NEXT_PUBLIC_STATIC_DEMO === "1") {
+    const { staticApi } = await import("./static-api");
+    return (await staticApi(url, init)) as T;
+  }
   const res = await fetch(url, init);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

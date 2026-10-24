@@ -1,6 +1,7 @@
 "use client";
 import { MapPin } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useProviderStatus } from "@/client/queries";
 import { RETAILERS, RETAILER_BY_ID } from "@/data/retailers";
 import { formatDateTimeHe } from "@/lib/format";
@@ -11,7 +12,11 @@ import { formatDateTimeHe } from "@/lib/format";
  */
 export function CoverageNotice({ className = "" }: { className?: string }) {
   const { data } = useProviderStatus();
-  if (!data) return null;
+  // The status is often already cached when a late-hydrating (Suspense) page mounts; render only after mount
+  // so the first client render matches the prerendered HTML.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted || !data) return null;
   if (!data.coverage.length) {
     return (
       <p className={`rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-amber-900 ring-1 ring-amber-200 ${className}`}>

@@ -10,3 +10,6 @@ data/imported/*
 data/price-feeds/**
 !data/price-feeds/README.md
 screenshots/
+netlify-drop/
+.static-build/
+superil-netlify-drop.zip

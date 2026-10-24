@@ -88,6 +88,21 @@ The site picks up new data on the next request; no redeploy is needed.
 
 ---
 
+## Option C – Static demo (Netlify Drop or any static host)
+
+```bash
+npm run build:static
+```
+
+This creates `netlify-drop/`, a plain folder you can drag onto <https://app.netlify.com/drop>. It contains the
+3D store, catalog, search, product pages, cart, comparison and checkout handoff, all running in the visitor's
+browser with **sample prices only** ("נתון לדוגמה").
+
+The static demo has **no** admin area, price imports, official prices or database. Nothing secret is in it:
+`.env` files and `data/imported/` are never copied. For real prices, use option A or B.
+
+---
+
 ## Security checklist before going public
 
 - [ ] `NODE_ENV=production`, served over **HTTPS**.
