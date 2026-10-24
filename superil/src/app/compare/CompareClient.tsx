@@ -1,4 +1,5 @@
 "use client";
+import { CoverageNotice } from "@/components/CoverageNotice";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -16,6 +17,7 @@ export function CompareClient() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <h1 className="text-3xl font-extrabold">השוואת מחירים</h1>
+      <CoverageNotice className="mt-3" />
       <div className="mt-4 inline-flex rounded-full bg-slate-100 p-1" role="tablist">
         {(["basket", "product"] as const).map((t) => (
           <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`rounded-full px-5 py-2 font-bold ${tab === t ? "bg-white shadow-sm" : "text-slate-600"}`}>

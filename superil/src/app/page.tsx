@@ -4,12 +4,15 @@ import { HomeSearch } from "@/components/HomeSearch";
 import { HeroScene } from "@/components/HeroScene";
 import { CATEGORIES } from "@/lib/categories";
 import { RETAILERS } from "@/data/retailers";
-import { getPriceMode } from "@/server/providers";
+import { getOfficialSource, getPriceMode } from "@/server/providers";
+import { RETAILER_BY_ID } from "@/data/retailers";
 
 export const revalidate = 60;
 
 export default async function HomePage() {
   const priceMode = await getPriceMode();
+  const coverage = await getOfficialSource().coverage();
+  const coveredNames = coverage.map((c) => `${RETAILER_BY_ID[c.retailerId]?.nameHe ?? c.retailerId} (${c.branches.length} ${c.branches.length === 1 ? "סניף" : "סניפים"})`).join(", ");
   return (
     <div>
       {/* Hero */}
@@ -26,7 +29,7 @@ export default async function HomePage() {
               <span className="text-sun-400">בלי לצאת מהבית.</span>
             </h1>
             <p className="mt-5 max-w-xl text-lg text-white/80">
-              מסתובבים בין המעברים, מרימים את המוצרים המוכרים מהמדף, משווים מחירים בין הרשתות וממשיכים לקנייה באתר הרשת שבחרתם.
+              מסתובבים בין המעברים, מרימים את המוצרים המוכרים מהמדף, משווים מחירים בין הרשתות שיש לנו עבורן נתונים, וממשיכים לקנייה באתר הרשת שבחרתם.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/store" className="inline-flex items-center gap-2 rounded-full bg-sun-400 px-7 py-4 text-lg font-extrabold text-ink shadow-lg transition hover:bg-sun-500">
@@ -95,9 +98,9 @@ export default async function HomePage() {
             </div>
             <p className="mt-2 text-sm text-amber-900/80">
               {priceMode === "official" ? (
-                <>המחירים מגיעים מ<b>קבצי המחירים הרשמיים</b> שהרשתות מפרסמות לפי חוק שקיפות המחירים. לכל מחיר מוצגים הסניף ומועד פרסום הקובץ; מחירים ישנים מסומנים כלא עדכניים.</>
+                <>מחירים רשמיים זמינים כרגע רק עבור: <b>{coveredNames}</b>. הם מגיעים מ<b>קבצי המחירים הרשמיים</b> שהרשתות מפרסמות לפי חוק שקיפות המחירים, ומיובאים ידנית – לא בזמן אמת. לכל מחיר מוצגים הסניף ומועד פרסום הקובץ; מחירים ישנים מסומנים כלא עדכניים.</>
               ) : priceMode === "mixed" ? (
-                <>חלק מהמחירים מגיעים מקבצי מחירים רשמיים וחלקם <b>נתונים לדוגמה</b> – כל מחיר מסומן לפי מקורו.</>
+                <>מחירים רשמיים זמינים רק עבור: <b>{coveredNames}</b>. שאר המחירים הם <b>נתונים לדוגמה</b> – כל מחיר מסומן לפי מקורו.</>
               ) : (
                 <>בשלב זה המחירים המוצגים הם <b>נתונים לדוגמה</b>, עד שיובאו קבצי המחירים שהרשתות מפרסמות לפי חוק שקיפות המחירים.</>
               )}{" "}

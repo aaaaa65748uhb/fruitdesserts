@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { AddToCart } from "@/components/AddToCart";
+import { CoverageNotice } from "@/components/CoverageNotice";
 import { OfferTable } from "@/components/OfferTable";
 import { sortOffers, type OfferSort } from "@/lib/compare";
 import type { PriceOffer, Product } from "@/lib/types";
@@ -22,6 +23,7 @@ export function ProductOffers({ product, initialOffers }: { product: Product; in
         </div>
       </div>
       <OfferTable offers={offers} />
+      <CoverageNotice className="mt-3" />
       <p className="mt-2 text-xs text-slate-500">מבצעים מוצגים רק כאשר הם מאומתים. מחיר בסניף אחד אינו מעיד על מחיר או מלאי בסניף אחר.</p>
     </section>
   );

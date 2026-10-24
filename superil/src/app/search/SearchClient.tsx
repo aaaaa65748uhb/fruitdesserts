@@ -1,4 +1,5 @@
 "use client";
+import { CoverageNotice } from "@/components/CoverageNotice";
 import { Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -37,6 +38,7 @@ export function SearchClient() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <h1 className="text-3xl font-extrabold">חיפוש מוצרים</h1>
+      <CoverageNotice className="mt-3" />
       <form role="search" className="relative mt-4 max-w-2xl" onSubmit={(e) => { e.preventDefault(); setParam("q", q.trim()); }}>
         <Search className="pointer-events-none absolute top-1/2 right-4 h-5 w-5 -translate-y-1/2 text-slate-400" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="שם מוצר, מותג או ברקוד" aria-label="חיפוש מוצר" className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pr-12 pl-4 text-lg shadow-sm outline-none focus:border-brand-500" />

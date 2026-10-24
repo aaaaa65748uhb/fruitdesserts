@@ -6,6 +6,10 @@ _Last updated October 2026._
 > published file structures. **No real retailer file has been imported in this repository yet**, so the app
 > still shows sample prices (labelled "נתון לדוגמה") until an operator imports a real file as described below.
 > Do not describe the site as showing real prices until that has been done and checked (section 6).
+>
+> Setup, deployment and operations: see [SETUP.md](SETUP.md), [DEPLOYMENT.md](DEPLOYMENT.md) and
+> [OPERATIONS.md](OPERATIONS.md). Admin pages: `/admin/status` (launch readiness) and `/admin/prices`
+> (import + matching review).
 
 ## 1. Data sources: findings and decisions
 
@@ -62,8 +66,10 @@ dropped silently.
 
 1. The same canonical GTIN from different chains or branches is the same product.
 2. A curated catalog product (the 156 products on the 3D shelves) is linked to file records **only** through
-   a reviewed identifier in `data/barcode-map.json`. The identifier is a GTIN, or `i:<retailer>:<code>` for
-   internal codes such as produce.
+   a reviewed identifier. The identifier is a GTIN, or `i:<retailer>:<code>` for internal codes such as
+   produce. Approvals and rejections made in the admin page or CLI are stored in the repository (the database
+   in production). `data/barcode-map.json` can additionally hold links reviewed in git; a stored decision
+   overrides the file for the same pair.
 3. Package sizes must be equal: same measurement basis, and the same total amount within 0.5%. Records with a
    different size are never attached to a product, and are listed as **size conflicts**. Mapping a catalog
    product to a barcode whose observed size differs is refused.
@@ -127,7 +133,7 @@ cp .env.example .env.local    # then edit the values below
 | Variable | Purpose |
 |---|---|
 | `ADMIN_TOKEN` | Enables `/admin/prices`. At least 24 random characters (`openssl rand -hex 32`). Unset = admin disabled (404). |
-| `DATABASE_URL` | Optional PostgreSQL. Run `npm run db:push && npm run db:seed` once. Unset = JSON store. |
+| `DATABASE_URL` | PostgreSQL; **required in production**. Run `npm run db:migrate` (or `npm run start:prod`, which migrates on start). Unset = JSON store (development). |
 | `PRICE_DATA_DIR` | JSON store folder (default `data/imported`, git-ignored). |
 | `BARCODE_MAP_FILE` | Reviewed catalog ↔ barcode links (default `data/barcode-map.json`; commit it). |
 | `PRICE_VERIFIED_MAX_AGE_HOURS`, `PRICE_STALE_AFTER_DAYS` | Freshness windows (36 h / 7 days). |
@@ -198,8 +204,11 @@ npm run prices -- preview <file> [--retailer <id>] [--published-at <ISO time>] [
 npm run prices -- import  <file...> [--retailer <id>] [--published-at <ISO time>] [--force] [--json]
 npm run prices -- imports                  # history
 npm run prices -- report [--json]          # matched / unmatched / duplicates / conflicts / suggestions
-npm run prices -- map   <productId> <GTIN | i:<retailer>:<code>>
-npm run prices -- unmap <productId>
+npm run prices -- map    <productId> <GTIN | i:<retailer>:<code>>   # approve a link
+npm run prices -- reject <productId> <identifier>                   # dismiss a suggestion
+npm run prices -- unmap  <productId> [<identifier>]
+npm run prices -- uploads                                           # archived original files
+npm run prices -- export-upload <sha256> <out-file>
 ```
 
 Retailer ids: `shufersal`, `rami-levy`, `victory`, `carrefour`, `hazi-hinam`, `yohananof`, `osher-ad`,
@@ -224,6 +233,7 @@ Test fixtures in `tests/fixtures/official/` follow the published structures, wit
 
 - Not yet validated against a real downloaded file. Schema variants seen in the wild may need parser tweaks.
   The preview report will show any problems.
+- Original uploads are archived (database table `ImportFile`, or `data/imported/uploads/` without a database).
 - No automated downloading by design. Scheduled imports can be added by running the CLI on files the operator
   fetches through permitted means.
 - Promotions are informational only (see section 4).

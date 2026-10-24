@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { SEED_PRODUCTS } from "@/data/seed-products";
 import { effectiveFreshness } from "@/lib/freshness";
 import type {
   AvailabilityStatus,
@@ -48,15 +49,19 @@ export function fromDbProduct(p: DbProduct): Product {
 
 export class PrismaProductStore implements ProductStore {
   readonly id = "postgres";
+  /** Curated catalog from code, plus/overridden by any catalog rows in the database (no seeding required). */
   async load(): Promise<Product[]> {
-    return (await prisma().product.findMany()).map(fromDbProduct);
+    const rows = (await prisma().product.findMany({ where: { provenance: { not: "price_feed" } } })).map(fromDbProduct);
+    const byId = new Map(SEED_PRODUCTS.map((p) => [p.id, p]));
+    for (const r of rows) byId.set(r.id, r);
+    return [...byId.values()];
   }
   async status(): Promise<ProviderStatus> {
     try {
       const count = await prisma().product.count();
-      return { id: this.id, name: "מסד נתונים PostgreSQL", kind: "catalog", enabled: true, healthy: true, freshness: "cached", message: `${count} מוצרים במסד הנתונים.` };
+      return { id: this.id, name: "קטלוג מוצרים", kind: "catalog", enabled: true, healthy: true, freshness: "sample", message: `קטלוג שנאסף ידנית (פרטי אריזה לא אומתו מול היצרן), ${count ? "בתוספת " : ""}מוצרים מקבצי מחירים רשמיים.` };
     } catch {
-      return { id: this.id, name: "מסד נתונים PostgreSQL", kind: "catalog", enabled: true, healthy: false, freshness: "unavailable", message: "אין חיבור למסד הנתונים." };
+      return { id: this.id, name: "קטלוג מוצרים", kind: "catalog", enabled: true, healthy: false, freshness: "unavailable", message: "הקטלוג אינו זמין כרגע." };
     }
   }
 }

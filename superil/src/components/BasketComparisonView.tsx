@@ -31,7 +31,10 @@ export function BasketComparisonView({ compact = false }: { compact?: boolean })
   if (isError) return <p className="rounded-2xl bg-red-50 p-4 text-red-800">ההשוואה אינה זמינה כרגע.</p>;
   if (isLoading || !data) return <div className="h-96 animate-pulse rounded-3xl bg-slate-200/60" />;
 
-  const sorted = [...data.baskets].sort((a, b) => Number(b.complete) - Number(a.complete) || b.pricedItems - a.pricedItems || a.itemsSubtotal - b.itemsSubtotal);
+  const sorted = data.baskets
+    .filter((b) => b.pricedItems > 0)
+    .sort((a, b) => Number(b.complete) - Number(a.complete) || b.pricedItems - a.pricedItems || a.itemsSubtotal - b.itemsSubtotal);
+  const noData = data.baskets.filter((b) => b.pricedItems === 0);
 
   return (
     <div className="space-y-4">
@@ -108,6 +111,11 @@ export function BasketComparisonView({ compact = false }: { compact?: boolean })
           );
         })}
       </ul>
+      {noData.length > 0 && (
+        <p className="rounded-2xl bg-slate-50 px-4 py-2.5 text-sm text-slate-600">
+          אין נתוני מחירים עבור המוצרים בסל ברשתות: {noData.map((b) => RETAILER_BY_ID[b.retailerId]?.nameHe ?? b.retailerId).join(", ")}. אין להסיק מכך שהן יקרות או זולות יותר.
+        </p>
+      )}
 
       <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
         <h3 className="flex items-center gap-2 font-extrabold"><Split className="h-5 w-5 text-brand-700" /> פיצול הסל בין רשתות</h3>

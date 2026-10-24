@@ -4,7 +4,7 @@ import { computeUnitPrice } from "@/lib/units";
 import type { Branch, PriceOffer, Product, Promotion, ProviderStatus } from "@/lib/types";
 import { priceConfig } from "../prices/config";
 import { keyToProductId, productIdToKey, sameSize, type BarcodeMap } from "../prices/matching";
-import { getPriceRepository, readBarcodeMap } from "../prices/service";
+import { effectiveMappings, getPriceRepository } from "../prices/service";
 import type { FeedProduct, PromotionWithBranch, StoredBranch } from "../prices/types";
 import type { LocationQuery, OfferSource } from "./types";
 
@@ -40,19 +40,20 @@ function toPromotion(p: PromotionWithBranch, now: number): Promotion {
  */
 export class OfficialPriceSource implements OfferSource {
   readonly id = "official-price-files";
-  private mapCache?: { at: number; map: BarcodeMap };
-  private officialCache?: { at: number; has: boolean };
+  // Caches are keyed on the repository's data version, so imports and mapping decisions take effect immediately.
+  private mapCache?: { version: string; map: BarcodeMap };
+  private officialCache?: { version: string; has: boolean };
 
   private async map() {
-    if (!this.mapCache || Date.now() - this.mapCache.at > 10_000) this.mapCache = { at: Date.now(), map: (await readBarcodeMap()).map };
+    const version = await (await getPriceRepository()).version();
+    if (this.mapCache?.version !== version) this.mapCache = { version, map: (await effectiveMappings()).map };
     return this.mapCache.map;
   }
 
   async hasOfficialData(): Promise<boolean> {
-    if (!this.officialCache || Date.now() - this.officialCache.at > 15_000) {
-      const repo = await getPriceRepository();
-      this.officialCache = { at: Date.now(), has: (await repo.listPriceBranches()).length > 0 };
-    }
+    const repo = await getPriceRepository();
+    const version = await repo.version();
+    if (this.officialCache?.version !== version) this.officialCache = { version, has: (await repo.listPriceBranches()).length > 0 };
     return this.officialCache.has;
   }
 
@@ -85,12 +86,25 @@ export class OfficialPriceSource implements OfferSource {
     return [...out.values()];
   }
 
+  /** Public coverage summary: which retailers/branches have official prices and when they were published. */
+  async coverage(): Promise<{ retailerId: string; branches: { storeId: string; name?: string; lastPublishedAt?: string }[] }[]> {
+    const repo = await getPriceRepository();
+    const [branches, stores] = await Promise.all([repo.listPriceBranches(), repo.getStores()]);
+    const out = new Map<string, { storeId: string; name?: string; lastPublishedAt?: string }[]>();
+    for (const b of branches) {
+      const s = stores.find((x) => x.retailerId === b.retailerId && x.storeId === b.storeId);
+      const list = out.get(b.retailerId) ?? [];
+      list.push({ storeId: b.storeId, name: s ? branchLabel(s) : undefined, lastPublishedAt: b.lastFullPublishedAt });
+      out.set(b.retailerId, list);
+    }
+    return [...out].map(([retailerId, list]) => ({ retailerId, branches: list }));
+  }
+
   async status(): Promise<ProviderStatus> {
     const repo = await getPriceRepository();
     const branches = await repo.listPriceBranches();
     const imports = await repo.listImports();
     const latest = branches.map((b) => b.lastFullPublishedAt).filter(Boolean).sort().at(-1) ?? imports.map((i) => i.publishedAt).sort().at(-1);
-    const offers = branches.reduce((n, b) => n + b.offers, 0);
     return {
       id: this.id,
       name: "קבצי שקיפות מחירים רשמיים",
@@ -99,9 +113,10 @@ export class OfficialPriceSource implements OfferSource {
       healthy: true,
       freshness: branches.length ? freshnessFromPublication(latest, priceConfig.verifiedMaxAgeMs, priceConfig.staleAfterMs) : "unavailable",
       lastUpdated: latest,
+      // Public text: coverage only – no file counts or storage details.
       message: branches.length
-        ? `${branches.length} סניפים, ${offers.toLocaleString("he-IL")} מחירים מ-${imports.length} קבצים שיובאו (${repo.kind === "postgres" ? "PostgreSQL" : "קבצים מקומיים"}).`
-        : "טרם יובאו קבצי מחירים רשמיים. ראו docs/INTEGRATIONS.md.",
+        ? `מחירים רשמיים זמינים עבור ${new Set(branches.map((b) => b.retailerId)).size} רשתות ו-${branches.length} סניפים. הקבצים מיובאים ידנית – לא בזמן אמת.`
+        : "טרם יובאו קבצי מחירים רשמיים.",
     };
   }
 

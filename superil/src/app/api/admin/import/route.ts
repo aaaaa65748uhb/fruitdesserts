@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/server/admin-auth";
-import { json } from "@/server/api";
-import { commitUpload } from "@/server/prices/service";
+import { errorResponse, json } from "@/server/api";
+import { StorageNotPersistentError, commitUpload } from "@/server/prices/service";
 import { readUpload } from "../upload";
 
 export const runtime = "nodejs";
@@ -12,5 +12,11 @@ export async function POST(req: NextRequest) {
   if (denied) return denied;
   const u = await readUpload(req);
   if ("error" in u) return u.error;
-  return json(await commitUpload(u.name, u.bytes, { retailerId: u.retailerId, publishedAt: u.publishedAt, force: u.force, importedBy: "admin-web" }));
+  try {
+    return json(await commitUpload(u.name, u.bytes, { retailerId: u.retailerId, publishedAt: u.publishedAt, force: u.force, importedBy: "admin-web" }));
+  } catch (e) {
+    if (e instanceof StorageNotPersistentError) return errorResponse(503, e.message);
+    console.error("[superil] import failed", e instanceof Error ? e.message : e);
+    return errorResponse(500, "הייבוא נכשל. אם הועלה ארכיון, ייתכן שחלק מהקבצים בו כבר יובאו – בדקו בהיסטוריית הייבוא וביומן השרת.");
+  }
 }

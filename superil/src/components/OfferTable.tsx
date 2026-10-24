@@ -54,6 +54,8 @@ export function OfferTable({ offers }: { offers: PriceOffer[] }) {
                 )}
               </span>
             </div>
+            {o.freshness === "sample" && <p className="mt-1 text-[11px] text-amber-800">מקור: נתון לדוגמה – אינו מחיר אמיתי בחנות</p>}
+            {o.sourceProvider === "official-price-files" && <p className="mt-1 text-[11px] text-slate-500">מקור: קובץ שקיפות מחירים רשמי של הרשת</p>}
             {(o.publishedAt || o.priceChangedAt) && (
               <p className="mt-1 text-[11px] text-slate-500" title={o.sourceFile ? `קובץ מקור: ${o.sourceFile}` : undefined}>
                 {o.publishedAt && <>קובץ המחירים פורסם {formatDateTimeHe(o.publishedAt)}</>}

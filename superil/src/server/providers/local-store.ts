@@ -21,12 +21,12 @@ export class LocalProductStore implements ProductStore {
   async status(): Promise<ProviderStatus> {
     return {
       id: this.id,
-      name: "קטלוג מוצרים מובנה",
+      name: "קטלוג מוצרים",
       kind: "catalog",
       enabled: true,
       healthy: true,
       freshness: "sample",
-      message: `${SEED_PRODUCTS.length} מוצרי קטלוג שנאספו ידנית (פרטי אריזה לא אומתו מול היצרן). מוצרים נוספים מתווספים מקבצי מחירים רשמיים.`,
+      message: `קטלוג שנאסף ידנית (פרטי אריזה לא אומתו מול היצרן), בתוספת מוצרים מקבצי מחירים רשמיים כשהם מיובאים.`,
     };
   }
 }

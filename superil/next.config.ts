@@ -12,8 +12,18 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   outputFileTracingRoot: path.join(__dirname),
+  // Self-contained server bundle for the Docker image (see Dockerfile); `next start` is used otherwise.
+  output: process.env.BUILD_STANDALONE === "1" ? "standalone" : undefined,
   async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }];
+    const privateHeaders = [
+      { key: "X-Robots-Tag", value: "noindex, nofollow" },
+      { key: "Cache-Control", value: "no-store" },
+    ];
+    return [
+      { source: "/(.*)", headers: securityHeaders },
+      { source: "/admin/:path*", headers: privateHeaders },
+      { source: "/api/admin/:path*", headers: privateHeaders },
+    ];
   },
 };
 

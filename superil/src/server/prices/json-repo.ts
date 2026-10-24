@@ -1,9 +1,12 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { gunzipSync, gzipSync } from "fflate";
 import type { Issue } from "../ingest/records";
 import { priceConfig } from "./config";
 import type {
+  ArchivedUpload,
   BranchSnapshot,
+  MappingDecision,
   FeedProduct,
   ImportBatch,
   OfferWithBranch,
@@ -22,6 +25,8 @@ import type {
  *   promos/<r>__<s>.json    current promotions per branch
  *   stores/<r>.json         branch details from Stores files
  *   issues/<importId>.json  validation issues of an import
+ *   mappings.json           reviewed catalog ↔ identifier decisions
+ *   uploads/<sha256>.gz     original uploaded files (+ uploads.json index)
  *   version                 bumped on every write (cache invalidation across processes)
  */
 const safe = (s: string) => s.replace(/[^A-Za-z0-9-]/g, "_");
@@ -190,5 +195,49 @@ export class JsonPriceRepository implements PriceRepository {
 
   async getImportIssues(importId: string) {
     return readJson<Issue[]>(this.p("issues", `${safe(importId)}.json`), []);
+  }
+
+  async getMappingDecisions() {
+    return readJson<MappingDecision[]>(this.p("mappings.json"), []);
+  }
+
+  async saveMappingDecision(d: MappingDecision) {
+    const list = (await this.getMappingDecisions()).filter((x) => !(x.productId === d.productId && x.key === d.key));
+    list.push(d);
+    await writeJson(this.p("mappings.json"), list);
+    await this.bump();
+  }
+
+  async archiveUpload(meta: ArchivedUpload, bytes: Uint8Array) {
+    const list = await this.listArchivedUploads();
+    if (list.some((u) => u.fileHash === meta.fileHash)) return;
+    await fs.mkdir(this.p("uploads"), { recursive: true });
+    await fs.writeFile(this.p("uploads", `${safe(meta.fileHash)}.gz`), gzipSync(bytes));
+    list.push(meta);
+    await writeJson(this.p("uploads.json"), list);
+  }
+
+  async listArchivedUploads() {
+    return readJson<ArchivedUpload[]>(this.p("uploads.json"), []);
+  }
+
+  async getArchivedUpload(fileHash: string) {
+    try {
+      return gunzipSync(new Uint8Array(await fs.readFile(this.p("uploads", `${safe(fileHash)}.gz`))));
+    } catch {
+      return undefined;
+    }
+  }
+
+  async priceCountsByPublication() {
+    const { offers } = await this.loadIndex();
+    const counts = new Map<string, number>();
+    for (const list of offers.values()) for (const o of list) counts.set(o.publishedAt, (counts.get(o.publishedAt) ?? 0) + 1);
+    return [...counts].map(([publishedAt, count]) => ({ publishedAt, count }));
+  }
+
+  async ping() {
+    await fs.mkdir(this.dir, { recursive: true });
+    await fs.access(this.dir, (await import("fs")).constants.W_OK);
   }
 }

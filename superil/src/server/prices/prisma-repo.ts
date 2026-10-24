@@ -1,10 +1,13 @@
 import type { Prisma } from "@prisma/client";
+import { gunzipSync, gzipSync } from "fflate";
 import { RETAILER_BY_ID } from "@/data/retailers";
 import type { PackageUnit } from "@/lib/types";
 import type { Issue, PromotionRecord } from "../ingest/records";
 import { prisma } from "../providers/prisma-store";
 import type {
+  ArchivedUpload,
   BranchSnapshot,
+  MappingDecision,
   FeedProduct,
   ImportBatch,
   OfferWithBranch,
@@ -49,8 +52,11 @@ export class PrismaPriceRepository implements PriceRepository {
   readonly kind = "postgres" as const;
 
   async version() {
-    const last = await prisma().importBatch.findFirst({ orderBy: { importedAt: "desc" }, select: { id: true } });
-    return last?.id ?? "empty";
+    const [last, decision] = await Promise.all([
+      prisma().importBatch.findFirst({ orderBy: { importedAt: "desc" }, select: { id: true } }),
+      prisma().mappingDecision.findFirst({ orderBy: { decidedAt: "desc" }, select: { decidedAt: true } }),
+    ]);
+    return `${last?.id ?? "empty"}|${decision?.decidedAt.toISOString() ?? ""}`;
   }
 
   async listImports(): Promise<ImportBatch[]> {
@@ -281,6 +287,50 @@ export class PrismaPriceRepository implements PriceRepository {
         issues: issues.slice(0, 5000) as unknown as Prisma.InputJsonValue,
       },
     });
+  }
+
+  async getMappingDecisions(): Promise<MappingDecision[]> {
+    const rows = await prisma().mappingDecision.findMany();
+    return rows.map((r) => ({
+      productId: r.productId,
+      key: r.key,
+      status: r.status as MappingDecision["status"],
+      decidedAt: r.decidedAt.toISOString(),
+      decidedBy: r.decidedBy as MappingDecision["decidedBy"],
+      note: r.note ?? undefined,
+    }));
+  }
+
+  async saveMappingDecision(d: MappingDecision) {
+    const data = { status: d.status, decidedAt: new Date(d.decidedAt), decidedBy: d.decidedBy, note: d.note };
+    await prisma().mappingDecision.upsert({ where: { productId_key: { productId: d.productId, key: d.key } }, update: data, create: { productId: d.productId, key: d.key, ...data } });
+  }
+
+  async archiveUpload(meta: ArchivedUpload, bytes: Uint8Array) {
+    const exists = await prisma().importFile.findUnique({ where: { fileHash: meta.fileHash }, select: { fileHash: true } });
+    if (exists) return;
+    await prisma().importFile.create({
+      data: { ...meta, uploadedAt: new Date(meta.uploadedAt), data: Buffer.from(gzipSync(bytes)) },
+    });
+  }
+
+  async listArchivedUploads(): Promise<ArchivedUpload[]> {
+    const rows = await prisma().importFile.findMany({ select: { fileHash: true, uploadName: true, sizeBytes: true, uploadedAt: true, uploadedBy: true }, orderBy: { uploadedAt: "asc" } });
+    return rows.map((r) => ({ ...r, uploadedAt: r.uploadedAt.toISOString(), uploadedBy: r.uploadedBy as ArchivedUpload["uploadedBy"] }));
+  }
+
+  async getArchivedUpload(fileHash: string) {
+    const row = await prisma().importFile.findUnique({ where: { fileHash }, select: { data: true } });
+    return row ? gunzipSync(new Uint8Array(row.data)) : undefined;
+  }
+
+  async priceCountsByPublication() {
+    const rows = await prisma().officialPrice.groupBy({ by: ["publishedAt"], _count: { _all: true } });
+    return rows.map((r) => ({ publishedAt: r.publishedAt.toISOString(), count: r._count._all }));
+  }
+
+  async ping() {
+    await prisma().$queryRaw`SELECT 1`;
   }
 
   async getImportIssues(importId: string) {

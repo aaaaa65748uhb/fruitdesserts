@@ -205,3 +205,26 @@ model CartLine {
 
   @@unique([cartId, productId])
 }
+
+/** Reviewed decision linking (approved) or refusing to link (rejected) a catalog product and an identifier. */
+model MappingDecision {
+  productId String
+  key       String
+  status    String
+  decidedAt DateTime
+  decidedBy String
+  note      String?
+
+  @@id([productId, key])
+  @@index([key])
+}
+
+/** Original uploaded official files (gzip-compressed), kept for audit and re-processing. */
+model ImportFile {
+  fileHash   String   @id
+  uploadName String
+  sizeBytes  Int
+  uploadedAt DateTime
+  uploadedBy String
+  data       Bytes
+}

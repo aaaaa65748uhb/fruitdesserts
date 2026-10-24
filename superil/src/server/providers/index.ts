@@ -84,9 +84,10 @@ export async function getProvider(): Promise<ProductProvider> {
   if (provider) return provider;
   const off = getOfficialSource();
   if (process.env.DATABASE_URL) {
-    const { PrismaProductStore, PrismaOfferSource } = await import("./prisma-store");
+    const { PrismaProductStore } = await import("./prisma-store");
     const store = new MergedStore(new PrismaProductStore(), () => off.products());
-    provider = new CompositeProvider(store, [off, new GatedSampleSource(new PrismaOfferSource()), new ChpAdapter()], [off]);
+    const sample = new SampleOfferSource(new Map(SEED_PRODUCTS.map((p) => [p.id, p])), RETAILERS);
+    provider = new CompositeProvider(store, [off, new GatedSampleSource(sample), new ChpAdapter()], [off]);
   } else {
     const sample = new SampleOfferSource(new Map(SEED_PRODUCTS.map((p) => [p.id, p])), RETAILERS);
     provider = new CompositeProvider(new LocalProductStore(off), [off, new GatedSampleSource(sample), new ChpAdapter()], [off]);

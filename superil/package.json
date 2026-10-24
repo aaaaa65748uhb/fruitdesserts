@@ -13,7 +13,11 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "postinstall": "prisma generate",
-    "prices": "tsx scripts/prices.ts"
+    "prices": "tsx scripts/prices.ts",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "start:prod": "prisma migrate deploy && next start",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -29,7 +33,7 @@
     "react-dom": "^19.3.1",
     "server-only": "^0.0.1",
     "three": "^0.170.0",
-    "zod": "^3.25.76",
+    "zod": "^4.6.7",
     "zustand": "^5.0.16"
   },
   "devDependencies": {
@@ -54,5 +58,8 @@
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "engines": {
+    "node": ">=20.9.0 <25"
   }
 }

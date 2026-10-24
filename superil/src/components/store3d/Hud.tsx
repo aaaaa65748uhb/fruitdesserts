@@ -125,7 +125,7 @@ function OfferLine({ offer }: { offer?: PriceOffer }) {
   return (
     <span className="flex flex-wrap items-center gap-2">
       <Price value={offer.price} className="text-2xl font-extrabold" />
-      <span className="text-xs text-slate-300">{RETAILER_BY_ID[offer.retailerId]?.nameHe}</span>
+      <span className="text-xs text-slate-300">{RETAILER_BY_ID[offer.retailerId]?.nameHe}{offer.branchName ? ` · ${offer.branchName}` : ""}</span>
       <FreshnessBadge status={offer.freshness} />
     </span>
   );

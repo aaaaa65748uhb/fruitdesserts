@@ -118,6 +118,25 @@ export interface StoredReport {
   issues: Issue[];
 }
 
+/** A reviewed decision linking (or refusing to link) a catalog product to an identifier. */
+export interface MappingDecision {
+  productId: string;
+  /** "g:<gtin>" or "i:<retailer>:<code>" */
+  key: string;
+  status: "approved" | "rejected";
+  decidedAt: string;
+  decidedBy: "cli" | "admin-web";
+  note?: string;
+}
+
+export interface ArchivedUpload {
+  fileHash: string;
+  uploadName: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  uploadedBy: "cli" | "admin-web";
+}
+
 /** Persistence for official price data. Implemented with JSON files (no DB) and PostgreSQL (Prisma). */
 export interface PriceRepository {
   readonly kind: "json" | "postgres";
@@ -140,4 +159,14 @@ export interface PriceRepository {
   getImportIssues(importId: string): Promise<Issue[]>;
   /** Changes whenever data changes; used to invalidate caches. */
   version(): Promise<string>;
+  getMappingDecisions(): Promise<MappingDecision[]>;
+  saveMappingDecision(d: MappingDecision): Promise<void>;
+  /** Keeps the original uploaded file (for audit / re-processing). No-op if already archived. */
+  archiveUpload(meta: ArchivedUpload, bytes: Uint8Array): Promise<void>;
+  listArchivedUploads(): Promise<ArchivedUpload[]>;
+  getArchivedUpload(fileHash: string): Promise<Uint8Array | undefined>;
+  /** Count of stored official prices grouped by publication time (for freshness statistics). */
+  priceCountsByPublication(): Promise<{ publishedAt: string; count: number }[]>;
+  /** Throws if the storage backend is unreachable. */
+  ping(): Promise<void>;
 }

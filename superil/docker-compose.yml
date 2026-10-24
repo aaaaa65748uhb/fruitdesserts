@@ -1,0 +1,37 @@
+# Production-like stack: SUPERIL + PostgreSQL. Imported prices, mapping decisions and the original
+# uploaded files are stored in PostgreSQL, on the named volume "pgdata" – they survive container rebuilds.
+#   1. cp .env.example .env   and set ADMIN_TOKEN and POSTGRES_PASSWORD
+#   2. docker compose up -d --build
+services:
+  db:
+    image: ${POSTGRES_IMAGE:-postgres:16}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: superil
+      POSTGRES_USER: superil
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U superil -d superil"]
+      interval: 5s
+      retries: 10
+  app:
+    build:
+      context: .
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-bookworm}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://superil:${POSTGRES_PASSWORD}@db:5432/superil
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN in .env}
+      SAMPLE_PRICES: ${SAMPLE_PRICES:-auto}
+      PRICE_VERIFIED_MAX_AGE_HOURS: ${PRICE_VERIFIED_MAX_AGE_HOURS:-36}
+      PRICE_STALE_AFTER_DAYS: ${PRICE_STALE_AFTER_DAYS:-7}
+    ports:
+      - "3000:3000"
+volumes:
+  pgdata:

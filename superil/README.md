@@ -3,9 +3,12 @@
 Walk through a 3D Israeli supermarket in the browser, pick products off the shelves, compare prices
 between chains, and continue to the chain's official website to buy.
 
+**Guides:** [Setup (beginner friendly)](docs/SETUP.md) · [Deployment](docs/DEPLOYMENT.md) ·
+[Operations & backups](docs/OPERATIONS.md) · [Price data & imports](docs/INTEGRATIONS.md)
+
 ## Run it (no coding needed)
 
-You need [Node.js 20+](https://nodejs.org). In a terminal, inside this `superil` folder:
+You need [Node.js 22](https://nodejs.org) (20.9+ works). In a terminal, inside this `superil` folder:
 
 ```bash
 npm install
@@ -41,12 +44,15 @@ npm run prices -- import  data/price-feeds/<PriceFull file> --retailer shufersal
 Or set `ADMIN_TOKEN` and use the admin page at `/admin/prices` (upload → preview → import → matching report).
 After the first import, sample prices switch off automatically. See `docs/INTEGRATIONS.md` for the full guide.
 
-## Optional: PostgreSQL
+## PostgreSQL (required for a public server)
 
 ```bash
-cp .env.example .env        # set DATABASE_URL
-npm run db:push && npm run db:seed
+cp .env.example .env        # set DATABASE_URL and ADMIN_TOKEN
+npm run db:migrate
+npm run build && npm run start:prod
 ```
+
+Or run everything with Docker: `docker compose up -d --build`. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Checks
 

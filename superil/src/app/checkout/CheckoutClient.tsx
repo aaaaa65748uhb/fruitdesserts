@@ -1,4 +1,5 @@
 "use client";
+import { CoverageNotice } from "@/components/CoverageNotice";
 import { AlertTriangle, Check, ClipboardCopy, Download, ExternalLink, MessageCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -82,6 +83,7 @@ export function CheckoutClient() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       <h1 className="text-3xl font-extrabold">המשך לקנייה</h1>
+      <CoverageNotice className="mt-3" />
       <ol className="mt-4 flex flex-wrap gap-2 text-sm" aria-label="שלבים">
         {steps.map((s, i) => (
           <li key={s} className={`flex items-center gap-2 rounded-full px-3 py-1.5 ${i <= step ? "bg-brand-700 text-white" : "bg-slate-100 text-slate-500"}`} aria-current={i === step ? "step" : undefined}>

@@ -104,7 +104,13 @@ export function useBranches(retailerId?: string, city?: string) {
 export function useProviderStatus() {
   return useQuery({
     queryKey: ["status"],
-    queryFn: () => getJson<{ providers: ProviderStatus[]; priceMode: "official" | "sample" | "mixed" | "none" }>("/api/status"),
-    staleTime: 60_000,
+    queryFn: () =>
+      getJson<{
+        providers: ProviderStatus[];
+        priceMode: "official" | "sample" | "mixed" | "none";
+        coverage: { retailerId: string; branches: { storeId: string; name?: string; lastPublishedAt?: string }[] }[];
+      }>("/api/status"),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 }

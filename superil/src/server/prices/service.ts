@@ -19,9 +19,31 @@ import {
   type Suggestion,
 } from "./matching";
 import { mergePriceSnapshot, mergePromoSnapshot } from "./merge";
-import { OFFICIAL_PROVENANCE, type ApplyStats, type FeedProduct, type ImportBatch, type PriceRepository, type StoredBranch } from "./types";
+import { OFFICIAL_PROVENANCE, type ApplyStats, type FeedProduct, type ImportBatch, type MappingDecision, type PriceRepository, type StoredBranch } from "./types";
 
 let repo: PriceRepository | undefined;
+
+export type StorageMode = "postgres" | "file" | "file-unsafe";
+
+/**
+ * Where official data is stored:
+ * - "postgres":    DATABASE_URL is set (recommended for production).
+ * - "file":        JSON files in PRICE_DATA_DIR (development, or production with an explicit persistent volume).
+ * - "file-unsafe": production without DATABASE_URL and without an explicit PRICE_DATA_DIR. Imports are refused,
+ *                  because the default folder is usually wiped on redeploy.
+ */
+export function storageMode(): StorageMode {
+  if (process.env.DATABASE_URL) return "postgres";
+  if (process.env.NODE_ENV === "production" && !process.env.PRICE_DATA_DIR) return "file-unsafe";
+  return "file";
+}
+
+export class StorageNotPersistentError extends Error {
+  constructor() {
+    super("אחסון לא קבוע: בסביבת ייצור יש להגדיר DATABASE_URL (מומלץ) או PRICE_DATA_DIR על כונן קבוע. הייבוא נחסם כדי שהנתונים לא יאבדו.");
+  }
+}
+
 export async function getPriceRepository(): Promise<PriceRepository> {
   if (repo) return repo;
   if (process.env.DATABASE_URL) {
@@ -30,17 +52,56 @@ export async function getPriceRepository(): Promise<PriceRepository> {
   } else repo = new JsonPriceRepository();
   return repo;
 }
+
+function assertWritable() {
+  if (storageMode() === "file-unsafe" && !testRepo) throw new StorageNotPersistentError();
+}
+let testRepo = false;
 /** For tests. */
 export function setPriceRepository(r: PriceRepository | undefined) {
   repo = r;
+  testRepo = !!r;
 }
 
-export async function readBarcodeMap(file = priceConfig.barcodeMapFile): Promise<{ map: BarcodeMap; invalid: string[] }> {
+/** The committed, reviewed mapping file (data/barcode-map.json). */
+export async function readMappingFile(file = priceConfig.barcodeMapFile): Promise<{ map: BarcodeMap; invalid: string[] }> {
   try {
     return parseBarcodeMap(JSON.parse(await fs.readFile(file, "utf8")));
   } catch {
     return { map: {}, invalid: [] };
   }
+}
+
+export interface ApprovedMapping {
+  productId: string;
+  key: string;
+  source: "file" | "admin-web" | "cli";
+  decidedAt?: string;
+}
+
+/**
+ * Effective catalog ↔ identifier links = approvals in the committed mapping file + decisions stored in the
+ * repository (database in production). A stored decision for the same pair overrides the file.
+ */
+export async function effectiveMappings(): Promise<{ map: BarcodeMap; approved: ApprovedMapping[]; rejected: Set<string>; invalid: string[] }> {
+  const { map: fileMap, invalid } = await readMappingFile();
+  const decisions = await (await getPriceRepository()).getMappingDecisions();
+  const decided = new Map(decisions.map((d) => [`${d.productId}|${d.key}`, d]));
+  const approved: ApprovedMapping[] = [];
+  for (const [productId, keys] of Object.entries(fileMap)) {
+    for (const key of keys) if (!decided.has(`${productId}|${key}`)) approved.push({ productId, key, source: "file" });
+  }
+  for (const d of decisions) if (d.status === "approved") approved.push({ productId: d.productId, key: d.key, source: d.decidedBy, decidedAt: d.decidedAt });
+  const map: BarcodeMap = {};
+  for (const a of approved) (map[a.productId] ??= []).push(a.key);
+  const rejected = new Set(decisions.filter((d) => d.status === "rejected").map((d) => `${d.productId}|${d.key}`));
+  return { map, approved, rejected, invalid };
+}
+
+/** @deprecated kept for callers that only need the effective map */
+export async function readBarcodeMap(): Promise<{ map: BarcodeMap; invalid: string[] }> {
+  const { map, invalid } = await effectiveMappings();
+  return { map, invalid };
 }
 
 const MAX_ISSUES_IN_REPORT = 300;
@@ -131,10 +192,27 @@ async function entryReport(e: AnalyzedEntry, r: PriceRepository, fileHash: strin
   };
 }
 
+/** Warns when files are imported out of the recommended order (Stores → PriceFull → PromoFull → updates). */
+async function addOrderWarnings(entries: AnalyzedEntry[], r: PriceRepository) {
+  const branchesWithPrices = new Set((await r.listPriceBranches()).map((b) => `${b.retailerId}:${b.storeId}`));
+  for (const e of entries) {
+    if (!e.retailerId || e.blockers.length) continue;
+    const inUpload = (kind: string, sameStore: boolean) =>
+      entries.some((x) => x !== e && x.retailerId === e.retailerId && x.kind?.startsWith(kind) && !x.blockers.length && (!sameStore || x.storeId === e.storeId));
+    if (e.kind?.startsWith("price") && !inUpload("stores", false) && !(await r.getStores(e.retailerId)).length) {
+      e.issues.push({ severity: "warning", code: "order_stores_missing", message: "קובץ הסניפים של הרשת טרם יובא – שם הסניף והעיר לא יוצגו עד שייובא" });
+    }
+    if (e.kind?.startsWith("promo") && !inUpload("price", true) && !branchesWithPrices.has(`${e.retailerId}:${e.storeId}`)) {
+      e.issues.push({ severity: "warning", code: "order_prices_missing", message: "לסניף זה טרם יובאו מחירים – המבצעים יוצגו רק אחרי ייבוא קובץ מחירים" });
+    }
+  }
+}
+
 /** Parses and validates an upload and reports what an import would do. Writes nothing. */
 export async function previewUpload(name: string, bytes: Uint8Array, opts: UploadOptions): Promise<UploadReport> {
   const r = await getPriceRepository();
   const analysis = analyzeUpload(name, bytes, { retailerId: opts.retailerId, publishedAt: opts.publishedAt, chainMap: await r.getChainMap(), now: opts.now, staleAfterMs: priceConfig.staleAfterMs });
+  await addOrderWarnings(analysis.entries, r);
   const { map } = await readBarcodeMap();
   const feed = await r.getFeedProducts();
   const entries = await Promise.all(analysis.entries.map((e) => entryReport(e, r, analysis.fileHash, SEED_PRODUCTS, map, feed)));
@@ -143,13 +221,16 @@ export async function previewUpload(name: string, bytes: Uint8Array, opts: Uploa
 
 /** Imports every entry that has no blockers. Safe to repeat: identical files are detected and merges are idempotent. */
 export async function commitUpload(name: string, bytes: Uint8Array, opts: UploadOptions): Promise<UploadReport> {
+  assertWritable();
   const r = await getPriceRepository();
   const now = opts.now ?? Date.now();
   const analysis = analyzeUpload(name, bytes, { retailerId: opts.retailerId, publishedAt: opts.publishedAt, chainMap: await r.getChainMap(), now, staleAfterMs: priceConfig.staleAfterMs });
+  await addOrderWarnings(analysis.entries, r);
   const { map } = await readBarcodeMap();
   const mappedKeys = invertMap(map);
   const report: UploadReport = { uploadName: name, fileHash: analysis.fileHash, sizeBytes: analysis.sizeBytes, mode: "commit", repository: r.kind, errors: analysis.errors, entries: [] };
 
+  let archived = false;
   // Stores files first, so branch names are known for the price entries in the same archive.
   const ordered = [...analysis.entries].sort((a, b) => Number(b.kind === "stores") - Number(a.kind === "stores"));
   for (const [i, e] of ordered.entries()) {
@@ -221,6 +302,10 @@ export async function commitUpload(name: string, bytes: Uint8Array, opts: Upload
       await r.saveStores(batch.retailerId, stores);
       batch.applied = { written: stores.length, unchanged: 0, skippedOlder: 0, removed: 0 };
     }
+    if (!archived) {
+      await r.archiveUpload({ fileHash: analysis.fileHash, uploadName: name, sizeBytes: analysis.sizeBytes, uploadedAt: importedAt, uploadedBy: opts.importedBy }, bytes);
+      archived = true;
+    }
     await r.recordImport(batch, e.issues);
     if (batch.chainId) await r.learnChain(batch.chainId, batch.retailerId);
     report.entries.push({ ...er, status: batch.applied.written || batch.applied.removed ? "imported" : "not_applied", applied: batch.applied, importId: batch.id });
@@ -228,25 +313,41 @@ export async function commitUpload(name: string, bytes: Uint8Array, opts: Upload
   return report;
 }
 
+export interface SuggestionDetail extends Suggestion {
+  productBrand: string;
+  productSize: string;
+  recordManufacturer?: string;
+  recordSize: string;
+  retailers: string[];
+  priceRange?: [number, number];
+}
+
 export interface MatchingOverview {
   generatedAt: string;
   repository: "json" | "postgres";
   imports: number;
   branches: { retailerId: string; storeId: string; offers: number; name?: string; city?: string; lastFullPublishedAt?: string }[];
+  /** Approved links with their source and the official prices they currently receive. */
+  approved: (ApprovedMapping & { productName: string; offersByRetailer: Record<string, number> })[];
+  /** Catalog products with at least one approved link that has prices. */
   matched: { productId: string; productName: string; keys: string[]; offersByRetailer: Record<string, number> }[];
   mappedWithoutOffers: { productId: string; productName: string; keys: string[] }[];
-  unmatchedCatalog: { productId: string; productName: string }[];
+  unmatchedCatalog: { productId: string; productName: string; size: string }[];
   unmatchedRecords: { total: number; sample: { productKey: string; productId?: string; name: string; size: string; retailers: number }[] };
   duplicates: { importId: string; entryName: string; count: number }[];
   conflicts: { priceConflicts: { importId: string; entryName: string; count: number }[]; sizeConflicts: SizeConflict[] };
-  suggestions: Suggestion[];
+  /** Pending suggestions only (never applied automatically; rejected ones are hidden). */
+  suggestions: SuggestionDetail[];
+  rejectedCount: number;
   invalidMapEntries: string[];
 }
 
-/** Repository-wide report: matched / unmatched products, duplicates and conflicting records. */
+const sizeText = (q: number, u: string) => `${Number(q.toFixed(3))} ${u}`;
+
+/** Repository-wide report: approved / suggested matches, unmatched products, duplicates and conflicting records. */
 export async function matchingOverview(): Promise<MatchingOverview> {
   const r = await getPriceRepository();
-  const { map, invalid } = await readBarcodeMap();
+  const { map, approved, rejected, invalid } = await effectiveMappings();
   const feed = await r.getFeedProducts();
   const imports = await r.listImports();
   const stores = await r.getStores();
@@ -254,9 +355,11 @@ export async function matchingOverview(): Promise<MatchingOverview> {
     const s = stores.find((x) => x.retailerId === b.retailerId && x.storeId === b.storeId);
     return { ...b, name: s?.name, city: s?.cityIsCode ? undefined : s?.city };
   });
+  const seedById = new Map(SEED_PRODUCTS.map((p) => [p.id, p]));
   const matched: MatchingOverview["matched"] = [];
   const mappedWithoutOffers: MatchingOverview["mappedWithoutOffers"] = [];
   const sizeConflicts: SizeConflict[] = [];
+  const offersPerKey = new Map<string, Record<string, number>>();
   for (const p of SEED_PRODUCTS) {
     const keys = map[p.id];
     if (!keys) continue;
@@ -264,6 +367,11 @@ export async function matchingOverview(): Promise<MatchingOverview> {
     const ok = offers.filter((o) => sameSize(o, p));
     for (const o of offers.filter((x) => !sameSize(x, p))) {
       sizeConflicts.push({ productKey: o.productKey, recordName: o.name, against: "catalog", productId: p.id, productName: p.nameHe, expected: `${p.packageSize * (p.multipack ?? 1)} ${p.packageUnit}`, found: `${o.quantity} ${o.unit}` });
+    }
+    for (const o of ok) {
+      const m = offersPerKey.get(o.productKey) ?? {};
+      m[o.retailerId] = (m[o.retailerId] ?? 0) + 1;
+      offersPerKey.set(o.productKey, m);
     }
     if (ok.length) {
       const offersByRetailer: Record<string, number> = {};
@@ -290,20 +398,35 @@ export async function matchingOverview(): Promise<MatchingOverview> {
     if (dup) duplicates.push({ importId: b.id, entryName: b.entryName, count: dup });
     if (conf) priceConflicts.push({ importId: b.id, entryName: b.entryName, count: conf });
   }
-  const suggestions = matchRecords(
-    unmatchedKeys.slice(0, 5000).map((f) => ({ ...f })),
-    SEED_PRODUCTS,
-    map,
-    {},
-  ).suggestions.slice(0, 100);
+  const raw = matchRecords(unmatchedKeys.slice(0, 5000).map((f) => ({ ...f })), SEED_PRODUCTS, map, {})
+    .suggestions.filter((s) => !rejected.has(`${s.productId}|${s.productKey}`))
+    .slice(0, 100);
+  const sugOffers = await r.offersByKeys([...new Set(raw.map((s) => s.productKey))]);
+  const suggestions: SuggestionDetail[] = raw.map((s) => {
+    const p = seedById.get(s.productId)!;
+    const f = feed[s.productKey];
+    const offers = sugOffers.filter((o) => o.productKey === s.productKey);
+    const prices = offers.map((o) => o.price);
+    return {
+      ...s,
+      productName: p.nameHe,
+      productBrand: p.brand,
+      productSize: sizeText(p.packageSize * (p.multipack ?? 1), p.packageUnit),
+      recordManufacturer: f?.manufacturer,
+      recordSize: f ? sizeText(f.quantity, f.unit) : "",
+      retailers: [...new Set(offers.map((o) => o.retailerId))],
+      priceRange: prices.length ? [Math.min(...prices), Math.max(...prices)] : undefined,
+    };
+  });
   return {
     generatedAt: new Date().toISOString(),
     repository: r.kind,
     imports: imports.length,
     branches,
+    approved: approved.map((a) => ({ ...a, productName: seedById.get(a.productId) ? `${seedById.get(a.productId)!.nameHe} ${seedById.get(a.productId)!.brand}` : a.productId, offersByRetailer: offersPerKey.get(a.key) ?? {} })),
     matched,
     mappedWithoutOffers,
-    unmatchedCatalog: SEED_PRODUCTS.filter((p) => !map[p.id]).map((p) => ({ productId: p.id, productName: `${p.nameHe} ${p.brand}` })),
+    unmatchedCatalog: SEED_PRODUCTS.filter((p) => !map[p.id]).map((p) => ({ productId: p.id, productName: `${p.nameHe} ${p.brand}`, size: sizeText(p.packageSize * (p.multipack ?? 1), p.packageUnit) })),
     unmatchedRecords: {
       total: unmatchedKeys.length,
       sample: sampleKeys.slice(0, 100).map((f) => ({
@@ -317,39 +440,55 @@ export async function matchingOverview(): Promise<MatchingOverview> {
     duplicates,
     conflicts: { priceConflicts, sizeConflicts: sizeConflicts.slice(0, 200) },
     suggestions,
+    rejectedCount: rejected.size,
     invalidMapEntries: invalid,
   };
 }
 
-/** Links (or unlinks) a catalog product to a verified identifier after review. Refuses size mismatches. */
-export async function setCatalogMapping(productId: string, identifier: string | null, file = priceConfig.barcodeMapFile): Promise<{ ok: boolean; message: string }> {
+export type MappingAction = "approve" | "reject" | "unlink";
+
+/**
+ * Records a reviewed decision. "approve" links a catalog product to a verified identifier (refusing package-size
+ * mismatches and identifiers already linked elsewhere); "reject" dismisses a suggestion; "unlink" removes an
+ * approved link (from the file or the database). Decisions are stored in the repository, i.e. the database in
+ * production, so they survive redeploys.
+ */
+export async function decideMapping(
+  productId: string,
+  identifier: string,
+  action: MappingAction,
+  by: MappingDecision["decidedBy"],
+): Promise<{ ok: boolean; message: string }> {
+  assertWritable();
   const product = SEED_PRODUCTS.find((p) => p.id === productId);
   if (!product) return { ok: false, message: "מוצר קטלוג לא נמצא" };
-  let raw: Record<string, unknown> = {};
-  try {
-    raw = JSON.parse(await fs.readFile(file, "utf8"));
-  } catch {
-    raw = {};
-  }
-  if (identifier === null) {
-    delete raw[productId];
-    await fs.writeFile(file, JSON.stringify(raw, null, 2) + "\n");
-    return { ok: true, message: "הקישור הוסר" };
-  }
   const key = normalizeMapKey(identifier);
   if (!key) return { ok: false, message: "מזהה לא תקין: נדרש ברקוד GTIN תקין או קוד פנימי בפורמט i:<רשת>:<קוד>" };
   const r = await getPriceRepository();
+  const decidedAt = new Date().toISOString();
+  if (action !== "approve") {
+    await r.saveMappingDecision({ productId, key, status: "rejected", decidedAt, decidedBy: by });
+    return { ok: true, message: action === "unlink" ? "הקישור הוסר" : "ההצעה נדחתה ולא תוצג שוב" };
+  }
   const feed = (await r.getFeedProducts())[key];
   const offers = await r.offersByKeys([key]);
   const observed = feed ?? offers[0];
   if (observed && !sameSize(observed, product)) {
     return { ok: false, message: `גודל האריזה שונה: בקטלוג ${product.packageSize * (product.multipack ?? 1)} ${product.packageUnit}, בקובץ ${observed.quantity} ${observed.unit} – לא ניתן לקשר וריאנטים שונים` };
   }
-  const { map } = parseBarcodeMap(raw);
+  const { map } = await effectiveMappings();
   const owner = invertMap(map).get(key);
   if (owner && owner !== productId) return { ok: false, message: `המזהה כבר מקושר למוצר ${owner}` };
-  const existing = map[productId] ?? [];
-  raw[productId] = [...new Set([...existing, key])];
-  await fs.writeFile(file, JSON.stringify(raw, null, 2) + "\n");
+  await r.saveMappingDecision({ productId, key, status: "approved", decidedAt, decidedBy: by });
   return { ok: true, message: observed ? "קושר ונבדק מול גודל האריזה בקובץ" : "קושר (טרם נמצאו רשומות עם מזהה זה)" };
+}
+
+/** Backwards-compatible helper: link (identifier) or unlink all links (null). */
+export async function setCatalogMapping(productId: string, identifier: string | null, by: MappingDecision["decidedBy"] = "cli"): Promise<{ ok: boolean; message: string }> {
+  if (identifier !== null) return decideMapping(productId, identifier, "approve", by);
+  const { map } = await effectiveMappings();
+  const keys = map[productId] ?? [];
+  if (!keys.length) return { ok: false, message: "אין קישור להסרה" };
+  for (const k of keys) await decideMapping(productId, k, "unlink", by);
+  return { ok: true, message: "הקישור הוסר" };
 }
