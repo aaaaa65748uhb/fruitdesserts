@@ -3,16 +3,17 @@ import { AlertTriangle, ArrowLeft, Crown, Info, Split } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 import { cartLineList, useCart } from "@/client/cart-store";
-import { useBasketComparison, useCatalog } from "@/client/queries";
+import { useBasketComparison, useProductsByIds } from "@/client/queries";
 import { RETAILER_BY_ID } from "@/data/retailers";
 import { FreshnessBadge } from "./FreshnessBadge";
+import { MapPin } from "lucide-react";
 import { Price } from "./Price";
 
 export function BasketComparisonView({ compact = false }: { compact?: boolean }) {
   const lines = useCart((s) => s.lines);
   const items = useMemo(() => cartLineList(lines).map((l) => ({ productId: l.productId, quantity: l.quantity })), [lines]);
   const { data, isLoading, isError } = useBasketComparison(items);
-  const catalog = useCatalog();
+  const catalog = useProductsByIds(items.map((i) => i.productId));
   const name = (id: string) => catalog.data?.byId[id]?.nameHe ?? id;
 
   if (!items.length) {
@@ -69,8 +70,15 @@ export function BasketComparisonView({ compact = false }: { compact?: boolean })
                   </span>
                 )}
                 <FreshnessBadge status={b.freshness} />
+                {b.branchId && (
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-600">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {b.branchName ?? `סניף ${b.branchId.split(":")[1]} (פרטי הסניף לא יובאו)`}
+                    {b.branchesCompared && b.branchesCompared > 1 ? ` · הסניף המשתלם מבין ${b.branchesCompared}` : ""}
+                  </span>
+                )}
                 <span className="mr-auto text-left">
-                  <Price value={b.itemsSubtotal} className="text-xl font-extrabold" />
+                  {b.pricedItems > 0 ? <Price value={b.itemsSubtotal} className="text-xl font-extrabold" /> : <span className="text-sm font-bold text-slate-400">אין מחירים</span>}
                   <span className="block text-[11px] text-slate-500">
                     מוצרים בלבד · <span className="num">{b.pricedItems}/{items.length}</span> עם מחיר
                   </span>

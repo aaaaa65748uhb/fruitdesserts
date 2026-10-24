@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SYNTHETIC TEST DATA in the PromoFull structure -->
+<Root>
+  <ChainId>7290000000001</ChainId>
+  <SubChainId>001</SubChainId>
+  <StoreId>001</StoreId>
+  <Promotions Count="5">
+    <Promotion>
+      <PromotionId>1001</PromotionId>
+      <PromotionDescription>2 חטיפי בדיקה ב-9 ש"ח</PromotionDescription>
+      <PromotionUpdateDate>2026-10-20 08:00:00</PromotionUpdateDate>
+      <PromotionStartDate>2026-10-20</PromotionStartDate>
+      <PromotionStartHour>00:00:00</PromotionStartHour>
+      <PromotionEndDate>2026-11-30</PromotionEndDate>
+      <PromotionEndHour>23:59:00</PromotionEndHour>
+      <MinQty>2.00</MinQty>
+      <DiscountedPrice>9.00</DiscountedPrice>
+      <AdditionalRestrictions>
+        <AdditionalIsCoupon>0</AdditionalIsCoupon>
+        <Clubs><ClubId>0</ClubId></Clubs>
+      </AdditionalRestrictions>
+      <PromotionItems Count="1">
+        <Item><ItemCode>7299990000012</ItemCode><ItemType>1</ItemType><IsGiftItem>0</IsGiftItem></Item>
+      </PromotionItems>
+    </Promotion>
+    <Promotion>
+      <PromotionId>1002</PromotionId>
+      <PromotionDescription>מבצע שהסתיים</PromotionDescription>
+      <PromotionStartDate>2026-01-01</PromotionStartDate>
+      <PromotionStartHour>00:00:00</PromotionStartHour>
+      <PromotionEndDate>2026-01-31</PromotionEndDate>
+      <PromotionEndHour>23:59:00</PromotionEndHour>
+      <DiscountedPrice>5.00</DiscountedPrice>
+      <Clubs><ClubId>0</ClubId></Clubs>
+      <PromotionItems><Item><ItemCode>7299990000029</ItemCode><ItemType>1</ItemType><IsGiftItem>0</IsGiftItem></Item></PromotionItems>
+    </Promotion>
+    <Promotion>
+      <PromotionId>1003</PromotionId>
+      <PromotionDescription>מבצע לחברי מועדון</PromotionDescription>
+      <PromotionStartDate>2026-10-01</PromotionStartDate>
+      <PromotionEndDate>2026-12-31</PromotionEndDate>
+      <DiscountedPrice>6.00</DiscountedPrice>
+      <AdditionalRestrictions><Clubs><ClubId>3</ClubId></Clubs></AdditionalRestrictions>
+      <PromotionItems><Item><ItemCode>7299990000029</ItemCode><ItemType>1</ItemType><IsGiftItem>0</IsGiftItem></Item></PromotionItems>
+    </Promotion>
+    <Promotion>
+      <PromotionId>1004</PromotionId>
+      <PromotionDescription>מבצע ללא תאריכים</PromotionDescription>
+      <PromotionItems><Item><ItemCode>7299990000036</ItemCode><ItemType>1</ItemType><IsGiftItem>0</IsGiftItem></Item></PromotionItems>
+    </Promotion>
+    <Promotion>
+      <PromotionId>1005</PromotionId>
+      <PromotionDescription>מבצע ללא פריטים</PromotionDescription>
+      <PromotionStartDate>2026-10-01</PromotionStartDate>
+      <PromotionEndDate>2026-12-31</PromotionEndDate>
+    </Promotion>
+  </Promotions>
+</Root>

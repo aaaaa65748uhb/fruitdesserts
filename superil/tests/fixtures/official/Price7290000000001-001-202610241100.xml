@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SYNTHETIC TEST DATA: partial update file (Price) for the same branch -->
+<Root>
+  <ChainId>7290000000001</ChainId>
+  <SubChainId>001</SubChainId>
+  <StoreId>001</StoreId>
+  <Items Count="2">
+    <Item>
+      <PriceUpdateDate>2026-10-24 10:45:00</PriceUpdateDate>
+      <ItemCode>7299990000029</ItemCode>
+      <ItemType>1</ItemType>
+      <ItemName>חלב בדיקה 3% 1 ליטר</ItemName>
+      <UnitQty>ליטרים</UnitQty>
+      <Quantity>1</Quantity>
+      <bIsWeighted>0</bIsWeighted>
+      <ItemPrice>6.90</ItemPrice>
+    </Item>
+    <Item>
+      <PriceUpdateDate>2026-10-24 10:45:00</PriceUpdateDate>
+      <ItemCode>7299990000081</ItemCode>
+      <ItemType>1</ItemType>
+      <ItemName>פריט עם מחירים סותרים</ItemName>
+      <UnitQty>גרמים</UnitQty>
+      <Quantity>500</Quantity>
+      <ItemPrice>10.00</ItemPrice>
+    </Item>
+    <Item>
+      <PriceUpdateDate>2026-10-24 10:45:00</PriceUpdateDate>
+      <ItemCode>7299990000081</ItemCode>
+      <ItemType>1</ItemType>
+      <ItemName>פריט עם מחירים סותרים</ItemName>
+      <UnitQty>גרמים</UnitQty>
+      <Quantity>500</Quantity>
+      <ItemPrice>11.00</ItemPrice>
+    </Item>
+  </Items>
+</Root>

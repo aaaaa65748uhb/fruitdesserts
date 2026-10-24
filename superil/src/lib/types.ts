@@ -51,8 +51,9 @@ export interface Product {
 
 /** Status labels shown to users. Must reflect the underlying data honestly. */
 export type FreshnessStatus =
-  | "live" // מחיר מעודכן – verified from a live/authorized source recently
-  | "cached" // מחיר שמור – from a published file / cache, with a known timestamp
+  | "live" // מחיר מאומת – from an official file published recently that passed validation
+  | "cached" // מחיר שמור – from an official file, older than the verified window but not stale
+  | "stale" // מחיר לא עדכני – too old to rely on; shown with its date, excluded from totals
   | "sample" // נתון לדוגמה – demonstration data, not a real price
   | "unavailable"; // מחיר לא זמין
 
@@ -64,7 +65,15 @@ export interface Promotion {
   promoPrice?: number;
   minQuantity?: number;
   validUntil?: string;
+  /** Only verified promotions are applied to totals. Official-file promotions are never auto-applied. */
   verified: boolean;
+  /** For official promotions: current only when dates are valid and now is within them. */
+  status?: "active" | "upcoming" | "expired" | "unverified";
+  validFrom?: string;
+  /** false = club/coupon restricted, undefined = not stated in the file. */
+  generalPublic?: boolean;
+  promotionId?: string;
+  discountedPrice?: number;
 }
 
 export interface PriceOffer {
@@ -85,6 +94,17 @@ export interface PriceOffer {
   freshness: FreshnessStatus;
   /** Confidence that this offer refers to exactly this product (barcode match = 1). */
   matchConfidence: number;
+  /** Official-file provenance (absent for sample data). */
+  publishedAt?: string;
+  importedAt?: string;
+  /** PriceUpdateDate from the file: when the retailer last changed this price. */
+  priceChangedAt?: string;
+  sourceFile?: string;
+  importId?: string;
+  /** Branch name/city, only when a Stores file supplied them. */
+  branchName?: string;
+  /** Other promotions found in the promo file for this item (not applied to totals). */
+  promotions?: Promotion[];
 }
 
 export type IntegrationLevel =

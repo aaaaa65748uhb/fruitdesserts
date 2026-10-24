@@ -51,17 +51,113 @@ model Retailer {
 }
 
 model Branch {
-  id         String       @id
-  retailerId String
-  retailer   Retailer     @relation(fields: [retailerId], references: [id])
-  name       String
-  city       String
-  address    String?
-  zipCode    String?
-  source     String
-  offers     PriceOffer[]
+  id          String       @id
+  retailerId  String
+  retailer    Retailer     @relation(fields: [retailerId], references: [id])
+  name        String
+  city        String
+  address     String?
+  zipCode     String?
+  source      String
+  /** Fields below come only from official Stores files. */
+  storeId     String?
+  subChainId  String?
+  chainId     String?
+  cityIsCode  Boolean      @default(false)
+  publishedAt DateTime?
+  importId    String?
+  offers      PriceOffer[]
 
   @@index([retailerId, city])
+}
+
+/** One imported official file (or archive entry). fileHash+entryName makes repeated imports detectable. */
+model ImportBatch {
+  id                String   @id
+  fileHash          String
+  uploadName        String
+  entryName         String
+  kind              String
+  retailerId        String
+  chainId           String?
+  subChainId        String?
+  storeId           String?
+  publishedAt       DateTime
+  publishedAtSource String
+  importedAt        DateTime
+  importedBy        String
+  provenance        String
+  counts            Json
+  applied           Json
+  issues            Json
+
+  @@index([fileHash, entryName])
+}
+
+/** Current official price per branch and product key ("g:<gtin>" or "i:<retailer>:<code>"). */
+model OfficialPrice {
+  retailerId         String
+  storeId            String
+  productKey         String
+  itemCode           String
+  barcode            String?
+  name               String
+  manufacturer       String?
+  quantity           Float
+  unit               String
+  isWeighted         Boolean
+  price              Float
+  unitOfMeasurePrice Float?
+  priceChangedAt     DateTime?
+  publishedAt        DateTime
+  importId           String
+  sourceFile         String
+  importedAt         DateTime
+
+  @@id([retailerId, storeId, productKey])
+  @@index([productKey])
+}
+
+model BranchPriceState {
+  retailerId          String
+  storeId             String
+  chainId             String?
+  subChainId          String?
+  lastFullPublishedAt DateTime?
+  lastPromoFullAt     DateTime?
+
+  @@id([retailerId, storeId])
+}
+
+model OfficialPromotion {
+  retailerId  String
+  storeId     String
+  promotionId String
+  productKeys String[]
+  publishedAt DateTime
+  data        Json
+
+  @@id([retailerId, storeId, promotionId])
+  @@index([productKeys], type: Gin)
+}
+
+model FeedProduct {
+  productKey         String   @id
+  barcode            String?
+  internalRetailerId String?
+  itemCode           String
+  name               String
+  manufacturer       String?
+  quantity           Float
+  unit               String
+  isWeighted         Boolean
+  firstSeenImportId  String
+  firstSeenAt        DateTime
+}
+
+model ChainMapping {
+  chainId    String @id
+  retailerId String
 }
 
 model PriceOffer {

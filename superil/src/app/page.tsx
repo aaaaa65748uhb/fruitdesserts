@@ -4,8 +4,12 @@ import { HomeSearch } from "@/components/HomeSearch";
 import { HeroScene } from "@/components/HeroScene";
 import { CATEGORIES } from "@/lib/categories";
 import { RETAILERS } from "@/data/retailers";
+import { getPriceMode } from "@/server/providers";
 
-export default function HomePage() {
+export const revalidate = 60;
+
+export default async function HomePage() {
+  const priceMode = await getPriceMode();
   return (
     <div>
       {/* Hero */}
@@ -90,7 +94,14 @@ export default function HomePage() {
               <ShieldCheck className="h-5 w-5" /> שקיפות לגבי הנתונים
             </div>
             <p className="mt-2 text-sm text-amber-900/80">
-              בגרסה זו המחירים המוצגים הם <b>נתונים לדוגמה</b>, עד שיחוברו קבצי המחירים שהרשתות מפרסמות לפי חוק שקיפות המחירים. אריזות המוצרים בתלת־ממד הן איורים ולא תמונות רשמיות.
+              {priceMode === "official" ? (
+                <>המחירים מגיעים מ<b>קבצי המחירים הרשמיים</b> שהרשתות מפרסמות לפי חוק שקיפות המחירים. לכל מחיר מוצגים הסניף ומועד פרסום הקובץ; מחירים ישנים מסומנים כלא עדכניים.</>
+              ) : priceMode === "mixed" ? (
+                <>חלק מהמחירים מגיעים מקבצי מחירים רשמיים וחלקם <b>נתונים לדוגמה</b> – כל מחיר מסומן לפי מקורו.</>
+              ) : (
+                <>בשלב זה המחירים המוצגים הם <b>נתונים לדוגמה</b>, עד שיובאו קבצי המחירים שהרשתות מפרסמות לפי חוק שקיפות המחירים.</>
+              )}{" "}
+              אריזות המוצרים בתלת־ממד הן איורים ולא תמונות רשמיות.
             </p>
             <Link href="/data-sources" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-amber-900 underline">
               <Database className="h-4 w-4" /> מקורות הנתונים ומצבם

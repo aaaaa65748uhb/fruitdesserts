@@ -1,10 +1,12 @@
-# Price-transparency files
+# Official price files (git-ignored)
 
-Put the `PriceFull*.xml` / `.gz` files you downloaded from a chain's official price-publication portal here
-(this folder's contents are git-ignored), then run:
+Download files manually from the chain's official price-publication portal (list of chains:
+https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations). Keep the original file names.
+Then preview and import:
 
 ```bash
-npm run import:feed -- --retailer shufersal --file data/price-feeds/<file name>
+npm run prices -- preview data/price-feeds/<file> --retailer <id>
+npm run prices -- import  data/price-feeds/<file> --retailer <id>
 ```
 
-Retailer ids: shufersal, rami-levy, victory, carrefour, hazi-hinam, yohananof, osher-ad, keshet-teamim, tiv-taam.
+Full guide: docs/INTEGRATIONS.md, section 6.

@@ -53,11 +53,13 @@ export default async function ProductPage({ params }: Props) {
           {product.productDescription && <p className="mt-4 text-slate-700">{product.productDescription}</p>}
           {product.provenance === "curated_demo" && (
             <p className="mt-4 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
-              פריט קטלוג לדוגמה: שם המוצר והמותג מוכרים, אך גודל האריזה לא אומת מול היצרן ואין ברקוד מאומת. המחירים המוצגים הם נתונים לדוגמה.
+              מוצר קטלוג שנאסף ידנית: שם המוצר והמותג מוכרים, אך גודל האריזה לא אומת מול היצרן.{" "}
+              {product.barcode ? "המחירים הרשמיים מקושרים אליו לפי ברקוד שנבדק, ורק לאריזה באותו גודל." : "אין לו ברקוד מאומת, ולכן לא מקושרים אליו מחירים רשמיים."}{" "}
+              {offers.some((o) => o.freshness === "sample") && "המחירים המסומנים \"נתון לדוגמה\" אינם מחירים אמיתיים."}
             </p>
           )}
           {product.provenance === "price_feed" && (
-            <p className="mt-4 rounded-2xl bg-sky-50 p-3 text-sm text-sky-900 ring-1 ring-sky-200">פרטי מוצר זה נלקחו מקובץ מחירים שפרסמה רשת לפי חוק שקיפות המחירים.</p>
+            <p className="mt-4 rounded-2xl bg-sky-50 p-3 text-sm text-sky-900 ring-1 ring-sky-200">פרטי מוצר זה נלקחו מקובץ מחירים רשמי שפרסמה רשת לפי חוק שקיפות המחירים.{product.barcode ? " המחירים בין הרשתות מושווים לפי אותו ברקוד ואותו גודל אריזה." : " זהו קוד פנימי של הרשת – אין השוואה לרשתות אחרות."}</p>
           )}
           <ProductOffers product={product} initialOffers={offers} />
           <section className="mt-6 rounded-2xl bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-100">

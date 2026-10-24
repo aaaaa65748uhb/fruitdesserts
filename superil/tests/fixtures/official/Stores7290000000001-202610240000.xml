@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SYNTHETIC TEST DATA in the SAP (asx:abap) upper-case Stores structure used by some chains -->
+<asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+    <CHAINID>7290000000001</CHAINID>
+    <LASTUPDATEDATE>2026-10-24</LASTUPDATEDATE>
+    <STORES>
+      <STORE>
+        <SUBCHAINID>1</SUBCHAINID>
+        <STOREID>1</STOREID>
+        <BIKORETNO>7</BIKORETNO>
+        <STORETYPE>1</STORETYPE>
+        <CHAINNAME>רשת בדיקה</CHAINNAME>
+        <STORENAME>סניף בדיקה מרכז</STORENAME>
+        <ADDRESS>רחוב הבדיקה 1</ADDRESS>
+        <CITY>עיר בדיקה</CITY>
+        <ZIPCODE>1234567</ZIPCODE>
+      </STORE>
+      <STORE>
+        <SUBCHAINID>1</SUBCHAINID>
+        <STOREID>2</STOREID>
+        <STORENAME>סניף עם קוד יישוב</STORENAME>
+        <ADDRESS>רחוב אחר 5</ADDRESS>
+        <CITY>5000</CITY>
+      </STORE>
+      <STORE>
+        <SUBCHAINID>1</SUBCHAINID>
+        <STORENAME>סניף בלי מספר</STORENAME>
+        <ADDRESS>לא ידוע</ADDRESS>
+      </STORE>
+    </STORES>
+  </asx:values>
+</asx:abap>

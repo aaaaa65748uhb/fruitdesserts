@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SYNTHETIC TEST DATA in a lower-case / Products-style variant used by some chains -->
+<root>
+  <chainid>7290000000002</chainid>
+  <subchainid>001</subchainid>
+  <storeid>15</storeid>
+  <Products>
+    <Product>
+      <PriceUpdateDate>2026-10-10 12:00</PriceUpdateDate>
+      <ItemCode>7299990000012</ItemCode>
+      <ItemType>1</ItemType>
+      <ItemNm>חטיף תירס בדיקה</ItemNm>
+      <ManufacturerName>יצרן בדיקה</ManufacturerName>
+      <UnitQty>גרם</UnitQty>
+      <Quantity>80</Quantity>
+      <bIsWeighted>0</bIsWeighted>
+      <ItemPrice>4.90</ItemPrice>
+    </Product>
+    <Product>
+      <ItemCode>0012345678905</ItemCode>
+      <ItemType>1</ItemType>
+      <ItemNm>משקה בדיקה מיובא</ItemNm>
+      <UnitQty>מיליליטרים</UnitQty>
+      <Quantity>330</Quantity>
+      <ItemPrice>5.20</ItemPrice>
+    </Product>
+    <Product>
+      <ItemCode>7299990000029</ItemCode>
+      <ItemType>1</ItemType>
+      <ItemNm>חלב בדיקה 3% מארז</ItemNm>
+      <UnitQty>ליטרים</UnitQty>
+      <Quantity>3</Quantity>
+      <ItemPrice>19.90</ItemPrice>
+    </Product>
+  </Products>
+</root>

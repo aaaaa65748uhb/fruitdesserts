@@ -2,14 +2,13 @@
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useCatalog, useOffers, useProduct } from "@/client/queries";
+import { useCatalog, useOffers, useProduct, useSearch } from "@/client/queries";
 import { AddToCart } from "@/components/AddToCart";
 import { BasketComparisonView } from "@/components/BasketComparisonView";
 import { OfferTable } from "@/components/OfferTable";
 import { Packshot } from "@/components/Packshot";
 import { Price } from "@/components/Price";
 import { isUsableOffer, sortOffers, type OfferSort } from "@/lib/compare";
-import { searchProducts } from "@/lib/search";
 import { BASIS_LABEL_HE, formatPackage, sameBasis, totalBaseQuantity } from "@/lib/units";
 
 export function CompareClient() {
@@ -34,7 +33,8 @@ function ProductCompare() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<string>();
   const [sort, setSort] = useState<OfferSort>("price");
-  const results = useMemo(() => (catalog.data ? searchProducts(catalog.data.products, q, {}, 8) : []), [catalog.data, q]);
+  const search = useSearch(q.trim());
+  const results = useMemo(() => (search.data?.products ?? []).slice(0, 8).map((product) => ({ product })), [search.data]);
   const productQ = useProduct(selected);
   const product = productQ.data?.product;
 

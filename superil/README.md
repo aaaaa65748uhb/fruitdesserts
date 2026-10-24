@@ -27,14 +27,19 @@ Open http://localhost:3000. For development with live reload, use `npm run dev`.
 - **Checkout handoff**: an interactive checklist, copy / download / WhatsApp, and a button to the chain's official site.
 - **Data sources page**: `/data-sources` shows which data sources are connected and their status.
 
-## Important: the prices are sample data
+## Prices: sample data until official files are imported
 
-Until real price files are imported, all prices are labelled **נתון לדוגמה** (sample data). To use real
-published prices, see `docs/INTEGRATIONS.md` and `data/price-feeds/README.md`:
+Until an official price file is imported, every price is labelled **נתון לדוגמה** (sample data), and a banner
+on each page says so. Real prices come from the files that chains publish under Israel's price-transparency
+law. You download them manually and import them with a preview step first:
 
 ```bash
-npm run import:feed -- --retailer shufersal --file data/price-feeds/<PriceFull file>
+npm run prices -- preview data/price-feeds/<PriceFull file> --retailer shufersal
+npm run prices -- import  data/price-feeds/<PriceFull file> --retailer shufersal
 ```
+
+Or set `ADMIN_TOKEN` and use the admin page at `/admin/prices` (upload → preview → import → matching report).
+After the first import, sample prices switch off automatically. See `docs/INTEGRATIONS.md` for the full guide.
 
 ## Optional: PostgreSQL
 

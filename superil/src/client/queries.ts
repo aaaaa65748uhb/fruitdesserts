@@ -28,6 +28,19 @@ export function useCatalog() {
   });
 }
 
+/** Products by id, for the cart and comparisons (never downloads the full catalog). */
+export function useProductsByIds(ids: string[]) {
+  const sorted = [...new Set(ids)].sort();
+  return useQuery({
+    queryKey: ["products-by-id", sorted],
+    enabled: sorted.length > 0,
+    queryFn: () => getJson<{ products: Product[] }>("/api/products/batch", post({ ids: sorted })),
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
+    select: (d) => ({ products: d.products, byId: Object.fromEntries(d.products.map((p) => [p.id, p])) as Record<string, Product> }),
+  });
+}
+
 export function useSearch(q: string, filters: { category?: CategoryId; brand?: string } = {}) {
   const sp = new URLSearchParams({ q });
   if (filters.category) sp.set("category", filters.category);
@@ -89,5 +102,9 @@ export function useBranches(retailerId?: string, city?: string) {
 }
 
 export function useProviderStatus() {
-  return useQuery({ queryKey: ["status"], queryFn: () => getJson<{ providers: ProviderStatus[] }>("/api/status") });
+  return useQuery({
+    queryKey: ["status"],
+    queryFn: () => getJson<{ providers: ProviderStatus[]; priceMode: "official" | "sample" | "mixed" | "none" }>("/api/status"),
+    staleTime: 60_000,
+  });
 }

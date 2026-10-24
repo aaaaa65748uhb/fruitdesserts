@@ -5,7 +5,7 @@ import { FRESHNESS_RANK } from "@/lib/freshness";
 import { roundMoney } from "@/lib/format";
 import type { CartLine, FreshnessStatus, PriceOffer, Product } from "@/lib/types";
 import { cartLineList, useCart } from "./cart-store";
-import { useCatalog, useOffers } from "./queries";
+import { useOffers, useProductsByIds } from "./queries";
 import { useSettings } from "./settings-store";
 
 export interface PricedLine {
@@ -29,12 +29,12 @@ export function useCartPricing() {
   const lines = useCart((s) => s.lines);
   const preferred = useSettings((s) => s.preferredRetailerId);
   const list = useMemo(() => cartLineList(lines), [lines]);
-  const catalog = useCatalog();
+  const catalog = useProductsByIds(list.map((l) => l.productId));
   const offersQ = useOffers(list.map((l) => l.productId));
 
   return useMemo(() => {
     const priced: PricedLine[] = list.map((line) => {
-      if (catalog.isLoading) return { line, offers: [], status: "loading" };
+      if (catalog.isLoading || (!catalog.data && list.length)) return { line, offers: [], status: "loading" };
       const product = catalog.data?.byId[line.productId];
       if (!product) return { line, offers: [], status: "unknown_product" };
       const offers = offersQ.data?.offers[line.productId] ?? [];

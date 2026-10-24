@@ -6,7 +6,7 @@ export type OfferSort = "price" | "unitPrice";
 
 /** Offers that may be used in calculations: priced and not marked unavailable or out of stock. */
 export function isUsableOffer(o: PriceOffer): boolean {
-  return o.freshness !== "unavailable" && o.availability !== "out_of_stock" && Number.isFinite(o.price) && o.price >= 0;
+  return o.freshness !== "unavailable" && o.freshness !== "stale" && o.availability !== "out_of_stock" && Number.isFinite(o.price) && o.price >= 0;
 }
 
 export function sortOffers(offers: PriceOffer[], by: OfferSort): PriceOffer[] {
@@ -35,6 +35,11 @@ export interface BasketLineInput {
 
 export interface RetailerBasket {
   retailerId: string;
+  /** Branch whose prices were used (absent for chain-wide sample data). */
+  branchId?: string;
+  branchName?: string;
+  /** How many branches of this retailer had prices for the basket. */
+  branchesCompared?: number;
   itemsSubtotal: number;
   pricedItems: number;
   missingProductIds: string[];
@@ -78,42 +83,57 @@ export function compareBasket(
 ): BasketComparison {
   const valid = lines.filter((l) => l.quantity > 0);
   const baskets: RetailerBasket[] = retailers.map((r) => {
-    const basket: RetailerBasket = {
-      retailerId: r.id,
-      itemsSubtotal: 0,
-      pricedItems: 0,
-      missingProductIds: [],
-      freshness: "live",
-      deliveryFee: r.deliveryFee,
-      minimumOrder: r.minimumOrder,
-      complete: false,
-      lines: [],
-    };
-    for (const line of valid) {
-      const best = sortOffers(
-        (offersByProduct[line.productId] ?? []).filter((o) => o.retailerId === r.id && isUsableOffer(o)),
-        "price",
-      )[0];
-      if (!best) {
-        basket.missingProductIds.push(line.productId);
-        continue;
+    // Prices are published per branch, so a basket is priced at ONE branch (or chain-wide for sample data);
+    // offers of different branches are never mixed. The best-covered, then cheapest, branch is reported.
+    const branchKeys = new Set<string>();
+    for (const line of valid) for (const o of offersByProduct[line.productId] ?? []) if (o.retailerId === r.id && isUsableOffer(o)) branchKeys.add(o.branchId ?? "");
+    const candidates = (branchKeys.size ? [...branchKeys] : [""]).map((branchKey) => {
+      const basket: RetailerBasket = {
+        retailerId: r.id,
+        branchId: branchKey || undefined,
+        itemsSubtotal: 0,
+        pricedItems: 0,
+        missingProductIds: [],
+        freshness: "live",
+        deliveryFee: r.deliveryFee,
+        minimumOrder: r.minimumOrder,
+        complete: false,
+        lines: [],
+      };
+      for (const line of valid) {
+        const best = sortOffers(
+          (offersByProduct[line.productId] ?? []).filter((o) => o.retailerId === r.id && (o.branchId ?? "") === branchKey && isUsableOffer(o)),
+          "price",
+        )[0];
+        if (!best) {
+          basket.missingProductIds.push(line.productId);
+          continue;
+        }
+        const subtotal = linePrice(best, line.quantity);
+        basket.itemsSubtotal = roundMoney(basket.itemsSubtotal + subtotal);
+        basket.pricedItems++;
+        basket.freshness = worse(basket.freshness, best.freshness);
+        basket.branchName ??= best.branchName;
+        basket.lines.push({ productId: line.productId, quantity: line.quantity, offerId: best.id, unitPrice: best.price, subtotal });
       }
-      const subtotal = linePrice(best, line.quantity);
-      basket.itemsSubtotal = roundMoney(basket.itemsSubtotal + subtotal);
-      basket.pricedItems++;
-      basket.freshness = worse(basket.freshness, best.freshness);
-      basket.lines.push({ productId: line.productId, quantity: line.quantity, offerId: best.id, unitPrice: best.price, subtotal });
-    }
-    if (basket.pricedItems === 0) basket.freshness = "unavailable";
-    basket.complete = valid.length > 0 && basket.missingProductIds.length === 0;
-    if (basket.minimumOrder !== undefined) basket.meetsMinimumOrder = basket.itemsSubtotal >= basket.minimumOrder;
-    if (basket.complete && basket.deliveryFee !== undefined) {
-      basket.estimatedFinalTotal = roundMoney(basket.itemsSubtotal + basket.deliveryFee);
-    }
-    return basket;
+      if (basket.pricedItems === 0) basket.freshness = "unavailable";
+      basket.complete = valid.length > 0 && basket.missingProductIds.length === 0;
+      if (basket.minimumOrder !== undefined) basket.meetsMinimumOrder = basket.itemsSubtotal >= basket.minimumOrder;
+      if (basket.complete && basket.deliveryFee !== undefined) {
+        basket.estimatedFinalTotal = roundMoney(basket.itemsSubtotal + basket.deliveryFee);
+      }
+      return basket;
+    });
+    candidates.sort((a, b) => b.pricedItems - a.pricedItems || a.itemsSubtotal - b.itemsSubtotal);
+    const chosen = candidates[0];
+    chosen.branchesCompared = candidates.filter((c) => c.pricedItems > 0).length;
+    return chosen;
   });
 
-  const complete = baskets.filter((b) => b.complete).sort((a, b) => a.itemsSubtotal - b.itemsSubtotal);
+  const allComplete = baskets.filter((b) => b.complete);
+  // Never rank sample-priced baskets against official prices.
+  const realComplete = allComplete.filter((b) => b.freshness !== "sample");
+  const complete = (realComplete.length ? realComplete : allComplete).sort((a, b) => a.itemsSubtotal - b.itemsSubtotal);
   const notes: string[] = [];
   let cheapestCompleteRetailerId: string | undefined;
   let potentialSavings: number | undefined;
@@ -130,8 +150,9 @@ export function compareBasket(
   // Split basket: cheapest usable offer per product across all retailers.
   const split: SplitBasket = { total: 0, retailerIds: [], missingProductIds: [], lines: [] };
   const used = new Set<string>();
+  const anyReal = valid.some((l) => (offersByProduct[l.productId] ?? []).some((o) => isUsableOffer(o) && o.freshness !== "sample"));
   for (const line of valid) {
-    const best = sortOffers((offersByProduct[line.productId] ?? []).filter(isUsableOffer), "price")[0];
+    const best = sortOffers((offersByProduct[line.productId] ?? []).filter((o) => isUsableOffer(o) && (!anyReal || o.freshness !== "sample")), "price")[0];
     if (!best) {
       split.missingProductIds.push(line.productId);
       continue;
@@ -151,6 +172,15 @@ export function compareBasket(
   const dataIsSampleOnly =
     usedOffers.length > 0 && usedOffers.every((id) => allOffers.find((o) => o.id === id)?.freshness === "sample");
   if (dataIsSampleOnly) notes.unshift("ההשוואה מבוססת על נתונים לדוגמה בלבד ואינה משקפת מחירים אמיתיים.");
+  const usedFreshness = new Set(usedOffers.map((id) => allOffers.find((o) => o.id === id)?.freshness));
+  if (!dataIsSampleOnly && usedFreshness.has("sample")) {
+    notes.unshift("חלק מהרשתות מתומחרות לפי נתונים לדוגמה – הן אינן משתתפות בקביעת הסל הזול ביותר.");
+  }
+  const staleOnly = valid.filter((l) => {
+    const offers = offersByProduct[l.productId] ?? [];
+    return offers.length > 0 && offers.every((o) => o.freshness === "stale");
+  }).length;
+  if (staleOnly) notes.push(`ל-${staleOnly} מוצרים יש רק מחירים לא עדכניים – הם אינם נכללים בחישוב.`);
 
   return { baskets, cheapestCompleteRetailerId, potentialSavings, split, dataIsSampleOnly, notes };
 }

@@ -5,7 +5,8 @@ out/
 .env.local
 *.tsbuildinfo
 next-env.d.ts
-data/imported/*.json
+data/imported/*
+!data/imported/.gitkeep
 data/price-feeds/**
 !data/price-feeds/README.md
 screenshots/

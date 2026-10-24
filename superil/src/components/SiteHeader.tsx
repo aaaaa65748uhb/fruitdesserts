@@ -7,6 +7,7 @@ import { useCartPricing } from "@/client/cart-pricing";
 import { useUi } from "@/client/ui-store";
 import { Logo } from "./Logo";
 import { Price } from "./Price";
+import { PriceModeBanner } from "./PriceModeBanner";
 
 const NAV = [
   { href: "/store", label: "לסופר בתלת־ממד", icon: Box },
@@ -93,6 +94,7 @@ export function SiteHeader() {
           {menuOpen ? <X /> : <Menu />}
         </button>
       </div>
+      <PriceModeBanner />
       {menuOpen && (
         <nav className="animate-pop border-t border-slate-200 px-4 pb-4 lg:hidden" aria-label="ניווט נייד">
           <form
