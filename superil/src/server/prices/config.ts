@@ -1,5 +1,20 @@
 import path from "path";
 
+export type StorageMode = "postgres" | "file" | "file-unsafe";
+
+/**
+ * Where official data is stored:
+ * - "postgres":    DATABASE_URL is set (recommended for production).
+ * - "file":        JSON files in PRICE_DATA_DIR (development, or production with an explicit persistent volume).
+ * - "file-unsafe": production without DATABASE_URL and without an explicit PRICE_DATA_DIR. Imports are refused,
+ *                  because the default folder is usually wiped on redeploy.
+ */
+export function storageMode(): StorageMode {
+  if (process.env.DATABASE_URL) return "postgres";
+  if (process.env.NODE_ENV === "production" && !process.env.PRICE_DATA_DIR) return "file-unsafe";
+  return "file";
+}
+
 /** Runtime configuration for official price data (see docs/INTEGRATIONS.md). */
 export const priceConfig = {
   /** Where the JSON price store lives when DATABASE_URL is not set. */

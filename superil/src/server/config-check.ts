@@ -1,7 +1,8 @@
 import "server-only";
-import { adminEnabled } from "./admin-auth";
-import { priceConfig } from "./prices/config";
-import { storageMode } from "./prices/service";
+// Only environment-reading modules: this file runs at server start-up (instrumentation-node.ts), so it must not
+// pull in request/crypto code (admin-auth.ts) or the storage layer (prices/service.ts).
+import { MIN_ADMIN_TOKEN_LENGTH, adminEnabled } from "./admin-config";
+import { priceConfig, storageMode } from "./prices/config";
 
 export type CheckLevel = "ok" | "warn" | "error";
 
@@ -31,7 +32,7 @@ export function configChecks(): ConfigCheck[] {
       id: "ADMIN_TOKEN",
       label: "קוד גישת מנהל (ADMIN_TOKEN)",
       level: adminEnabled() ? "ok" : "error",
-      detail: adminEnabled() ? "מוגדר (הערך אינו מוצג)" : rawToken ? "קצר מדי – נדרשים לפחות 24 תווים; ממשק הניהול כבוי" : "לא הוגדר – ממשק הניהול כבוי",
+      detail: adminEnabled() ? "מוגדר (הערך אינו מוצג)" : rawToken ? `קצר מדי – נדרשים לפחות ${MIN_ADMIN_TOKEN_LENGTH} תווים; ממשק הניהול כבוי` : "לא הוגדר – ממשק הניהול כבוי",
     },
     {
       id: "DATABASE_URL",

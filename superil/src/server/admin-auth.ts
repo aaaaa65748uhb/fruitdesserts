@@ -2,7 +2,10 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
+import { adminEnabled, adminToken } from "./admin-config";
 import { errorResponse } from "./api";
+
+export { adminEnabled, adminToken };
 
 /**
  * Admin access for price imports.
@@ -12,15 +15,6 @@ import { errorResponse } from "./api";
  */
 export const ADMIN_COOKIE = "superil_admin";
 const SESSION_MS = 8 * 3600_000;
-
-export function adminToken(): string | undefined {
-  const t = process.env.ADMIN_TOKEN;
-  return t && t.length >= 24 ? t : undefined;
-}
-
-export function adminEnabled(): boolean {
-  return !!adminToken();
-}
 
 function sign(payload: string, token: string) {
   return createHmac("sha256", token).update(`superil-admin:${payload}`).digest("base64url");

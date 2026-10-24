@@ -4,7 +4,7 @@ import { RETAILER_BY_ID } from "@/data/retailers";
 import type { Product } from "@/lib/types";
 import { analyzeUpload, type AnalyzedEntry } from "../ingest/analyze";
 import type { Issue } from "../ingest/records";
-import { priceConfig } from "./config";
+import { priceConfig, storageMode } from "./config";
 import { JsonPriceRepository } from "./json-repo";
 import {
   invertMap,
@@ -23,20 +23,7 @@ import { OFFICIAL_PROVENANCE, type ApplyStats, type FeedProduct, type ImportBatc
 
 let repo: PriceRepository | undefined;
 
-export type StorageMode = "postgres" | "file" | "file-unsafe";
-
-/**
- * Where official data is stored:
- * - "postgres":    DATABASE_URL is set (recommended for production).
- * - "file":        JSON files in PRICE_DATA_DIR (development, or production with an explicit persistent volume).
- * - "file-unsafe": production without DATABASE_URL and without an explicit PRICE_DATA_DIR. Imports are refused,
- *                  because the default folder is usually wiped on redeploy.
- */
-export function storageMode(): StorageMode {
-  if (process.env.DATABASE_URL) return "postgres";
-  if (process.env.NODE_ENV === "production" && !process.env.PRICE_DATA_DIR) return "file-unsafe";
-  return "file";
-}
+export { storageMode, type StorageMode } from "./config";
 
 export class StorageNotPersistentError extends Error {
   constructor() {
