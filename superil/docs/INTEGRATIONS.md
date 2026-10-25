@@ -18,7 +18,7 @@ _Last updated October 2026._
 | **Official price-transparency files** (חוק קידום התחרות בענף המזון, תשע"ד-2014; תקנות קידום התחרות בענף המזון (שקיפות מחירים), תשע"ה-2014) | Large chains must publish, per branch, full price files (`PriceFull`), price updates (`Price`), full promotion files (`PromoFull`), promotion updates (`Promo`) and a branch list (`Stores`). The files are XML, usually gzip-compressed. Schemas and encodings vary between chains. Some publication portals block access from outside Israel. | **Implemented**: validated import (CLI + admin web UI), matching, freshness and promotions. Files are obtained **manually** by the operator from the official portals (section 4). SUPERIL never downloads them itself. |
 | **CHP (chp.co.il)** | No public API; its terms do not permit reusing its database. | `ChpAdapter` stays **disabled** until written authorization exists. It never scrapes. |
 | **Retailer online stores** | No official cart-transfer API, documented deep links or affiliate program was found. | Checkout is an honest handoff: a checklist plus the official site, where the retailer handles payment. |
-| **Product images** | No licensed source available. | Generated placeholder packaging, marked "איור". |
+| **Product images** | Open Food Facts, a collaborative open database, licensed CC BY-SA 3.0. Photos come from its public AWS data exports. | 105 products show their real front photo, with credit on each product page and in `public/products/CREDITS.txt`. Loose produce is drawn as 3D models. Household goods have no licensed source, so they show a generated illustration marked "איור". See `scripts/product-photos/README.md`. |
 
 ## 2. Supported formats
 

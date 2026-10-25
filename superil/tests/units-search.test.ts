@@ -51,7 +51,7 @@ describe("Hebrew search", () => {
   it("does not merge different package sizes into one result", () => {
     const ids = searchProducts(SEED_PRODUCTS, "במבה").map((h) => h.product.id);
     expect(ids).toContain("bamba-80");
-    expect(ids).toContain("bamba-25x4");
+    expect(ids).toContain("bamba-200");
   });
   it("matches barcodes exactly", () => {
     const withBarcode = [{ ...SEED_PRODUCTS[0], barcode: "4006381333931" }, ...SEED_PRODUCTS.slice(1)];

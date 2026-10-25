@@ -1,14 +1,16 @@
 "use client";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useCart } from "@/client/cart-store";
 import { useSettings } from "@/client/settings-store";
 import { useUi } from "@/client/ui-store";
 import type { Product } from "@/lib/types";
-import { EYE_HEIGHT, PLAYER_RADIUS, type StoreLayout } from "./layout";
+import { EYE_HEIGHT, PLAYER_RADIUS, productDims, type StoreLayout } from "./layout";
 import { moveWithCollisions, pickBlock } from "./physics";
-import { playerLive, touchInput, useStore3d } from "./state";
+import { makePhotoMaterial } from "./Products";
+import { cartLive, playerLive, touchInput, useStore3d } from "./state";
+import type { Atlas } from "./textures";
 
 export const INTERACT_RANGE = 3.2;
 const WALK_SPEED = 3.0;
@@ -113,6 +115,11 @@ export function Player({ layout, productsById }: { layout: StoreLayout; products
         st.set({ panelProductId: st.focus.productId });
         return;
       }
+      if (e.code === "KeyC" && !e.repeat && !st.panelProductId) {
+        const settings = useSettings.getState();
+        settings.set({ showCart: settings.showCart === false });
+        return;
+      }
       if (e.code === "Slash" || (e.code === "KeyF" && !st.panelProductId)) {
         e.preventDefault();
         document.exitPointerLock?.();
@@ -214,20 +221,32 @@ export function Player({ layout, productsById }: { layout: StoreLayout; products
   return null;
 }
 
-/** Product flying from the shelf into the (virtual) cart. */
-export function PickupEffects({ productsById }: { productsById: Record<string, Product> }) {
+/** Product flying from the shelf into the cart. */
+export function PickupEffects({ productsById, atlas }: { productsById: Record<string, Product>; atlas: Atlas }) {
   const pickups = useStore3d((s) => s.pickups);
+  const material = useMemo(() => makePhotoMaterial(atlas.texture, true), [atlas]);
+  useEffect(() => () => material.dispose(), [material]);
   return (
     <>
-      {pickups.map((p) => (
-        <FlyingProduct key={p.id} id={p.id} from={p.from} color={productsById[p.productId]?.packaging.color ?? "#ffffff"} />
-      ))}
+      {pickups.map((p) => {
+        const product = productsById[p.productId];
+        if (!product) return null;
+        return <FlyingProduct key={p.id} id={p.id} from={p.from} product={product} atlas={atlas} material={material} />;
+      })}
     </>
   );
 }
 
-function FlyingProduct({ id, from, color }: { id: number; from: [number, number, number]; color: string }) {
-  const ref = useRef<THREE.Mesh>(null);
+function FlyingProduct({ id, from, product, atlas, material }: { id: number; from: [number, number, number]; product: Product; atlas: Atlas; material: THREE.Material }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const dims = useMemo(() => productDims(product), [product]);
+  const geometry = useMemo(() => {
+    const g = new THREE.BoxGeometry(1, 1, 1);
+    g.setAttribute("aUvRect", new THREE.InstancedBufferAttribute(new Float32Array(atlas.rects.get(product.id) ?? [0, 0, 0.001, 0.001]), 4));
+    g.setAttribute("aSideColor", new THREE.InstancedBufferAttribute(new Float32Array(atlas.sides?.get(product.id) ?? [0.8, 0.8, 0.8]), 3));
+    return g;
+  }, [atlas, product.id]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
   const t0 = useRef<number | null>(null);
   const { camera } = useThree();
   const target = useRef(new THREE.Vector3());
@@ -236,22 +255,23 @@ function FlyingProduct({ id, from, color }: { id: number; from: [number, number,
     if (!m) return;
     t0.current ??= clock.elapsedTime;
     const t = Math.min(1, (clock.elapsedTime - t0.current) / 0.5);
-    // Target: just below and in front of the camera
-    target.current.set(0, -0.45, -0.6).applyQuaternion(camera.quaternion).add(camera.position);
+    // Target: the cart basket in front of the player (or just below the view when the cart is hidden)
+    const yaw = playerLive.yaw;
+    if (cartLive.visible && useSettings.getState().showCart !== false) target.current.set(cartLive.x, 0.75, cartLive.z);
+    else target.current.set(camera.position.x - Math.sin(yaw) * 0.6, camera.position.y - 0.5, camera.position.z - Math.cos(yaw) * 0.6);
     const e = 1 - Math.pow(1 - t, 3);
-    m.position.set(
-      from[0] + (target.current.x - from[0]) * e,
-      from[1] + (target.current.y - from[1]) * e + Math.sin(t * Math.PI) * 0.25,
-      from[2] + (target.current.z - from[2]) * e,
+    const mat = new THREE.Matrix4().compose(
+      new THREE.Vector3(
+        from[0] + (target.current.x - from[0]) * e,
+        from[1] + (target.current.y - from[1]) * e + Math.sin(t * Math.PI) * 0.3,
+        from[2] + (target.current.z - from[2]) * e,
+      ),
+      new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw + t * Math.PI * 2, 0)),
+      new THREE.Vector3(dims.w, dims.h, dims.d),
     );
-    m.rotation.y += 0.25;
-    m.scale.setScalar(0.16 * (1 - e * 0.7));
+    m.setMatrixAt(0, mat);
+    m.instanceMatrix.needsUpdate = true;
     if (t >= 1) useStore3d.getState().removePickup(id);
   });
-  return (
-    <mesh ref={ref} position={from}>
-      <boxGeometry args={[1, 1.3, 0.5]} />
-      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.35} />
-    </mesh>
-  );
+  return <instancedMesh ref={ref} args={[geometry, material, 1]} frustumCulled={false} />;
 }

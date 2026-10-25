@@ -4,6 +4,9 @@ import { create } from "zustand";
 /** Mutable per-frame player data (kept out of React state to avoid re-renders every frame). */
 export const playerLive = { x: 0, z: 0, yaw: 0, pitch: 0 };
 
+/** Where the first-person cart's basket currently is (written by FirstPersonCart, read by pickup effects). */
+export const cartLive = { x: 0, z: 0, visible: false };
+
 /** Touch input, written by the on-screen joystick / look pad and read in the frame loop. */
 export const touchInput = { moveX: 0, moveY: 0, lookDX: 0, lookDY: 0 };
 

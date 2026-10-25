@@ -34,6 +34,11 @@ export function SettingsClient() {
             <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${s.sound ? "right-1" : "right-6"}`} />
           </button>
         </Row>
+        <Row label="עגלה בחנות התלת־ממדית" hint="עגלת קניות לפניכם, עם המוצרים שבסל. אפשר גם להחליף במקש C.">
+          <button type="button" role="switch" aria-checked={s.showCart !== false} onClick={() => s.set({ showCart: s.showCart === false })} className={`relative h-7 w-12 rounded-full transition ${s.showCart !== false ? "bg-brand-600" : "bg-slate-300"}`} aria-label="עגלה בחנות התלת־ממדית">
+            <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${s.showCart !== false ? "right-1" : "right-6"}`} />
+          </button>
+        </Row>
         <Row label="רשת מועדפת" hint="המחירים בחנות ובסל יוצגו לפי רשת זו כשיש לה מחיר.">
           <select value={s.preferredRetailerId ?? ""} onChange={(e) => s.set({ preferredRetailerId: e.target.value || undefined })} className="rounded-xl border border-slate-200 px-3 py-2">
             <option value="">הזול ביותר הידוע</option>

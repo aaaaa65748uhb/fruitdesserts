@@ -1,0 +1,472 @@
+{
+ "almond-drink": {
+  "code": "7296073675174",
+  "imgid": "1"
+ },
+ "alpro-soy": {
+  "code": "7290119385607",
+  "imgid": "1"
+ },
+ "apropo": {
+  "code": "7290000066349",
+  "imgid": "1"
+ },
+ "baking-powder": {
+  "code": "7290002319016",
+  "imgid": "1"
+ },
+ "bamba-200": {
+  "code": "7290104508943",
+  "imgid": "2"
+ },
+ "bamba-80": {
+  "code": "7290000066318",
+  "imgid": "9",
+  "rot": 90
+ },
+ "bamba-nougat": {
+  "code": "7290100687109",
+  "imgid": "2"
+ },
+ "bissli-bamba-mix": {
+  "code": "7290118426226",
+  "imgid": "2"
+ },
+ "bissli-bbq": {
+  "code": "7290115201680",
+  "imgid": "2"
+ },
+ "bissli-grill": {
+  "code": "7290000066141",
+  "imgid": "1"
+ },
+ "bourekas-potato": {
+  "code": "7290002735830",
+  "imgid": "1"
+ },
+ "bread-agami-rye": {
+  "code": "7290018296066",
+  "imgid": "1",
+  "cutout": true
+ },
+ "bread-angel-spelt": {
+  "code": "7290017947891",
+  "imgid": "1"
+ },
+ "bread-white-sliced": {
+  "code": "7296073219347",
+  "imgid": "1"
+ },
+ "bulgarian-24": {
+  "code": "7290014761438",
+  "imgid": "1"
+ },
+ "butter-tnuva": {
+  "code": "7290014758544",
+  "imgid": "1"
+ },
+ "challah": {
+  "code": "7290002994350",
+  "imgid": "1",
+  "cutout": true
+ },
+ "chickpeas-can": {
+  "code": "7290018989289",
+  "imgid": "1"
+ },
+ "coke-1.5": {
+  "code": "7290000284316",
+  "imgid": "2"
+ },
+ "coke-can": {
+  "code": "7290001594056",
+  "imgid": "1"
+ },
+ "coke-zero-1.5": {
+  "code": "7290110115869",
+  "imgid": "1"
+ },
+ "corn-can": {
+  "code": "7290000208312",
+  "imgid": "1"
+ },
+ "cornflakes-telma": {
+  "code": "7290112494351",
+  "imgid": "3"
+ },
+ "cottage-tnuva-250": {
+  "code": "7290004127329",
+  "imgid": "9"
+ },
+ "cottage-tnuva-3": {
+  "code": "7290004127077",
+  "imgid": "1",
+  "cutout": false
+ },
+ "couscous-whole": {
+  "code": "7290002040088",
+  "imgid": "1"
+ },
+ "cream-crackers": {
+  "code": "7290000074696",
+  "imgid": "1"
+ },
+ "daniela": {
+  "code": "7290008693134",
+  "imgid": "1",
+  "cutout": false
+ },
+ "danone-greek": {
+  "code": "7290107936309",
+  "imgid": "2"
+ },
+ "danone-strawberry": {
+  "code": "7290006664532",
+  "imgid": "1"
+ },
+ "doritos-grill": {
+  "code": "7290106528567",
+  "imgid": "1"
+ },
+ "eggs-l-12": {
+  "code": "7296082000134",
+  "imgid": "1"
+ },
+ "eggs-m-12": {
+  "code": "7290000604022",
+  "imgid": "1"
+ },
+ "elite-instant-coffee": {
+  "code": "7290000176420",
+  "imgid": "7"
+ },
+ "eshel": {
+  "code": "7290004125400",
+  "imgid": "2"
+ },
+ "fanta-0.5": {
+  "code": "7290001594179",
+  "imgid": "1"
+ },
+ "flour-sugat": {
+  "code": "7290100703625",
+  "imgid": "1",
+  "cutout": true
+ },
+ "fuze-tea-green": {
+  "code": "7290110110758",
+  "imgid": "2",
+  "box": [
+   0.17,
+   0.0,
+   0.62,
+   1.0
+  ],
+  "cutout": false
+ },
+ "goldstar-dark": {
+  "code": "7290008464345",
+  "imgid": "1"
+ },
+ "granola": {
+  "code": "7290116532769",
+  "imgid": "1"
+ },
+ "heinz-ketchup": {
+  "code": "8715700419732",
+  "imgid": "1"
+ },
+ "honey": {
+  "code": "7290110554095",
+  "imgid": "1"
+ },
+ "hummus-masada": {
+  "code": "7290106576537",
+  "imgid": "1",
+  "cutout": false
+ },
+ "kariot-telma": {
+  "code": "7290116537368",
+  "imgid": "1"
+ },
+ "kif-kef-bites": {
+  "code": "7290112347626",
+  "imgid": "5"
+ },
+ "klik-kariot": {
+  "code": "7290116537375",
+  "imgid": "1"
+ },
+ "krembo": {
+  "code": "7290006681553",
+  "imgid": "1"
+ },
+ "lentils-green": {
+  "code": "7290003643752",
+  "imgid": "2",
+  "cutout": true
+ },
+ "mayo-telma": {
+  "code": "7290000111186",
+  "imgid": "1"
+ },
+ "mei-eden-0.5": {
+  "code": "7290000688077",
+  "imgid": "7"
+ },
+ "mei-eden-1.5x6": {
+  "code": "7290019056973",
+  "imgid": "1",
+  "cutout": false
+ },
+ "milk-golan-1-1l": {
+  "code": "7290000522326",
+  "imgid": "4",
+  "cutout": true,
+  "box": [
+   0.32,
+   0.1,
+   0.67,
+   0.83
+  ]
+ },
+ "milk-tara-3-1l": {
+  "code": "7290102398065",
+  "imgid": "6"
+ },
+ "milk-tnuva-3-1l": {
+  "code": "7290004131074",
+  "imgid": "19"
+ },
+ "milky-8": {
+  "code": "7290104726712",
+  "imgid": "1"
+ },
+ "nescafe-taster": {
+  "code": "7290000072753",
+  "imgid": "1",
+  "box": [
+   0.02,
+   0.18,
+   0.84,
+   0.83
+  ]
+ },
+ "neviot-0.5": {
+  "code": "7290002331018",
+  "imgid": "1"
+ },
+ "noodles-thin": {
+  "code": "7290000060972",
+  "imgid": "2",
+  "cutout": false
+ },
+ "oat-drink": {
+  "code": "7290017325972",
+  "imgid": "1"
+ },
+ "oats-quaker": {
+  "code": "7290008263597",
+  "imgid": "1"
+ },
+ "olive-oil-taaman": {
+  "code": "7290005437212",
+  "imgid": "2"
+ },
+ "olives-green": {
+  "code": "7290016272031",
+  "imgid": "1"
+ },
+ "onion-soup-powder": {
+  "code": "7290000070353",
+  "imgid": "1"
+ },
+ "osem-ketchup": {
+  "code": "7290115204056",
+  "imgid": "1"
+ },
+ "osem-ptitim": {
+  "code": "7290000060903",
+  "imgid": "1"
+ },
+ "osem-ptitim-whole": {
+  "code": "7290106575011",
+  "imgid": "1"
+ },
+ "osem-spaghetti": {
+  "code": "7290000060880",
+  "imgid": "1",
+  "cutout": true
+ },
+ "paprika": {
+  "code": "7290011091606",
+  "imgid": "1"
+ },
+ "parah-dark-100": {
+  "code": "7290000170077",
+  "imgid": "4"
+ },
+ "parah-milk-100": {
+  "code": "7290107955768",
+  "imgid": "1"
+ },
+ "petit-beurre": {
+  "code": "7290000074184",
+  "imgid": "1"
+ },
+ "pickles": {
+  "code": "7290002317265",
+  "imgid": "1"
+ },
+ "pinukiot-pesek-zman": {
+  "code": "7290112332691",
+  "imgid": "1"
+ },
+ "pita-bis-10": {
+  "code": "7290017746135",
+  "imgid": "1"
+ },
+ "popcorn-micro": {
+  "code": "7290000420325",
+  "imgid": "1"
+ },
+ "poplino-spaghetti": {
+  "code": "7296073720713",
+  "imgid": "1",
+  "cutout": true,
+  "box": [
+   0.38,
+   0.08,
+   0.8,
+   1.0
+  ]
+ },
+ "pretzels-beigale": {
+  "code": "7290112491770",
+  "imgid": "1"
+ },
+ "prigat-lemonana": {
+  "code": "7290013584816",
+  "imgid": "1"
+ },
+ "prigat-orange": {
+  "code": "7290110114961",
+  "imgid": "4"
+ },
+ "quinoa": {
+  "code": "7290100700273",
+  "imgid": "1"
+ },
+ "rice-sugat-basmati": {
+  "code": "7290003643004",
+  "imgid": "1",
+  "cutout": true
+ },
+ "rice-sugat-jasmine": {
+  "code": "7290100700396",
+  "imgid": "4"
+ },
+ "rice-sugat-persian": {
+  "code": "7290000211442",
+  "imgid": "1"
+ },
+ "rugelach-vanilla": {
+  "code": "7290010473120",
+  "imgid": "1"
+ },
+ "salt-atlit": {
+  "code": "7290000523804",
+  "imgid": "1"
+ },
+ "schug-yemeni": {
+  "code": "7290010154005",
+  "imgid": "2"
+ },
+ "schweppes-soda": {
+  "code": "7290019056119",
+  "imgid": "1",
+  "cutout": false
+ },
+ "shoko-tnuva": {
+  "code": "7290004120283",
+  "imgid": "1",
+  "cutout": true,
+  "box": [
+   0.3,
+   0.22,
+   0.78,
+   0.82
+  ]
+ },
+ "silan": {
+  "code": "7290018571576",
+  "imgid": "1"
+ },
+ "sour-cream-9": {
+  "code": "7290004125370",
+  "imgid": "1",
+  "cutout": false
+ },
+ "spelt-flour": {
+  "code": "7290100704653",
+  "imgid": "1"
+ },
+ "sprite-1l": {
+  "code": "7290110117153",
+  "imgid": "1"
+ },
+ "sugar-sugat": {
+  "code": "7290000211503",
+  "imgid": "1",
+  "small": true
+ },
+ "sweet-cream-38": {
+  "code": "7290000043814",
+  "imgid": "3"
+ },
+ "tahini-har-bracha": {
+  "code": "7290011723200",
+  "imgid": "2"
+ },
+ "tapuchips-classic": {
+  "code": "7290000178721",
+  "imgid": "1"
+ },
+ "tapuzina-can": {
+  "code": "7290119779741",
+  "imgid": "1"
+ },
+ "tea-wissotzky": {
+  "code": "7290006251275",
+  "imgid": "1"
+ },
+ "tofu": {
+  "code": "7290003726011",
+  "imgid": "1"
+ },
+ "tuna-starkist": {
+  "code": "7290017617466",
+  "imgid": "3"
+ },
+ "wafers-4u": {
+  "code": "7290015910545",
+  "imgid": "1"
+ },
+ "white-cheese-3": {
+  "code": "7290004131227",
+  "imgid": "2",
+  "cutout": false
+ },
+ "xl-energy": {
+  "code": "5906485301012",
+  "imgid": "10"
+ },
+ "yellow-emek-200": {
+  "code": "7290004122348",
+  "imgid": "1"
+ },
+ "yolo-choco": {
+  "code": "7290014761070",
+  "imgid": "1"
+ }
+}

@@ -10,6 +10,8 @@ interface SettingsState {
   moveSpeed: number;
   graphics: GraphicsQuality;
   sound: boolean;
+  /** Show the shopping cart you push in the 3D store. */
+  showCart: boolean;
   preferredRetailerId?: string;
   preferredCity?: string;
   set: (patch: Partial<Omit<SettingsState, "set">>) => void;
@@ -23,6 +25,7 @@ export const useSettings = create<SettingsState>()(
       moveSpeed: 1,
       graphics: "auto",
       sound: true,
+      showCart: true,
       set: (patch) => set(patch),
     }),
     { name: "superil-settings-v1", skipHydration: true, storage: createJSONStorage(() => localStorage) },

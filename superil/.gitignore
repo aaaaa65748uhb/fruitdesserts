@@ -13,3 +13,9 @@ screenshots/
 netlify-drop/
 .static-build/
 superil-netlify-drop.zip
+
+# product photo processing (scripts/product-photos)
+scripts/product-photos/raw/
+scripts/product-photos/images.jsonl
+scripts/product-photos/manifest.json
+scripts/product-photos/review.png

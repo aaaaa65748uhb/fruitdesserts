@@ -6,6 +6,9 @@ import { RETAILER_BY_ID } from "@/data/retailers";
 import { freshnessFromPublication } from "@/lib/freshness";
 import { priceConfig } from "@/server/prices/config";
 import { getPriceRepository } from "@/server/prices/service";
+import { PRODUCT_PHOTOS } from "@/data/product-photos";
+
+const photoCount = Object.keys(PRODUCT_PHOTOS).length;
 
 export const metadata: Metadata = { title: "מקורות נתונים" };
 export const dynamic = "force-dynamic";
@@ -73,7 +76,15 @@ export default async function DataSourcesPage() {
         <p><b>קבצי שקיפות מחירים:</b> לפי חוק קידום התחרות בענף המזון, רשתות גדולות מפרסמות קבצי מחירים מלאים. SUPERIL מייבא קבצים אלה (מחירים, מבצעים וסניפים) לאחר בדיקות תקינות. מחיר מקובץ שפורסם ב-36 השעות האחרונות מסומן &quot;מחיר מאומת&quot;, עד 7 ימים &quot;מחיר שמור&quot;, ומעבר לכך &quot;מחיר לא עדכני&quot; ואינו נכלל בחישובים. מבצעים מוצגים עם תוקפם אך אינם מחושבים בסל. הקבצים מורדים ידנית על ידי מפעיל האתר מהפורטלים הרשמיים של הרשתות.</p>
         <p><b>CHP:</b> תנאי השימוש של CHP אינם מתירים שימוש חוזר במאגר שלו, והאתר אינו מציע API ציבורי. המתאם קיים בקוד אך כבוי עד לקבלת הרשאה כתובה.</p>
         <p><b>העברת סל לרשתות:</b> לא מצאנו ממשק רשמי של הרשתות להעברת סל או להוספה לעגלה. לכן המעבר לרשת נעשה עם רשימת סימון ופתיחת האתר הרשמי. ההזמנה והתשלום – באתר הרשת בלבד.</p>
-        <p><b>תמונות מוצרים:</b> לא נעשה שימוש בתמונות אריזה רשמיות ללא הרשאה. האריזות בחנות הן איורים שנוצרו אוטומטית.</p>
+        <p>
+          <b>תמונות מוצרים:</b> {photoCount} מוצרים מוצגים עם צילום אמיתי של חזית האריזה מתוך{" "}
+          <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer" className="underline">Open Food Facts</a>, מאגר פתוח
+          שתורמים מצלמים בו מוצרים, ברישיון{" "}
+          <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.he" target="_blank" rel="noopener noreferrer" className="underline">CC BY-SA 3.0</a>.
+          הצילומים עובדו (חיתוך והסרת רקע) ומשמשים גם כמרקם של המוצרים בחנות התלת־ממדית; בדף כל מוצר מופיע קישור לרשומה המקורית ולשם הצלם.
+          למוצרים בלי צילום מורשה (פירות וירקות בתפזורת, ומוצרי ניקיון ובית שהמאגר אינו מכסה) מוצג איור שנוצר אוטומטית ומסומן כאיור.
+          ייתכנו הבדלים בין האריזה בצילום לאריזה הנמכרת כיום.
+        </p>
       </section>
     </div>
   );

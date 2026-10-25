@@ -5,13 +5,16 @@ import * as THREE from "three";
 import { chooseOffer } from "@/client/cart-pricing";
 import { useCatalog, useOffers } from "@/client/queries";
 import { useSettings } from "@/client/settings-store";
-import { StoreShell } from "./Environment";
+import { StoreLighting, StoreShell } from "./Environment";
+import { FirstPersonCart } from "./FirstPersonCart";
+import { Shoppers } from "./Shoppers";
 import { Hud } from "./Hud";
 import { buildStoreLayout } from "./layout";
 import { PickupEffects, Player } from "./Player";
-import { FocusHighlight, PriceTags, ProductInstances } from "./Products";
+import { buildProductAtlas } from "./photoAtlas";
+import { FocusHighlight, PhotoBoxInstances, PriceTags, ProduceInstances, ProductInstances, RoundPhotoInstances } from "./Products";
 import { useStore3d } from "./state";
-import { buildProductAtlas, buildTagAtlas } from "./textures";
+import { buildTagAtlas, type Atlas } from "./textures";
 
 function detectTouch() {
   return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
@@ -71,11 +74,23 @@ export default function Store3D() {
     [placedIds, offers, preferred],
   );
 
-  const atlas = useMemo(() => {
-    if (!products || !layout || typeof document === "undefined") return null;
+  const [atlas, setAtlas] = useState<Atlas | null>(null);
+  useEffect(() => {
+    if (!products || !layout) return;
+    let cancelled = false;
+    let built: Atlas | null = null;
     const placed = products.filter((p) => placedIds.includes(p.id));
-    return buildProductAtlas(placed, quality === "high" ? 256 : 128);
+    buildProductAtlas(placed, quality === "high" ? 256 : 128).then((a) => {
+      built = a;
+      if (cancelled) a.texture.dispose();
+      else setAtlas(a);
+    });
+    return () => {
+      cancelled = true;
+      built?.texture.dispose();
+    };
   }, [products, layout, placedIds, quality]);
+  const maxRows = quality === "high" ? 3 : 1;
   const tagAtlas = useMemo(() => {
     if (!productsById || typeof document === "undefined") return null;
     return buildTagAtlas(
@@ -87,7 +102,6 @@ export default function Store3D() {
       })),
     );
   }, [placedIds, productsById, displayOffer, offersQ.data]);
-  useEffect(() => () => atlas?.texture.dispose(), [atlas]);
   useEffect(() => () => tagAtlas?.texture.dispose(), [tagAtlas]);
 
   if (catalog.isError) return <Fallback message="לא הצלחנו לטעון את קטלוג המוצרים." />;
@@ -109,26 +123,27 @@ export default function Store3D() {
         <Canvas
           dpr={quality === "high" ? [1, 2] : 1}
           gl={{ antialias: quality === "high", powerPreference: "high-performance", preserveDrawingBuffer: false }}
-          camera={{ fov: 70, near: 0.05, far: 120, position: [layout.spawn.x, 1.62, layout.spawn.z] }}
+          camera={{ fov: 70, near: 0.05, far: 400, position: [layout.spawn.x, 1.62, layout.spawn.z] }}
           onCreated={({ gl }) => {
             gl.toneMapping = THREE.ACESFilmicToneMapping;
-            gl.toneMappingExposure = 1.05;
+            gl.toneMappingExposure = 1.0;
           }}
           aria-label="סופרמרקט תלת־ממדי"
         >
-          <color attach="background" args={["#e8ece7"]} />
-          <fog attach="fog" args={["#e8ece7", 22, 75]} />
-          <hemisphereLight args={["#ffffff", "#d6d0c4", 1.15]} />
-          <ambientLight intensity={0.35} />
-          <directionalLight position={[8, 20, 12]} intensity={1.0} />
-          <directionalLight position={[-10, 15, -8]} intensity={0.35} color="#e0f2fe" />
+          <color attach="background" args={["#dbe8f2"]} />
+          <fog attach="fog" args={["#e9eef2", 40, 170]} />
+          <StoreLighting quality={quality} />
           <StoreShell layout={layout} quality={quality} />
-          <ProductInstances blocks={layout.blocks} group="box" atlas={atlas} />
-          <ProductInstances blocks={layout.blocks} group="cyl" atlas={atlas} />
-          <ProductInstances blocks={layout.blocks} group="sphere" atlas={atlas} />
+          <ProductInstances blocks={layout.blocks} group="box" atlas={atlas} maxRows={maxRows} />
+          <ProductInstances blocks={layout.blocks} group="cyl" atlas={atlas} maxRows={maxRows} />
+          <PhotoBoxInstances blocks={layout.blocks} atlas={atlas} maxRows={maxRows} />
+          <RoundPhotoInstances blocks={layout.blocks} atlas={atlas} maxRows={maxRows} quality={quality} />
+          <ProduceInstances blocks={layout.blocks} productsById={productsById} quality={quality} />
           <PriceTags blocks={layout.blocks} atlas={tagAtlas} />
           <FocusHighlight blocks={layout.blocks} />
-          <PickupEffects productsById={productsById} />
+          <PickupEffects productsById={productsById} atlas={atlas} />
+          <FirstPersonCart productsById={productsById} atlas={atlas} layout={layout} />
+          <Shoppers count={quality === "high" ? 6 : 3} />
           <Player layout={layout} productsById={productsById} />
         </Canvas>
       </SceneErrorBoundary>

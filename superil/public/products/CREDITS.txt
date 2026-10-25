@@ -1,0 +1,113 @@
+Product photos in this folder come from Open Food Facts (https://world.openfoodfacts.org),
+photographed and uploaded by its contributors, and are licensed under
+Creative Commons Attribution-ShareAlike 3.0 (https://creativecommons.org/licenses/by-sa/3.0/).
+They were cropped, resized and, for round packs, had their background removed by SUPERIL;
+these adapted files are shared under the same licence.
+
+file | product | Open Food Facts product page | image id | uploaded by
+
+almond-drink.webp | משקה שקדים בריסטה (EVAN) | https://world.openfoodfacts.org/product/7296073675174 | 1 | macrofactor
+alpro-soy.webp | אלפרו בריסטה סויה (אלפרו) | https://world.openfoodfacts.org/product/7290119385607 | 1 | etai
+apropo.webp | אפרופו קלאסי (אסם) | https://world.openfoodfacts.org/product/7290000066349 | 1 | kiliweb
+baking-powder.webp | אבקת אפייה (מיה) | https://world.openfoodfacts.org/product/7290002319016 | 1 | org-app-foodbowel
+bamba-200.webp | במבה משפחתית (אסם) | https://world.openfoodfacts.org/product/7290104508943 | 2 | kiliweb
+bamba-80.webp | במבה (אסם) | https://world.openfoodfacts.org/product/7290000066318 | 9 | qalzy
+bamba-nougat.webp | במבה נוגט (אסם) | https://world.openfoodfacts.org/product/7290100687109 | 2 | kiliweb
+bissli-bamba-mix.webp | ביסלי בצל ובמבה מיקס (אסם) | https://world.openfoodfacts.org/product/7290118426226 | 2 | macrofactor
+bissli-bbq.webp | ביסלי ברביקיו (אסם) | https://world.openfoodfacts.org/product/7290115201680 | 2 | qalzy
+bissli-grill.webp | ביסלי גריל (אסם) | https://world.openfoodfacts.org/product/7290000066141 | 1 | yifrah
+bourekas-potato.webp | בורקס במילוי תפוחי אדמה (רמי לוי) | https://world.openfoodfacts.org/product/7290002735830 | 1 | macrofactor
+bread-agami-rye.webp | לחם שיפון 100% (אגמי) | https://world.openfoodfacts.org/product/7290018296066 | 1 | macrofactor
+bread-angel-spelt.webp | לחם כוסמין וחיטה מלאה (אנג'ל) | https://world.openfoodfacts.org/product/7290017947891 | 1 | macrofactor
+bread-white-sliced.webp | לחם אחיד פרוס (שופרסל) | https://world.openfoodfacts.org/product/7296073219347 | 1 | unknown
+bulgarian-24.webp | גבינה בולגרית 24% (פיראוס) | https://world.openfoodfacts.org/product/7290014761438 | 1 | macrofactor
+butter-tnuva.webp | חמאה (תנובה) | https://world.openfoodfacts.org/product/7290014758544 | 1 | foodless
+challah.webp | חלה פרוסה מעודנת (אגמי) | https://world.openfoodfacts.org/product/7290002994350 | 1 | yuvalsadeh4
+chickpeas-can.webp | גרגרי חומוס מבושלים (יכין) | https://world.openfoodfacts.org/product/7290018989289 | 1 | macrofactor
+coke-1.5.webp | קוקה-קולה (קוקה-קולה) | https://world.openfoodfacts.org/product/7290000284316 | 2 | eliya3
+coke-can.webp | קוקה-קולה פחית (קוקה-קולה) | https://world.openfoodfacts.org/product/7290001594056 | 1 | unknown
+coke-zero-1.5.webp | קוקה-קולה זירו (קוקה-קולה) | https://world.openfoodfacts.org/product/7290110115869 | 1 | blagokhar
+corn-can.webp | תירס מתוק (יכין) | https://world.openfoodfacts.org/product/7290000208312 | 1 | osh100
+cornflakes-telma.webp | קורנפלקס של אלופים (תלמה) | https://world.openfoodfacts.org/product/7290112494351 | 3 | macrofactor
+cottage-tnuva-250.webp | קוטג' 5% (תנובה) | https://world.openfoodfacts.org/product/7290004127329 | 9 | qalzy
+cottage-tnuva-3.webp | קוטג' 3% (תנובה) | https://world.openfoodfacts.org/product/7290004127077 | 1 | foodvisor
+couscous-whole.webp | קוסקוס מלא (מזון) | https://world.openfoodfacts.org/product/7290002040088 | 1 | unknown
+cream-crackers.webp | קרם קרקר (אסם) | https://world.openfoodfacts.org/product/7290000074696 | 1 | smoothie-app
+daniela.webp | דניאלה (תנובה) | https://world.openfoodfacts.org/product/7290008693134 | 1 | foodvisor
+danone-greek.webp | יוגורט יווני (דנונה) | https://world.openfoodfacts.org/product/7290107936309 | 2 | macrofactor
+danone-strawberry.webp | דנונה יוגורט עם תות 3% (דנונה) | https://world.openfoodfacts.org/product/7290006664532 | 1 | kiliweb
+doritos-grill.webp | דוריטוס גריל (דוריטוס) | https://world.openfoodfacts.org/product/7290106528567 | 1 | foodless
+eggs-l-12.webp | ביצים L (רמות השבים) | https://world.openfoodfacts.org/product/7296082000134 | 1 | smoothie-app
+eggs-m-12.webp | ביצים M (תנובה) | https://world.openfoodfacts.org/product/7290000604022 | 1 | smoothie-app
+elite-instant-coffee.webp | קפה נמס (עלית) | https://world.openfoodfacts.org/product/7290000176420 | 7 | foodless
+eshel.webp | אשל לבן (תנובה) | https://world.openfoodfacts.org/product/7290004125400 | 2 | foodless
+fanta-0.5.webp | פאנטה תפוזים (קוקה-קולה) | https://world.openfoodfacts.org/product/7290001594179 | 1 | foodless
+flour-sugat.webp | קמח חיטה לבן (סוגת) | https://world.openfoodfacts.org/product/7290100703625 | 1 | macrofactor
+fuze-tea-green.webp | פיוז טי תה ירוק (פיוז טי) | https://world.openfoodfacts.org/product/7290110110758 | 2 | unknown
+goldstar-dark.webp | גולדסטאר דארק לאגר (טמפו) | https://world.openfoodfacts.org/product/7290008464345 | 1 | unknown
+granola.webp | גרנולה בתוספת חלבון (תלמה) | https://world.openfoodfacts.org/product/7290116532769 | 1 | kiliweb
+heinz-ketchup.webp | קטשופ היינץ (היינץ) | https://world.openfoodfacts.org/product/8715700419732 | 1 | stamchik
+honey.webp | דבש טהור (יד מרדכי) | https://world.openfoodfacts.org/product/7290110554095 | 1 | shmuelzon
+hummus-masada.webp | חומוס מסעדה (צבר) | https://world.openfoodfacts.org/product/7290106576537 | 1 | macrofactor
+kariot-telma.webp | כריות נוגט (תלמה) | https://world.openfoodfacts.org/product/7290116537368 | 1 | macrofactor
+kif-kef-bites.webp | כיף כף נשנושים (עלית) | https://world.openfoodfacts.org/product/7290112347626 | 5 | kiliweb
+klik-kariot.webp | קליק כריות (קליק) | https://world.openfoodfacts.org/product/7290116537375 | 1 | overubderupperwest
+krembo.webp | קרמבו וניל (שטראוס) | https://world.openfoodfacts.org/product/7290006681553 | 1 | org-app-foodbowel
+lentils-green.webp | עדשים ירוקות (סוגת) | https://world.openfoodfacts.org/product/7290003643752 | 2 | inf
+mayo-telma.webp | מיונז אמיתי (תלמה) | https://world.openfoodfacts.org/product/7290000111186 | 1 | kiliweb
+mei-eden-0.5.webp | מי עדן מים מינרליים (מי עדן) | https://world.openfoodfacts.org/product/7290000688077 | 7 | lanskaya
+mei-eden-1.5x6.webp | מי עדן מים מינרליים (מי עדן) | https://world.openfoodfacts.org/product/7290019056973 | 1 | smoothie-app
+milk-golan-1-1l.webp | חלב טרי 1% רמת הגולן (רמת הגולן) | https://world.openfoodfacts.org/product/7290000522326 | 4 | macrofactor
+milk-tara-3-1l.webp | חלב טרי 3% (טרה) | https://world.openfoodfacts.org/product/7290102398065 | 6 | libra
+milk-tnuva-3-1l.webp | חלב טרי 3% בקרטון (תנובה) | https://world.openfoodfacts.org/product/7290004131074 | 19 | macrofactor
+milky-8.webp | מילקי מארז (שטראוס) | https://world.openfoodfacts.org/product/7290104726712 | 1 | shmuelzon
+nescafe-taster.webp | קפה נמס טייסטרס צ'ויס (נסקפה) | https://world.openfoodfacts.org/product/7290000072753 | 1 | openfoodfacts-contributors
+neviot-0.5.webp | נביעות מים מינרליים (נביעות) | https://world.openfoodfacts.org/product/7290002331018 | 1 | openfoodfacts-contributors
+noodles-thin.webp | אטריות דקיקות (אסם) | https://world.openfoodfacts.org/product/7290000060972 | 2 | macrofactor
+oat-drink.webp | משקה שיבולת שועל אורגני (הרדוף) | https://world.openfoodfacts.org/product/7290017325972 | 1 | waistline-app
+oats-quaker.webp | קוואקר אורגני (הרדוף) | https://world.openfoodfacts.org/product/7290008263597 | 1 | waistline-app
+olive-oil-taaman.webp | שמן זית כתית מעולה (טעמן) | https://world.openfoodfacts.org/product/7290005437212 | 2 | yuvalsadeh4
+olives-green.webp | זיתים ירוקים (רמי לוי) | https://world.openfoodfacts.org/product/7290016272031 | 1 | macrofactor
+onion-soup-powder.webp | אבקת מרק בצל (אסם) | https://world.openfoodfacts.org/product/7290000070353 | 1 | foodless
+osem-ketchup.webp | קטשופ מופחת סוכר (אסם) | https://world.openfoodfacts.org/product/7290115204056 | 1 | kiliweb
+osem-ptitim.webp | פתיתים אפויים אורז (אסם) | https://world.openfoodfacts.org/product/7290000060903 | 1 | foodless
+osem-ptitim-whole.webp | פתיתים מקמח חיטה מלאה (אסם) | https://world.openfoodfacts.org/product/7290106575011 | 1 | unknown
+osem-spaghetti.webp | ספגטי (אסם) | https://world.openfoodfacts.org/product/7290000060880 | 1 | moshiko2312
+paprika.webp | פפריקה מתוקה (פרג) | https://world.openfoodfacts.org/product/7290011091606 | 1 | kiliweb
+parah-dark-100.webp | שוקולד מריר מעולה (עלית) | https://world.openfoodfacts.org/product/7290000170077 | 4 | macrofactor
+parah-milk-100.webp | שוקולד חלב מעולה (עלית) | https://world.openfoodfacts.org/product/7290107955768 | 1 | qalzy
+petit-beurre.webp | פתי בר קלאסי (אסם) | https://world.openfoodfacts.org/product/7290000074184 | 1 | foodvisor
+pickles.webp | מלפפונים חמוצים במלח (מעיין) | https://world.openfoodfacts.org/product/7290002317265 | 1 | kiliweb
+pinukiot-pesek-zman.webp | פינוקיות פסק זמן (עלית) | https://world.openfoodfacts.org/product/7290112332691 | 1 | kiliweb
+pita-bis-10.webp | פיתות ביס כוסמין מלא (דוידוביץ') | https://world.openfoodfacts.org/product/7290017746135 | 1 | unknown
+popcorn-micro.webp | פופקורן טבעי למיקרוגל (פופ סטאר) | https://world.openfoodfacts.org/product/7290000420325 | 1 | macrofactor
+poplino-spaghetti.webp | ספגטי (פופלינו) | https://world.openfoodfacts.org/product/7296073720713 | 1 | macrofactor
+pretzels-beigale.webp | בייגלה דקים עם מלח ים (בייגל בייגל) | https://world.openfoodfacts.org/product/7290112491770 | 1 | unknown
+prigat-lemonana.webp | פריגת לימונענע (פריגת) | https://world.openfoodfacts.org/product/7290013584816 | 1 | unknown
+prigat-orange.webp | פריגת מיץ תפוזים (פריגת) | https://world.openfoodfacts.org/product/7290110114961 | 4 | foodless
+quinoa.webp | קינואה (סוגת) | https://world.openfoodfacts.org/product/7290100700273 | 1 | kiliweb
+rice-sugat-basmati.webp | אורז בסמטי קלאסי (סוגת) | https://world.openfoodfacts.org/product/7290003643004 | 1 | foodless
+rice-sugat-jasmine.webp | אורז יסמין קלאסי (סוגת) | https://world.openfoodfacts.org/product/7290100700396 | 4 | municorn-calorie-counter-app
+rice-sugat-persian.webp | אורז פרסי קלאסי (סוגת) | https://world.openfoodfacts.org/product/7290000211442 | 1 | yifrah
+rugelach-vanilla.webp | רוגלך מיני בטעם וניל (אדליס) | https://world.openfoodfacts.org/product/7290010473120 | 1 | unknown
+salt-atlit.webp | מלח עדין (מלח הארץ) | https://world.openfoodfacts.org/product/7290000523804 | 1 | smoothie-app
+schug-yemeni.webp | סחוג תימני (ביטון יוחאי) | https://world.openfoodfacts.org/product/7290010154005 | 2 | macrofactor
+schweppes-soda.webp | סודה (שוופס) | https://world.openfoodfacts.org/product/7290019056119 | 1 | foodless
+shoko-tnuva.webp | שוקו בשקית (תנובה) | https://world.openfoodfacts.org/product/7290004120283 | 1 | macrofactor
+silan.webp | סילאן טבעי (מיה) | https://world.openfoodfacts.org/product/7290018571576 | 1 | waistline-app
+sour-cream-9.webp | שמנת חמוצה 9% (תנובה) | https://world.openfoodfacts.org/product/7290004125370 | 1 | foodless
+spelt-flour.webp | קמח כוסמין לבן תופח (סוגת) | https://world.openfoodfacts.org/product/7290100704653 | 1 | icemachine
+sprite-1l.webp | ספרייט (קוקה-קולה) | https://world.openfoodfacts.org/product/7290110117153 | 1 | foodless
+sugar-sugat.webp | סוכר לבן (סוגת) | https://world.openfoodfacts.org/product/7290000211503 | 1 | openfoodfacts-contributors
+sweet-cream-38.webp | שמנת להקצפה 38% (תנובה) | https://world.openfoodfacts.org/product/7290000043814 | 3 | foodless
+tahini-har-bracha.webp | טחינה גולמית (הר ברכה) | https://world.openfoodfacts.org/product/7290011723200 | 2 | kiliweb
+tapuchips-classic.webp | תפוצ'יפס טבעי (עלית) | https://world.openfoodfacts.org/product/7290000178721 | 1 | kiliweb
+tapuzina-can.webp | תפוזינה פחית (תפוזינה) | https://world.openfoodfacts.org/product/7290119779741 | 1 | libra
+tea-wissotzky.webp | תה ירוק סיני קלאסי (ויסוצקי) | https://world.openfoodfacts.org/product/7290006251275 | 1 | unknown
+tofu.webp | טופו רך (משק ויילר) | https://world.openfoodfacts.org/product/7290003726011 | 1 | waistline-app
+tuna-starkist.webp | טונה במים (סטארקיסט) | https://world.openfoodfacts.org/product/7290017617466 | 3 | qalzy
+wafers-4u.webp | ופלים בטעם שוקולד (4U) | https://world.openfoodfacts.org/product/7290015910545 | 1 | unknown
+white-cheese-3.webp | גבינה לבנה 3% (תנובה) | https://world.openfoodfacts.org/product/7290004131227 | 2 | unknown
+xl-energy.webp | XL משקה אנרגיה (XL) | https://world.openfoodfacts.org/product/5906485301012 | 10 | macrofactor
+yellow-emek-200.webp | גבינה צהובה עמק 9% פרוסות (תנובה) | https://world.openfoodfacts.org/product/7290004122348 | 1 | foodless
+yolo-choco.webp | יולו (יולו) | https://world.openfoodfacts.org/product/7290014761070 | 1 | kiliweb

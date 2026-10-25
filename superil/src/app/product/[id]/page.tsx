@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Packshot } from "@/components/Packshot";
+import { PHOTO_LICENSE, PRODUCT_PHOTOS } from "@/data/product-photos";
 import { categoryName } from "@/lib/categories";
 import { formatDateTimeHe } from "@/lib/format";
 import { formatPackage } from "@/lib/units";
@@ -23,6 +24,7 @@ export default async function ProductPage({ params }: Props) {
   if (!product) notFound();
   const offers = await provider.getProductOffers(id);
 
+  const photo = PRODUCT_PHOTOS[product.id];
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <nav className="text-sm text-slate-500" aria-label="פירורי לחם">
@@ -35,7 +37,23 @@ export default async function ProductPage({ params }: Props) {
             <Packshot product={product} size={260} />
           </div>
           <p className="mt-3 text-xs text-slate-500">
-            {product.imageUrl ? `מקור התמונה: ${product.imageSource ?? "לא צוין"}${product.imageLicense ? ` · רישיון: ${product.imageLicense}` : ""}` : "איור אריזה להמחשה – אינו תמונת המוצר הרשמית."}
+            {photo ? (
+              <>
+                תמונה:{" "}
+                <a href={`https://world.openfoodfacts.org/product/${photo.offCode}`} target="_blank" rel="noopener noreferrer" className="underline">
+                  Open Food Facts
+                </a>
+                {photo.by ? ` · צילום: ${photo.by}` : ""} ·{" "}
+                <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.he" target="_blank" rel="noopener noreferrer" className="underline">
+                  {PHOTO_LICENSE}
+                </a>
+                {" "}· התמונה עובדה (חיתוך והסרת רקע). ייתכנו הבדלים בין האריזה בתמונה לאריזה הנמכרת כיום.
+              </>
+            ) : product.imageUrl ? (
+              `מקור התמונה: ${product.imageSource ?? "לא צוין"}${product.imageLicense ? ` · רישיון: ${product.imageLicense}` : ""}`
+            ) : (
+              "איור אריזה להמחשה – אין לנו עדיין תמונה מורשית של המוצר."
+            )}
           </p>
         </div>
         <div>

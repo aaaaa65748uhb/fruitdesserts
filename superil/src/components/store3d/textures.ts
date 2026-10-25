@@ -5,8 +5,8 @@ import { formatPackage } from "@/lib/units";
 import type { FreshnessStatus, Product } from "@/lib/types";
 
 /**
- * All product artwork in the 3D store is generated here. It is placeholder packaging — never presented
- * as official product images — and every label carries a small "איור" (illustration) mark.
+ * Generated artwork for the 3D store: placeholder packaging for products without a real photo (every such label
+ * carries a small "איור" – illustration – mark), shelf price tags and hanging signs.
  */
 
 const FONT = `"Rubik", "Assistant", "Segoe UI", "Arial Hebrew", Arial, sans-serif`;
@@ -15,6 +15,10 @@ export interface Atlas {
   texture: THREE.CanvasTexture;
   /** productId -> [u0, v0, du, dv] */
   rects: Map<string, [number, number, number, number]>;
+  /** productId -> linear RGB colour for the sides of photo boxes (product atlases only). */
+  sides?: Map<string, [number, number, number]>;
+  /** Product ids whose cell holds a real photo (product atlases only). */
+  photos?: Set<string>;
 }
 
 function luminance(hex: string) {
@@ -32,7 +36,7 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, 
   return px;
 }
 
-function drawLabel(ctx: CanvasRenderingContext2D, p: Product, x: number, y: number, s: number) {
+export function drawLabel(ctx: CanvasRenderingContext2D, p: Product, x: number, y: number, s: number) {
   const { color, accent, shape } = p.packaging;
   ctx.save();
   ctx.translate(x, y);
@@ -130,29 +134,6 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-export function buildProductAtlas(products: Product[], cell: number, maxAnisotropy = 4): Atlas {
-  const cols = 16;
-  const rows = Math.max(1, Math.ceil(products.length / cols));
-  const canvas = document.createElement("canvas");
-  canvas.width = cols * cell;
-  canvas.height = rows * cell;
-  const ctx = canvas.getContext("2d")!;
-  const rects = new Map<string, [number, number, number, number]>();
-  products.forEach((p, i) => {
-    const c = i % cols;
-    const r = Math.floor(i / cols);
-    drawLabel(ctx, p, c * cell, r * cell, cell);
-    // CanvasTexture uses flipY, so v=1 is the top row.
-    rects.set(p.id, [c / cols, 1 - (r + 1) / rows, 1 / cols, 1 / rows]);
-  });
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = maxAnisotropy;
-  texture.generateMipmaps = true;
-  texture.minFilter = THREE.LinearMipmapLinearFilter;
-  return { texture, rects };
-}
-
 export interface TagInfo {
   productId: string;
   name: string;
@@ -242,34 +223,5 @@ export function buildSignTexture(text: string, sub: string | undefined, color: s
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
-  return tex;
-}
-
-/** Light terrazzo floor tiles with grout lines. */
-export function buildFloorTexture(): THREE.CanvasTexture {
-  const s = 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = s;
-  canvas.height = s;
-  const ctx = canvas.getContext("2d")!;
-  ctx.fillStyle = "#ece9e2";
-  ctx.fillRect(0, 0, s, s);
-  let seed = 7;
-  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  for (let i = 0; i < 1400; i++) {
-    ctx.fillStyle = ["#d6d3cb", "#c9c4b8", "#f7f5ef", "#bdb6a7"][Math.floor(rnd() * 4)];
-    ctx.globalAlpha = 0.5;
-    ctx.beginPath();
-    ctx.arc(rnd() * s, rnd() * s, 1 + rnd() * 2.2, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = "#b8b2a6";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(0, 0, s, s);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
   return tex;
 }

@@ -20,10 +20,17 @@ Open http://localhost:3000. For development with live reload, use `npm run dev`.
 
 ## What works today
 
-- **3D supermarket**: 8 aisles, end caps, dairy and cold-drink fridges, bakery, produce, checkouts, and a cart corral.
+- **3D supermarket** in a "supermarket simulator" style: 8 aisles of metal shelving, with products stocked several
+  rows deep and stock boxes on top.
+  - End caps, glass-door dairy and drink fridges, bakery and produce crates.
+  - Checkouts with conveyor belts and registers, and shop windows looking out on the street.
+  - A cart you push that shows what you've picked, and other shoppers walking around.
+  - Bottles and jars are 3D models shaped from their real photo's silhouette.
 - **Controls**: WASD, mouse look and collision on desktop; joystick and drag-to-look on phones.
 - **Picking products**: **E** or a click adds an item to the cart; **Q** opens price details; **F** opens search.
-- **Product catalog**: 156 well-known Israeli products. They are marked as a demo catalog, have no invented barcodes, and use illustrated packaging.
+- **Product catalog**: 156 well-known Israeli products. They are marked as a demo catalog and have no invented barcodes.
+  - 105 products show their real front-of-pack photo from Open Food Facts (CC BY-SA, credited).
+  - The rest use 3D produce models or a generated illustration marked "איור".
 - **Shared cart**: the same cart in 3D and in the regular pages. It is saved in the browser and kept in sync across tabs.
 - **Search**: handles Hebrew spelling variations, brands, categories and barcodes.
 - **Price comparison**: compare one product or the whole basket, including a split basket across chains. Every price shows its data status.
