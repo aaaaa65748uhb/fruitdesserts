@@ -8,8 +8,17 @@ export interface CurrencyConfig {
   locale: string // used for number formatting
 }
 
+/** Hebrew (or other second-language) texts for a catalog item. */
+export interface LocalizedText {
+  name: string
+  description?: string
+  /** Shorter name for the small printed cards on the counter. */
+  short?: string
+}
+
 export interface BaseOption {
   id: string
+  he?: LocalizedText
   name: string
   description: string
   price: number
@@ -24,6 +33,8 @@ export interface BaseOption {
 
 export interface SauceOption {
   id: string
+  he?: LocalizedText
+  short?: string
   name: string
   shortName: string
   description: string
@@ -49,6 +60,8 @@ export type ToppingShape =
 
 export interface ToppingOption {
   id: string
+  he?: LocalizedText
+  short?: string
   name: string
   description: string
   price: number
@@ -72,6 +85,8 @@ export interface ToppingOption {
 
 export interface FillingOption {
   id: string
+  he?: LocalizedText
+  short?: string
   name: string
   description: string
   price: number
@@ -80,6 +95,8 @@ export interface FillingOption {
 
 export interface ExtraOption {
   id: string
+  he?: LocalizedText
+  short?: string
   name: string
   description: string
   price: number
@@ -105,8 +122,30 @@ export interface FulfillmentConfig {
   deliveryFee: number
   freeDeliveryOver: number
   pickupAddress: string
+  pickupAddressHe?: string
   pickupSlots: string[]
   deliveryCities: string[]
+}
+
+/** A ready-made "chef's pick" roll. Sauces are poured with the same patterns customers use. */
+export interface PresetSauce {
+  sauceId: string
+  pattern: 'zigzag' | 'spiral' | 'glaze'
+  flow: 'thin' | 'medium' | 'thick'
+  /** Rotation of the zigzag on the roll, in degrees. */
+  angle?: number
+}
+
+export interface Preset {
+  id: string
+  name: string
+  description: string
+  he?: LocalizedText
+  baseId: string
+  fillingId: string | null
+  sauces: PresetSauce[]
+  toppings: { toppingId: string; portions: number }[]
+  extras: string[]
 }
 
 export interface Catalog {
@@ -119,6 +158,7 @@ export interface Catalog {
   limits: CatalogLimits
   pricing: PricingRules
   fulfillment: FulfillmentConfig
+  presets: Preset[]
 }
 
 /* ------------------------------------------------------------------ */
@@ -145,6 +185,8 @@ export interface SauceStroke {
   drips: SauceDrip[]
   /** Scene-volume of sauce — drives amount display and pricing. */
   volume: number
+  /** Date.now() when poured in one go (chef's picks) — used for a pour-in reveal. */
+  bornAt?: number
 }
 
 export interface ToppingPiece {

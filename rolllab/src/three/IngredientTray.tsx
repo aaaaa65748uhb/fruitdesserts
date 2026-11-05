@@ -13,6 +13,8 @@ import { interaction } from './interaction'
 import { runtime } from './runtime'
 import { hitMaterial } from './SauceBottle3D'
 import { createNoise3D, damp } from '../lib/noise'
+import { dictionaries } from '../i18n/strings'
+import { nameOf, useLang } from '../i18n'
 
 export const TRAY = { w: 1.18, d: 0.9, h: 0.2, r: 0.12 }
 
@@ -107,13 +109,20 @@ export function IngredientTray({ topping, x, z, scale }: { topping: ToppingOptio
   const heap = useMemo(() => makeHeap(topping.id.length * 3.1), [topping.id])
   const bed = useMemo(() => bedGeometry(heap), [heap])
   const bedMat = useMemo(() => new THREE.MeshStandardMaterial({ color: topping.bedColor, roughness: 0.9 }), [topping.bedColor])
+  const lang = useLang((s) => s.lang)
   const labelMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        map: cardLabelTexture({ title: topping.name, price: money(topping.price), accent: topping.bedColor, kicker: 'Topping' }),
+        map: cardLabelTexture({
+          title: nameOf(topping, lang),
+          price: money(topping.price),
+          accent: topping.bedColor,
+          kicker: dictionaries[lang].kTopping,
+          rtl: lang === 'he',
+        }),
         roughness: 0.7,
       }),
-    [topping],
+    [topping, lang],
   )
   const hovered = useTool((s) => s.hovered)
   const held = useTool((s) => s.held)
@@ -161,12 +170,12 @@ export function IngredientTray({ topping, x, z, scale }: { topping: ToppingOptio
         </mesh>
       </group>
       {/* printed label card */}
-      <group position={[0, 0.03, TRAY.d / 2 + 0.185]} rotation-x={-Math.PI / 2 + 0.12}>
-        <mesh material={labelMat} receiveShadow>
-          <planeGeometry args={[0.9, 0.366]} />
+      <group position={[0, 0.06, TRAY.d / 2 + 0.185]} rotation-x={-Math.PI / 2 + 0.3}>
+        <mesh material={labelMat} castShadow receiveShadow>
+          <boxGeometry args={[0.96, 0.39, 0.006]} />
         </mesh>
         {used && (
-          <mesh position={[0.41, 0.14, 0.002]}>
+          <mesh position={[0.44, 0.155, 0.004]}>
             <circleGeometry args={[0.035, 20]} />
             <meshBasicMaterial color="#93AE57" />
           </mesh>

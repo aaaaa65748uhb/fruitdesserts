@@ -1,6 +1,7 @@
 import { catalog, findBase, findExtra, findFilling, findSauce, findTopping } from '../config/catalog'
 import type { Catalog, RollDesign } from '../types'
 import { uid } from '../lib/id'
+import { nameOf, tr, type Lang, currentLang } from '../i18n'
 
 /**
  * CustomizationEngine — pure helpers that read or validate a RollDesign.
@@ -60,8 +61,7 @@ export type LimitCheck = { ok: true } | { ok: false; reason: string }
 export function canUseSauce(design: RollDesign, sauceId: string, cat: Catalog = catalog): LimitCheck {
   const used = usedSauceIds(design)
   if (used.includes(sauceId)) return { ok: true }
-  if (used.length >= cat.limits.maxSauces)
-    return { ok: false, reason: `Up to ${cat.limits.maxSauces} sauces per roll — remove one to add another.` }
+  if (used.length >= cat.limits.maxSauces) return { ok: false, reason: tr().limitSauces(cat.limits.maxSauces) }
   return { ok: true }
 }
 
@@ -70,12 +70,10 @@ export function canUseTopping(design: RollDesign, toppingId: string, cat: Catalo
   const t = cat.toppings.find((x) => x.id === toppingId)
   if (!t) return { ok: false, reason: 'Unknown topping.' }
   if (used.includes(toppingId)) {
-    if (toppingCount(design, toppingId) >= t.maxPieces)
-      return { ok: false, reason: `That's the maximum amount of ${t.name.toLowerCase()}.` }
+    if (toppingCount(design, toppingId) >= t.maxPieces) return { ok: false, reason: tr().maxOf(nameOf(t)) }
     return { ok: true }
   }
-  if (used.length >= cat.limits.maxToppings)
-    return { ok: false, reason: `Up to ${cat.limits.maxToppings} toppings per roll — remove one to add another.` }
+  if (used.length >= cat.limits.maxToppings) return { ok: false, reason: tr().limitToppings(cat.limits.maxToppings) }
   return { ok: true }
 }
 
@@ -84,29 +82,31 @@ export function isDesignEmpty(design: RollDesign) {
 }
 
 /** Human readable one-liner, used in the cart and the order message. */
-export function summarizeDesign(design: RollDesign, cat: Catalog = catalog): string {
-  const parts: string[] = [findBase(design.baseId).name]
+export function summarizeDesign(design: RollDesign, cat: Catalog = catalog, lang: Lang = currentLang()): string {
+  const t = tr()
+  const extraWord = t.levels.extra.toLowerCase()
+  const parts: string[] = [nameOf(findBase(design.baseId), lang)]
   const filling = findFilling(design.fillingId)
-  if (filling) parts.push(filling.name)
+  if (filling) parts.push(nameOf(filling, lang))
   const sauces = usedSauceIds(design)
     .map((id) => {
       const s = findSauce(id)
       if (!s) return null
       const lvl = amountLevel(saucePortions(design, id, cat), cat.pricing.sauceExtraThreshold)
-      return lvl === 'extra' ? `extra ${s.name}` : s.name
+      return lvl === 'extra' ? `${nameOf(s, lang)} (${extraWord})` : nameOf(s, lang)
     })
     .filter(Boolean)
   if (sauces.length) parts.push(sauces.join(', '))
   const tops = usedToppingIds(design)
     .map((id) => {
-      const t = findTopping(id)
-      if (!t) return null
+      const tp = findTopping(id)
+      if (!tp) return null
       const lvl = amountLevel(toppingPortions(design, id, cat), cat.pricing.toppingExtraThreshold)
-      return lvl === 'extra' ? `extra ${t.name}` : t.name
+      return lvl === 'extra' ? `${nameOf(tp, lang)} (${extraWord})` : nameOf(tp, lang)
     })
     .filter(Boolean)
   if (tops.length) parts.push(tops.join(', '))
-  const extras = design.extras.map((e) => findExtra(e)?.name).filter(Boolean)
+  const extras = design.extras.map((e) => nameOf(findExtra(e), lang)).filter(Boolean)
   if (extras.length) parts.push(extras.join(', '))
   return parts.join(' · ')
 }

@@ -5,6 +5,7 @@ import { useCart } from '../store/cartStore'
 import { useUI } from '../store/uiStore'
 import { sfx } from '../lib/audio'
 import { runtime } from '../three/runtime'
+import { tr } from '../i18n'
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -46,7 +47,7 @@ export async function packAndAddToCart() {
     await wait(250)
     useUI.getState().setLidOpen(true)
     sfx.box(true)
-    useUI.getState().showToast(editingId ? 'Cart updated' : 'Boxed and added to your cart', 'success')
+    useUI.getState().showToast(editingId ? tr().cartUpdated : tr().boxed, 'success')
     await wait(500)
     useUI.getState().setCartOpen(true)
   } finally {

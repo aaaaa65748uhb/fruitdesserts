@@ -4,14 +4,19 @@ import { useBuilder } from '../store/builderStore'
 import { catalog } from '../config/catalog'
 import { money } from '../lib/format'
 import { sfx, unlockAudio } from '../lib/audio'
+import { nameOf, useT } from '../i18n'
+import type { Preset } from '../types'
 import { Icon, Swirl } from './icons'
+import { applyPreset } from './ChefPicks'
+import { LangToggle } from './UIControls'
 
 export function IntroScreen() {
   const ready = useUI((s) => s.sceneReady)
+  const t = useT()
   const [leaving, setLeaving] = useState(false)
   const from = Math.min(...catalog.bases.map((b) => b.price))
 
-  const start = () => {
+  const start = (preset?: Preset) => {
     unlockAudio()
     sfx.tap()
     setLeaving(true)
@@ -24,6 +29,10 @@ export function IntroScreen() {
         useUI.getState().setLidOpen(true)
         sfx.box(true)
       }, 450)
+      if (preset) {
+        setTimeout(() => applyPreset(preset), 2100)
+        return
+      }
       setTimeout(() => {
         let coached = false
         try {
@@ -38,45 +47,51 @@ export function IntroScreen() {
 
   return (
     <div className={`intro${leaving ? ' leaving' : ''}`}>
+      <div className="intro-lang">
+        <LangToggle />
+      </div>
       <div className="intro-copy">
         <div className="logo logo-top">
           <Swirl size={40} />
           ROLL LAB
         </div>
-        <p className="eyebrow">Cinnamon roll atelier</p>
+        <p className="eyebrow">{t.eyebrow}</p>
         <h1>
-          BUILD YOUR <em>DREAM</em> ROLL
+          {t.h1Pre} <em>{t.h1Em}</em> {t.h1Post}
         </h1>
-        <p className="lede">
-          Choose your dough, pour the sauces, sprinkle the crunch. Every roll is built by you on our counter — then baked
-          fresh and boxed for you.
-        </p>
+        <p className="lede">{t.lede}</p>
         <div className="cta-row">
-          <button className="btn primary big" onClick={start} disabled={!ready} autoFocus>
+          <button className="btn primary big" onClick={() => start()} disabled={!ready} autoFocus>
             {ready ? (
               <>
-                START CREATING <Icon.ArrowRight width={20} height={20} />
+                {t.start} <Icon.ArrowRight width={20} height={20} />
               </>
             ) : (
               <>
-                Warming the oven <span className="loading-dot" />
+                {t.warming} <span className="loading-dot" />
               </>
             )}
           </button>
           <span className="from">
-            from <b>{money(from)}</b>
+            {t.from} <b>{money(from)}</b>
           </span>
         </div>
+        <div className="intro-picks" aria-label={t.orPick}>
+          <span className="intro-picks-label">{t.orPick}</span>
+          <div className="intro-picks-row">
+            {catalog.presets.slice(0, 3).map((p) => (
+              <button key={p.id} className="chip" disabled={!ready} onClick={() => start(p)}>
+                <Icon.Sparkle /> {nameOf(p)}
+              </button>
+            ))}
+          </div>
+        </div>
         <ol className="intro-steps">
-          <li>
-            <span className="n">1</span> Pick your dough
-          </li>
-          <li>
-            <span className="n">2</span> Pour &amp; sprinkle
-          </li>
-          <li>
-            <span className="n">3</span> Box it &amp; order
-          </li>
+          {t.steps.map((s, i) => (
+            <li key={s}>
+              <span className="n">{i + 1}</span> {s}
+            </li>
+          ))}
         </ol>
       </div>
     </div>

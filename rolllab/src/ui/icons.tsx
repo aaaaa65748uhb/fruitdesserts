@@ -13,13 +13,13 @@ const base = (p: SVGProps<SVGSVGElement>) => ({
 
 export const Icon = {
   Undo: (p: SVGProps<SVGSVGElement>) => (
-    <svg {...base(p)}>
+    <svg {...base(p)} className="rtl-flip">
       <path d="M9 14 4 9l5-5" />
       <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
     </svg>
   ),
   Reset: (p: SVGProps<SVGSVGElement>) => (
-    <svg {...base(p)}>
+    <svg {...base(p)} className="rtl-flip">
       <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
       <path d="M3 3v5h5" />
     </svg>
@@ -65,12 +65,12 @@ export const Icon = {
     </svg>
   ),
   ArrowRight: (p: SVGProps<SVGSVGElement>) => (
-    <svg {...base(p)}>
+    <svg {...base(p)} className="rtl-flip">
       <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
   ),
   ArrowLeft: (p: SVGProps<SVGSVGElement>) => (
-    <svg {...base(p)}>
+    <svg {...base(p)} className="rtl-flip">
       <path d="M19 12H5M11 6l-6 6 6 6" />
     </svg>
   ),

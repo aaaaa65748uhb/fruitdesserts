@@ -11,6 +11,7 @@ import { bottleLabelTexture } from './textures'
 import { interaction } from './interaction'
 import { runtime } from './runtime'
 import { damp } from '../lib/noise'
+import { nameOf, useLang } from '../i18n'
 
 /** Height of the nozzle tip above the bottle base (model units). */
 export const BOTTLE_TIP = 1.46
@@ -59,13 +60,14 @@ function bottleGeometries() {
 
 export function SauceBottleModel({ sauce, squeeze = 1 }: { sauce: SauceOption; squeeze?: number }) {
   const g = bottleGeometries()
+  const lang = useLang((s) => s.lang)
   const labelMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        map: bottleLabelTexture({ title: sauce.name, price: money(sauce.price), accent: sauce.capColor }),
+        map: bottleLabelTexture({ title: nameOf(sauce, lang), price: money(sauce.price), accent: sauce.capColor, rtl: lang === 'he' }),
         roughness: 0.55,
       }),
-    [sauce],
+    [sauce, lang],
   )
   return (
     <group>

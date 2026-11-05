@@ -33,6 +33,8 @@ interface BuilderState {
   removeToppingPieces: (toppingId: string, count: number) => void
   removeTopping: (toppingId: string) => void
 
+  /** Replace the roll on the counter (e.g. a chef's pick). Undo brings the old one back. */
+  applyDesign: (design: RollDesign) => void
   undo: () => void
   reset: () => void
   loadDesign: (design: RollDesign, cartItemId: string | null) => void
@@ -150,6 +152,10 @@ export const useBuilder = create<BuilderState>()(
           commit({ ...design, toppings: design.toppings.filter((b) => b.toppingId !== toppingId) })
         },
 
+        applyDesign: (next) => {
+          const { design } = get()
+          commit({ ...next, id: design.id })
+        },
         undo: () => {
           const { past } = get()
           if (!past.length) return

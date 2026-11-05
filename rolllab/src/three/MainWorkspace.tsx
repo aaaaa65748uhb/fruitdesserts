@@ -112,6 +112,7 @@ function ReadySignal() {
 export function MainWorkspace() {
   const [quality, setQuality] = useState<'high' | 'low'>(detectQuality)
   const [dpr, setDpr] = useState(quality === 'high' ? 1.75 : 1.5)
+  runtime.quality = quality
 
   return (
     <Canvas

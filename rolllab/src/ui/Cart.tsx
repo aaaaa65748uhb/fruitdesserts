@@ -10,8 +10,10 @@ import { money } from '../lib/format'
 import { sfx } from '../lib/audio'
 import { rollTitle } from '../checkout/order'
 import { Icon, Swirl } from './icons'
+import { useT } from '../i18n'
 
 export function CartDrawer() {
+  const t = useT()
   const open = useUI((s) => s.cartOpen)
   const setOpen = useUI((s) => s.setCartOpen)
   const items = useCart((s) => s.items)
@@ -52,16 +54,16 @@ export function CartDrawer() {
     ui.setScreen('build')
     ui.setLidOpen(true)
     setOpen(false)
-    ui.showToast(`Editing ${rollTitle(item, items.indexOf(item))}`)
+    ui.showToast(t.editing(rollTitle(item, items.indexOf(item))))
   }
 
   return (
     <>
       <div className="backdrop" onClick={() => setOpen(false)} />
-      <aside className="cart" role="dialog" aria-modal="true" aria-label="Your cart">
+      <aside className="cart" role="dialog" aria-modal="true" aria-label={t.yourBox}>
         <div className="head">
-          <h2>Your box</h2>
-          <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close cart">
+          <h2>{t.yourBox}</h2>
+          <button className="icon-btn" onClick={() => setOpen(false)} aria-label={t.closeCart}>
             <Icon.Close />
           </button>
         </div>
@@ -69,12 +71,12 @@ export function CartDrawer() {
           <div className="empty">
             <Swirl size={72} />
             <p>
-              <b>Your cart is empty.</b>
+              <b>{t.cartEmpty}</b>
               <br />
-              Build a roll on the counter and box it.
+              {t.cartEmptySub}
             </p>
             <button className="btn primary" onClick={buildAnother}>
-              Start building
+              {t.startBuilding}
             </button>
           </div>
         ) : (
@@ -90,35 +92,35 @@ export function CartDrawer() {
                     </div>
                     <div className="sum">{summarizeDesign(it.design)}</div>
                     <div className="row">
-                      <div className="qty" role="group" aria-label="Quantity">
-                        <button aria-label="One less" onClick={() => (it.quantity > 1 ? useCart.getState().setQuantity(it.id, it.quantity - 1) : useCart.getState().remove(it.id))}>
+                      <div className="qty" role="group" aria-label={t.quantity}>
+                        <button aria-label={t.oneLess} onClick={() => (it.quantity > 1 ? useCart.getState().setQuantity(it.id, it.quantity - 1) : useCart.getState().remove(it.id))}>
                           <Icon.Minus />
                         </button>
                         <span aria-live="polite">{it.quantity}</span>
-                        <button aria-label="One more" onClick={() => useCart.getState().setQuantity(it.id, it.quantity + 1)}>
+                        <button aria-label={t.oneMore} onClick={() => useCart.getState().setQuantity(it.id, it.quantity + 1)}>
                           <Icon.Plus />
                         </button>
                       </div>
                       <span className="dt" style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-                        {money(it.unitPrice)} each
+                        {t.each(money(it.unitPrice))}
                       </span>
                       <span style={{ flex: 1 }} />
                       <button className="link-btn" onClick={() => edit(it.id)}>
-                        Edit
+                        {t.edit}
                       </button>
                       <button className="link-btn danger" onClick={() => (useCart.getState().remove(it.id), sfx.tap())}>
-                        Remove
+                        {t.removeItem}
                       </button>
                     </div>
                     {confirmEdit === it.id && (
                       <div className="note" role="alert" style={{ marginTop: 10, display: 'grid', gap: 8 }}>
-                        <span>The roll on your counter isn’t boxed yet. Replace it with this one?</span>
+                        <span>{t.replaceQ}</span>
                         <span style={{ display: 'flex', gap: 8 }}>
                           <button className="btn small primary" onClick={() => edit(it.id, true)}>
-                            Replace counter roll
+                            {t.replaceYes}
                           </button>
                           <button className="btn small ghost" onClick={() => setConfirmEdit(null)}>
-                            Keep it
+                            {t.replaceNo}
                           </button>
                         </span>
                       </div>
@@ -129,17 +131,17 @@ export function CartDrawer() {
             </div>
             <div className="foot">
               <div className="kv">
-                <span>Subtotal · {totals.itemCount} {totals.itemCount === 1 ? 'roll' : 'rolls'}</span>
+                <span>{t.subtotalRolls(totals.itemCount)}</span>
                 <b>{money(totals.subtotal)}</b>
               </div>
               <div className="note">
                 {totals.freeDeliveryRemaining > 0
-                  ? `Add ${money(totals.freeDeliveryRemaining)} more for free delivery (delivery ${money(catalog.fulfillment.deliveryFee)}). Pickup is always free.`
-                  : 'You’ve unlocked free delivery.'}
+                  ? t.freeDeliveryIn(money(totals.freeDeliveryRemaining), money(catalog.fulfillment.deliveryFee))
+                  : t.freeDeliveryYes}
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button className="btn ghost" style={{ flex: 1 }} onClick={buildAnother}>
-                  Build another
+                  {t.buildAnother}
                 </button>
                 <button
                   className="btn primary"
@@ -150,7 +152,7 @@ export function CartDrawer() {
                     sfx.tap()
                   }}
                 >
-                  Checkout <Icon.ArrowRight width={18} height={18} />
+                  {t.checkout} <Icon.ArrowRight width={18} height={18} />
                 </button>
               </div>
             </div>

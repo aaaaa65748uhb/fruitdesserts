@@ -12,6 +12,8 @@ import { interaction } from './interaction'
 import { runtime } from './runtime'
 import { hitMaterial } from './SauceBottle3D'
 import { damp } from '../lib/noise'
+import { dictionaries } from '../i18n/strings'
+import { shortOf, useLang } from '../i18n'
 
 const geo: Record<string, THREE.BufferGeometry> = {}
 
@@ -100,19 +102,21 @@ function useLift(active: boolean) {
 }
 
 function Label({ title, price, accent, kicker, z }: { title: string; price: string; accent: string; kicker: string; z: number }) {
+  const rtl = useLang((s) => s.lang) === 'he'
   const mat = useMemo(
-    () => new THREE.MeshStandardMaterial({ map: cardLabelTexture({ title, price, accent, kicker }), roughness: 0.7 }),
-    [title, price, accent, kicker],
+    () => new THREE.MeshStandardMaterial({ map: cardLabelTexture({ title, price, accent, kicker, rtl }), roughness: 0.7 }),
+    [title, price, accent, kicker, rtl],
   )
   return (
-    <mesh position={[0, 0.03, z]} rotation-x={-Math.PI / 2 + 0.12} material={mat} receiveShadow>
-      <planeGeometry args={[0.78, 0.317]} />
+    <mesh position={[0, 0.055, z]} rotation-x={-Math.PI / 2 + 0.3} material={mat} castShadow receiveShadow>
+      <boxGeometry args={[0.84, 0.342, 0.006]} />
     </mesh>
   )
 }
 
 export function FillingRamekin({ filling, x, z, scale }: { filling: FillingOption; x: number; z: number; scale: number }) {
   const applied = useBuilder((s) => s.design.fillingId === filling.id)
+  const lang = useLang((s) => s.lang)
   const hovered = useTool((s) => s.hovered)
   const held = useTool((s) => s.held)
   const isHover = hovered?.kind === 'filling' && hovered.id === filling.id
@@ -137,7 +141,7 @@ export function FillingRamekin({ filling, x, z, scale }: { filling: FillingOptio
           <cylinderGeometry args={[0.36, 0.36, 0.32, 16]} />
         </mesh>
       </group>
-      <Label title={filling.name.replace(' Filling', '')} price={money(filling.price)} accent={filling.color} kicker="Filling" z={0.5} />
+      <Label title={shortOf(filling, lang)} price={money(filling.price)} accent={filling.color} kicker={dictionaries[lang].kFilling} z={0.5} />
     </group>
   )
 }
@@ -238,6 +242,7 @@ function ExtraModel({ id }: { id: string }) {
 
 export function ExtraItem({ extra, x, z, scale }: { extra: ExtraOption; x: number; z: number; scale: number }) {
   const on = useBuilder((s) => s.design.extras.includes(extra.id))
+  const lang = useLang((s) => s.lang)
   const hovered = useTool((s) => s.hovered)
   const held = useTool((s) => s.held)
   const isHover = hovered?.kind === 'extra' && hovered.id === extra.id
@@ -264,10 +269,10 @@ export function ExtraItem({ extra, x, z, scale }: { extra: ExtraOption; x: numbe
         </mesh>
       </group>
       <Label
-        title={extra.name.replace(' & Sticker', '').replace('Birthday ', '')}
-        price={extra.price === 0 ? 'Free' : money(extra.price)}
+        title={shortOf(extra, lang)}
+        price={extra.price === 0 ? dictionaries[lang].free : money(extra.price)}
         accent="#C9883F"
-        kicker="Extra"
+        kicker={dictionaries[lang].kExtra}
         z={0.45}
       />
     </group>

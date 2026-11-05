@@ -44,6 +44,8 @@ export const runtime = {
   tooltipVisible: false,
   /** Time the dough was last swapped (for the "pop" animation). */
   popAt: 0,
+  /** Rendering tier chosen for this device. */
+  quality: 'high' as 'high' | 'low',
   /** Camera snapshot helper registered by the canvas. */
   snapshot: null as null | (() => Promise<string | null>),
 }

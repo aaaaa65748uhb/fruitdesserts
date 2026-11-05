@@ -18,6 +18,8 @@ async function boot() {
         document.fonts.load('italic 600 64px "Fraunces Variable"'),
         document.fonts.load('700 32px "DM Sans Variable"'),
         document.fonts.load('800 32px "DM Sans Variable"'),
+        document.fonts.load('800 32px "Rubik Hebrew"', 'אבג'),
+        document.fonts.load('400 32px "Suez One Hebrew"', 'אבג'),
       ]),
       new Promise((r) => setTimeout(r, 2500)),
     ])

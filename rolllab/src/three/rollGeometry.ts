@@ -32,6 +32,8 @@ export interface RollData {
   bottom: Float32Array
   spot: Float32Array
   outer: Float32Array
+  /** Cinnamon-sugar specks on the top crust. */
+  speck: Float32Array
   /** Spiral helpers — handy for "follow the swirl" sauce patterns. */
   pitch: number
   r0: number
@@ -64,6 +66,7 @@ export function buildRollGeometry(seed = 11): RollData {
   const bottom = new Float32Array(vertCount)
   const spot = new Float32Array(vertCount)
   const outer = new Float32Array(vertCount)
+  const speck = new Float32Array(vertCount)
 
   // Pre-compute the superellipse profile (seam at the hidden bottom centre).
   const prof: [number, number][] = []
@@ -171,6 +174,7 @@ export function buildRollGeometry(seed = 11): RollData {
       bottom[k] = bot
       spot[k] = mott
       outer[k] = outerFace
+      speck[k] = smoothstep(0.42, 0.62, noise(x * 34 + 3, y * 34, z * 34)) * smoothstep(0.2, 0.8, py) * (1 - fl)
     }
   }
 
@@ -206,6 +210,7 @@ export function buildRollGeometry(seed = 11): RollData {
         bottom[k] = smoothstep(-0.5, -0.95, cy)
         spot[k] = mott
         outer[k] = 0
+        speck[k] = smoothstep(0.42, 0.62, noise(x * 34 + 3, y * 34, z * 34)) * smoothstep(0.1, 0.8, cy)
       }
     }
   }
@@ -272,7 +277,7 @@ export function buildRollGeometry(seed = 11): RollData {
   geometry.computeBoundingSphere()
   geometry.computeBoundingBox()
 
-  return { geometry, crust, fill, bottom, spot, outer, pitch, r0, uMax, width }
+  return { geometry, crust, fill, bottom, spot, outer, speck, pitch, r0, uMax, width }
 }
 
 /* ------------------------------------------------------------------ */
@@ -302,7 +307,10 @@ export function paintRoll(data: RollData, paint: RollPaint) {
       _d.copy(paint.filling)
       _c.lerp(_d, f)
     }
-    const m = 0.9 + 0.2 * data.spot[i]
+    // cinnamon-sugar specks caramelised on the crust
+    const sp = data.speck[i]
+    if (sp > 0.001) _c.lerp(paint.bottom, sp * 0.42)
+    const m = 0.88 + 0.22 * data.spot[i]
     arr[i * 3] = _c.r * m
     arr[i * 3 + 1] = _c.g * m
     arr[i * 3 + 2] = _c.b * m

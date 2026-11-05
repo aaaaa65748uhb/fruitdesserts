@@ -16,6 +16,7 @@ interface UIState {
   cartOpen: boolean
   receiptOpen: boolean
   extrasOpen: boolean
+  picksOpen: boolean
   inspect: boolean
   muted: boolean
   lidOpen: boolean
@@ -27,6 +28,7 @@ interface UIState {
   setCartOpen: (v: boolean) => void
   setReceiptOpen: (v: boolean) => void
   setExtrasOpen: (v: boolean) => void
+  setPicksOpen: (v: boolean) => void
   setInspect: (v: boolean) => void
   toggleMuted: () => void
   setLidOpen: (v: boolean) => void
@@ -45,6 +47,7 @@ export const useUI = create<UIState>()(
       cartOpen: false,
       receiptOpen: false,
       extrasOpen: false,
+      picksOpen: false,
       inspect: false,
       muted: false,
       lidOpen: false,
@@ -52,10 +55,11 @@ export const useUI = create<UIState>()(
       toast: null,
       hint: null,
       sceneReady: false,
-      setScreen: (screen) => set({ screen, inspect: false, extrasOpen: false }),
+      setScreen: (screen) => set({ screen, inspect: false, extrasOpen: false, picksOpen: false }),
       setCartOpen: (cartOpen) => set({ cartOpen }),
       setReceiptOpen: (receiptOpen) => set({ receiptOpen }),
       setExtrasOpen: (extrasOpen) => set({ extrasOpen }),
+      setPicksOpen: (picksOpen) => set({ picksOpen }),
       setInspect: (inspect) => set({ inspect }),
       toggleMuted: () => set((s) => ({ muted: !s.muted })),
       setLidOpen: (lidOpen) => set({ lidOpen }),

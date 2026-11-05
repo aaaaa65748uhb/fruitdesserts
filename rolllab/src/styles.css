@@ -1,6 +1,24 @@
 /* ROLL LAB — design tokens & UI layer
    Warm cream paper, cinnamon ink, pistachio accents. Solid surfaces only. */
 
+/* Hebrew faces: only the Hebrew subset, so Latin text keeps Fraunces / DM Sans */
+@font-face {
+  font-family: 'Rubik Hebrew';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 900;
+  src: url('../node_modules/@fontsource-variable/rubik/files/rubik-hebrew-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'Suez One Hebrew';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('../node_modules/@fontsource/suez-one/files/suez-one-hebrew-400-normal.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+FB1D-FB4F;
+}
+
 :root {
   --cream: #f4ead9;
   --cream-2: #eadbc2;
@@ -20,8 +38,9 @@
   --line-2: rgba(74, 39, 22, 0.24);
   --shadow: 0 18px 40px -18px rgba(74, 39, 22, 0.45), 0 2px 6px rgba(74, 39, 22, 0.08);
   --shadow-sm: 0 6px 16px -8px rgba(74, 39, 22, 0.4), 0 1px 2px rgba(74, 39, 22, 0.08);
-  --display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
-  --ui: 'DM Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Fraunces Variable', 'Suez One Hebrew', Georgia, 'Times New Roman', serif;
+  --ui: 'DM Sans Variable', 'Rubik Hebrew', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --dir: 1;
   --radius: 20px;
   --dock-h: 96px;
   color-scheme: light;
@@ -54,6 +73,13 @@ textarea {
 
 button {
   cursor: pointer;
+}
+
+[dir='rtl'] {
+  --dir: -1;
+}
+[dir='rtl'] .rtl-flip {
+  transform: scaleX(-1);
 }
 
 :focus-visible {
@@ -177,7 +203,7 @@ button {
 .icon-btn .badge {
   position: absolute;
   top: -4px;
-  right: -4px;
+  inset-inline-end: -4px;
   min-width: 20px;
   height: 20px;
   padding: 0 5px;
@@ -211,7 +237,7 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--ink-3);
-  margin-right: 4px;
+  margin-inline-end: 4px;
   min-width: 52px;
 }
 .chip {
@@ -278,10 +304,12 @@ button {
   pointer-events: auto;
 }
 .topbar .logo-pill {
+  white-space: nowrap;
   background: var(--paper-2);
   border: 1.5px solid var(--line);
   border-radius: 999px;
-  padding: 5px 16px 5px 6px;
+  padding-block: 5px;
+  padding-inline: 6px 16px;
   box-shadow: var(--shadow-sm);
 }
 .topbar .actions {
@@ -306,7 +334,8 @@ button {
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 18px;
-  padding: 12px 14px 12px 18px;
+  padding-block: 12px;
+  padding-inline: 18px 14px;
   z-index: 15;
 }
 .dock-section-title {
@@ -315,7 +344,8 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--ink-3);
-  margin: 0 0 6px 2px;
+  margin: 0 0 6px;
+  margin-inline-start: 2px;
 }
 .dough-row {
   display: flex;
@@ -331,11 +361,12 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px 6px 6px;
+  padding-block: 6px;
+  padding-inline: 6px 12px;
   border-radius: 14px;
   border: 1.5px solid var(--line);
   background: var(--paper-2);
-  text-align: left;
+  text-align: start;
   min-width: 0;
   flex: 0 0 auto;
   transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
@@ -377,7 +408,7 @@ button {
 .price-btn {
   border: 0;
   background: none;
-  text-align: right;
+  text-align: end;
   padding: 4px 6px;
   border-radius: 12px;
 }
@@ -661,7 +692,7 @@ button {
 
 .receipt {
   position: fixed;
-  right: 18px;
+  inset-inline-end: 18px;
   bottom: calc(var(--dock-h) + 30px);
   width: 360px;
   max-height: calc(100vh - var(--dock-h) - 130px);
@@ -678,7 +709,6 @@ button {
 }
 @keyframes rise3 {
   from {
-    opacity: 0;
     transform: translateY(12px);
   }
 }
@@ -747,7 +777,7 @@ button {
 .line .ctrl {
   display: inline-flex;
   gap: 2px;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 .mini {
   width: 24px;
@@ -813,8 +843,16 @@ button {
 @keyframes fadeout {
   to {
     opacity: 0;
-    transform: translateX(-30px);
+    transform: translateX(calc(-30px * var(--dir)));
   }
+}
+[dir='rtl'] .intro {
+  background: linear-gradient(270deg, rgba(244, 234, 217, 0.97) 0%, rgba(244, 234, 217, 0.9) 34%, rgba(244, 234, 217, 0) 62%);
+}
+[dir='rtl'] .intro h1 {
+  letter-spacing: 0;
+  line-height: 1.02;
+  font-size: clamp(50px, 6.4vw, 96px);
 }
 .intro-copy {
   pointer-events: auto;
@@ -922,7 +960,7 @@ button {
   position: fixed;
   top: 84px;
   bottom: 24px;
-  right: 24px;
+  inset-inline-end: 24px;
   width: min(420px, calc(100% - 48px));
   background: var(--paper);
   border: 1.5px solid var(--line);
@@ -936,8 +974,7 @@ button {
 }
 @keyframes slidein {
   from {
-    opacity: 0;
-    transform: translateX(24px);
+    transform: translateX(calc(24px * var(--dir)));
   }
 }
 .review-panel .scroll {
@@ -1058,7 +1095,7 @@ button {
 .cart {
   position: fixed;
   top: 0;
-  right: 0;
+  inset-inline-end: 0;
   bottom: 0;
   width: min(460px, 100%);
   background: var(--paper);
@@ -1242,7 +1279,7 @@ button {
   background: #fff;
   border-radius: 16px;
   padding: 14px;
-  text-align: left;
+  text-align: start;
   display: grid;
   gap: 2px;
 }
@@ -1319,6 +1356,175 @@ button {
   margin-top: 18px;
 }
 
+/* ---------------- Language toggle & pill buttons ---------------- */
+
+.lang-btn {
+  height: 44px;
+  min-width: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line-2);
+  background: var(--paper-2);
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease;
+}
+.lang-btn:hover {
+  transform: translateY(-1px);
+}
+.pill-btn {
+  height: 44px;
+  padding: 0 16px 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line-2);
+  background: var(--paper-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.pill-btn svg {
+  width: 18px;
+  height: 18px;
+  color: var(--caramel);
+}
+.pill-btn:hover {
+  transform: translateY(-1px);
+}
+.pill-btn.on {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.pill-btn.on svg {
+  color: var(--butter);
+}
+
+/* ---------------- Chef's picks ---------------- */
+
+.picks-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 24;
+}
+.picks {
+  position: fixed;
+  top: calc(70px + env(safe-area-inset-top, 0px));
+  inset-inline-end: calc(18px + env(safe-area-inset-right, 0px));
+  width: min(440px, calc(100% - 20px));
+  max-height: calc(100% - var(--dock-h) - 110px);
+  overflow: auto;
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  z-index: 25;
+  padding: 18px;
+  animation: rise2b 0.22s ease;
+}
+@keyframes rise2b {
+  from {
+    transform: translateY(-8px);
+  }
+}
+.picks-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.picks-head h3 {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 26px;
+  margin: 0;
+  color: var(--cinnamon-deep);
+}
+.picks-head p {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.picks-list {
+  display: grid;
+  gap: 8px;
+}
+.pick {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  text-align: start;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1.5px solid var(--line);
+  background: var(--paper-2);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.pick:hover {
+  border-color: var(--ink);
+  transform: translateY(-1px);
+}
+.pick svg {
+  width: 44px;
+  height: 44px;
+}
+.pick-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.pick-name {
+  font-weight: 800;
+  font-size: 15px;
+}
+.pick-desc {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.35;
+}
+.pick-price {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 20px;
+  color: var(--cinnamon-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- Intro extras ---------------- */
+
+.intro-lang {
+  position: fixed;
+  top: calc(18px + env(safe-area-inset-top, 0px));
+  inset-inline-end: calc(18px + env(safe-area-inset-right, 0px));
+  pointer-events: auto;
+}
+.intro-picks {
+  margin-top: 26px;
+  display: grid;
+  gap: 10px;
+}
+.intro-picks-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.intro-picks-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.intro-picks .chip svg {
+  color: var(--caramel);
+}
+
 /* ---------------- Responsive ---------------- */
 
 @media (max-width: 980px) {
@@ -1346,12 +1552,28 @@ button {
     width: 28px;
     height: 28px;
   }
-  .icon-btn {
+  .icon-btn,
+  .lang-btn,
+  .pill-btn {
     width: 40px;
     height: 40px;
   }
+  .lang-btn {
+    width: auto;
+    padding: 0 10px;
+  }
+  .pill-btn {
+    padding: 0;
+    justify-content: center;
+  }
+  .pill-label {
+    display: none;
+  }
   .topbar .actions {
-    gap: 7px;
+    gap: 6px;
+  }
+  .intro-picks {
+    margin-top: 16px;
   }
   .dock {
     bottom: 0;
@@ -1376,7 +1598,8 @@ button {
     display: none;
   }
   .dough {
-    padding: 5px 10px 5px 5px;
+    padding-block: 5px;
+    padding-inline: 5px 10px;
   }
   .dough svg {
     width: 30px;
@@ -1439,8 +1662,8 @@ button {
   }
   .intro .logo-top {
     position: fixed;
-    top: 16px;
-    left: 20px;
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    inset-inline-start: 20px;
   }
   .review-panel {
     top: auto;
@@ -1465,6 +1688,15 @@ button {
   }
 }
 
+/* narrow phones: the swirl mark alone keeps the top bar on one line */
+@media (max-width: 440px) {
+  .topbar .logo-pill {
+    padding: 4px;
+    font-size: 0;
+    gap: 0;
+  }
+}
+
 /* phones turned sideways: one slim row so the counter stays visible */
 @media (max-height: 520px) and (min-aspect-ratio: 1/1) {
   :root {
@@ -1474,7 +1706,8 @@ button {
     top: 8px;
   }
   .topbar .logo-pill {
-    padding: 3px 12px 3px 4px;
+    padding-block: 3px;
+    padding-inline: 4px 12px;
   }
   .logo {
     font-size: 18px;
@@ -1483,9 +1716,23 @@ button {
     width: 26px;
     height: 26px;
   }
-  .icon-btn {
+  .icon-btn,
+  .pill-btn {
     width: 36px;
     height: 36px;
+  }
+  .lang-btn {
+    height: 36px;
+  }
+  .pill-btn {
+    padding: 0;
+    justify-content: center;
+  }
+  .pill-label {
+    display: none;
+  }
+  .intro-picks {
+    display: none;
   }
   .dock,
   .dock.holding {
@@ -1509,7 +1756,8 @@ button {
     display: none;
   }
   .dough {
-    padding: 4px 9px 4px 4px;
+    padding-block: 4px;
+    padding-inline: 4px 9px;
   }
   .dough svg {
     width: 26px;
@@ -1549,8 +1797,8 @@ button {
   .review-panel {
     top: 56px;
     bottom: 8px;
-    right: 8px;
-    left: auto;
+    inset-inline-end: 8px;
+    inset-inline-start: auto;
     width: min(380px, 52vw);
     height: auto;
     border-radius: 20px;

@@ -13,6 +13,8 @@ import { rollSurface } from './surface'
 import { runtime, useRuntime } from './runtime'
 import { poolVolume, strokeVolume } from './sauceGeometry'
 import { makePiece } from './Topping3D'
+import { nameOf, tr } from '../i18n'
+import { pathLength, spiralPath, zigzagPath } from './patterns'
 
 /**
  * InteractionEngine — turns pointer input into physical actions:
@@ -118,10 +120,10 @@ function toggleFilling(id: string) {
   const f = findFilling(id)
   if (b.design.fillingId === id) {
     b.setFilling(null)
-    useUI.getState().showToast(`${f?.name ?? 'Filling'} removed`)
+    useUI.getState().showToast(tr().fillingRemoved(nameOf(f)))
   } else {
     b.setFilling(id)
-    useUI.getState().showToast(`${f?.name ?? 'Filling'} rolled into every layer`, 'success')
+    useUI.getState().showToast(tr().fillingAdded(nameOf(f)), 'success')
   }
   sfx.squish()
 }
@@ -129,48 +131,6 @@ function toggleFilling(id: string) {
 /* ------------------------------------------------------------------ */
 /*  Pouring                                                            */
 /* ------------------------------------------------------------------ */
-
-function zigzagPath(): number[] {
-  // a back-to-front zigzag in *world* orientation, converted to roll-local
-  const pts: number[] = []
-  const zigs = 9
-  const N = 420
-  const spin = runtime.spin
-  const c = Math.cos(spin)
-  const s = Math.sin(spin)
-  for (let i = 0; i <= N; i++) {
-    const t = i / N
-    const zw = -0.8 + 1.6 * t
-    const amp = Math.sqrt(Math.max(0, 0.86 * 0.86 - zw * zw)) * 0.96
-    const ph = (t * zigs) % 2
-    const tri = ph < 1 ? ph * 2 - 1 : 3 - ph * 2
-    const xw = tri * amp
-    // world → local: rotate by -spin around Y (three.js rotation.y convention)
-    const xl = xw * c - zw * s
-    const zl = xw * s + zw * c
-    pts.push(xl, zl)
-  }
-  return pts
-}
-
-function spiralPath(): number[] {
-  const d = runtime.rollData
-  const pts: number[] = []
-  if (!d) return pts
-  const u0 = 0.9
-  const u1 = d.uMax - 1.2
-  for (let u = u0; u <= u1; u += 0.03) {
-    const r = d.r0 + (d.pitch * u) / (Math.PI * 2)
-    pts.push(Math.cos(u) * r, Math.sin(u) * r)
-  }
-  return pts
-}
-
-function pathLength(p: number[]) {
-  let L = 0
-  for (let i = 2; i < p.length; i += 2) L += Math.hypot(p[i] - p[i - 2], p[i + 1] - p[i - 1])
-  return L
-}
 
 function startStroke(sauceId: string, kind: 'line' | 'pool') {
   const id = uid('stroke')
@@ -373,7 +333,7 @@ function sprinkleTick() {
   if (toppingCount(design, t.id) >= t.maxPieces) {
     if (!st.limitWarned) {
       st.limitWarned = true
-      useUI.getState().showToast(`That's the maximum ${t.name.toLowerCase()} for one roll`, 'warn')
+      useUI.getState().showToast(tr().maxTopping(nameOf(t)), 'warn')
     }
     return
   }
@@ -406,10 +366,10 @@ export const interaction = {
     if (!canInteract()) return
     const b = useBuilder.getState()
     const had = b.design.extras.includes(id)
-    if (!had && b.design.extras.length >= catalog.limits.maxExtras) return toast('No more extras on this roll.')
+    if (!had && b.design.extras.length >= catalog.limits.maxExtras) return toast(tr().noMoreExtras)
     b.toggleExtra(id)
     const ex = catalog.extras.find((x) => x.id === id)
-    useUI.getState().showToast(had ? `${ex?.name} removed` : `${ex?.name} added`, had ? 'info' : 'success')
+    useUI.getState().showToast(had ? tr().extraRemoved(nameOf(ex)) : tr().extraAdded(nameOf(ex)), had ? 'info' : 'success')
     sfx.tap()
   },
 

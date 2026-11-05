@@ -15,6 +15,7 @@ export const catalog: Catalog = {
   bases: [
     {
       id: 'classic',
+      he: { name: 'קינמון קלאסי', description: 'בצק בריוש חמאתי מגולגל עם קינמון ציילון וסוכר חום.' },
       name: 'Classic Cinnamon',
       description: 'Buttery brioche dough rolled with Ceylon cinnamon & brown sugar.',
       price: 18,
@@ -22,6 +23,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'chocolate',
+      he: { name: 'שוקולד', description: 'בצק קקאו מגולגל עם שוקולד מריר וקינמון.' },
       name: 'Chocolate',
       description: 'Cocoa dough swirled with dark chocolate & cinnamon.',
       price: 21,
@@ -29,6 +31,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'pistachio',
+      he: { name: 'פיסטוק', description: 'בצק זהוב מגולגל עם ממרח פיסטוק סיציליאני קלוי.' },
       name: 'Pistachio',
       description: 'Golden dough rolled with roasted Sicilian pistachio paste.',
       price: 23,
@@ -36,6 +39,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'red-velvet',
+      he: { name: 'רד ולווט', description: 'בצק רד ולווט עם נגיעת קקאו וספירלת גבינת שמנת.' },
       name: 'Red Velvet',
       description: 'Cocoa-kissed red velvet dough with a cream-cheese swirl.',
       price: 22,
@@ -43,6 +47,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'vanilla',
+      he: { name: 'וניל', description: 'בצק רך ואוורירי עם סוכר וניל ממדגסקר.' },
       name: 'Vanilla Bean',
       description: 'Pale, pillowy dough with Madagascar vanilla sugar.',
       price: 19,
@@ -53,6 +58,7 @@ export const catalog: Catalog = {
   sauces: [
     {
       id: 'pistachio',
+      he: { name: 'קרם פיסטוק', description: 'קרם פיסטוק קלוי וחלק.' },
       name: 'Pistachio Cream',
       shortName: 'Pistachio',
       description: 'Silky roasted pistachio cream.',
@@ -64,6 +70,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'white-chocolate',
+      he: { name: 'שוקולד לבן', description: 'שוקולד לבן בלגי, מומס וחלק.' },
       name: 'White Chocolate',
       shortName: 'White Choc',
       description: 'Belgian white chocolate, melted smooth.',
@@ -75,6 +82,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'milk-chocolate',
+      he: { name: 'שוקולד חלב', description: 'שוקולד חלב קרמי 34%.' },
       name: 'Milk Chocolate',
       shortName: 'Milk Choc',
       description: 'Creamy 34% milk chocolate.',
@@ -86,6 +94,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'dark-chocolate',
+      he: { name: 'שוקולד מריר', description: 'גנאש שוקולד מריר 70%.' },
       name: 'Dark Chocolate',
       shortName: 'Dark Choc',
       description: 'Intense 70% dark chocolate ganache.',
@@ -97,6 +106,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'lotus',
+      he: { name: 'לוטוס', description: 'ממרח ביסקוויט לוטוס, מחומם.' },
       name: 'Lotus Biscoff',
       shortName: 'Lotus',
       description: 'Caramelised biscuit spread, warmed.',
@@ -108,6 +118,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'vanilla-glaze',
+      he: { name: 'זיגוג וניל', description: 'זיגוג סוכר קלאסי עם וניל.' },
       name: 'Vanilla Glaze',
       shortName: 'Vanilla',
       description: 'Classic sugar glaze with vanilla bean.',
@@ -119,6 +130,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'salted-caramel',
+      he: { name: 'קרמל מלוח', description: 'קרמל בבישול איטי עם פתיתי מלח ים.' },
       name: 'Salted Caramel',
       shortName: 'Caramel',
       description: 'Slow-cooked caramel with flaky sea salt.',
@@ -130,6 +142,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'strawberry',
+      he: { name: 'רוטב תות', description: 'קולי תותים רענן.' },
       name: 'Strawberry Sauce',
       shortName: 'Strawberry',
       description: 'Bright strawberry coulis.',
@@ -144,6 +157,7 @@ export const catalog: Catalog = {
   toppings: [
     {
       id: 'chopped-pistachio',
+      he: { name: 'פיסטוק קצוץ', description: 'קלוי וקצוץ ביד.' },
       name: 'Chopped Pistachios',
       description: 'Roasted, hand-chopped.',
       price: 4,
@@ -159,6 +173,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'whole-pistachio',
+      he: { name: 'פיסטוק שלם', description: 'גרעיני פיסטוק קלויים.' },
       name: 'Whole Pistachios',
       description: 'Whole roasted kernels.',
       price: 5,
@@ -174,6 +189,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'lotus-crumbs',
+      he: { name: 'פירורי לוטוס', description: 'ביסקוויטים מקורמלים כתושים.' },
       name: 'Lotus Crumbs',
       description: 'Crushed caramelised biscuits.',
       price: 3,
@@ -189,6 +205,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'chocolate-chips',
+      he: { name: 'שוקולד צ׳יפס', description: 'טיפות שוקולד מריר.' },
       name: 'Chocolate Chips',
       description: 'Dark chocolate drops.',
       price: 3,
@@ -205,6 +222,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'white-chocolate',
+      he: { name: 'שוקולד לבן', description: 'חתיכות שוקולד לבן גדולות.' },
       name: 'White Chocolate',
       description: 'Chunky white chocolate pieces.',
       price: 3,
@@ -220,6 +238,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'hazelnut',
+      he: { name: 'אגוזי לוז', description: 'אגוזי לוז קלויים מפיימונטה.' },
       name: 'Hazelnut Pieces',
       description: 'Toasted Piedmont hazelnuts.',
       price: 4,
@@ -235,6 +254,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'almond-flakes',
+      he: { name: 'פתיתי שקדים', description: 'פתיתים זהובים קלויים.' },
       name: 'Almond Flakes',
       description: 'Golden toasted flakes.',
       price: 3,
@@ -250,6 +270,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'cookie-crumbs',
+      he: { name: 'פירורי עוגיות', description: 'קראמבל עוגיות חמאה חומה.' },
       name: 'Cookie Crumbs',
       description: 'Brown-butter cookie crumble.',
       price: 3,
@@ -265,6 +286,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'sprinkles',
+      he: { name: 'סוכריות צבעוניות', description: 'סוכריות סוכר צבעוניות.' },
       name: 'Rainbow Sprinkles',
       description: 'Colourful sugar strands.',
       price: 2,
@@ -281,6 +303,7 @@ export const catalog: Catalog = {
     },
     {
       id: 'coconut',
+      he: { name: 'קוקוס קלוי', description: 'שבבי קוקוס זהובים.' },
       name: 'Toasted Coconut',
       description: 'Golden coconut shavings.',
       price: 3,
@@ -297,18 +320,18 @@ export const catalog: Catalog = {
   ],
 
   fillings: [
-    { id: 'pistachio', name: 'Pistachio Filling', description: 'Pistachio paste rolled into every layer.', price: 6, color: '#8DAE4A' },
-    { id: 'chocolate', name: 'Chocolate Filling', description: 'Dark chocolate hazelnut swirl.', price: 4, color: '#3A1C10' },
-    { id: 'lotus', name: 'Lotus Filling', description: 'Biscoff spread & crumbs inside.', price: 5, color: '#AF6E34' },
-    { id: 'vanilla-cream', name: 'Vanilla Cream', description: 'Vanilla bean pastry cream.', price: 4, color: '#F3E6C4' },
-    { id: 'caramel', name: 'Caramel Filling', description: 'Soft dulce de leche caramel.', price: 4, color: '#C27628' },
+    { id: 'pistachio', he: { name: 'מילוי פיסטוק', description: 'ממרח פיסטוק מגולגל לתוך כל שכבה.', short: 'פיסטוק' }, short: 'Pistachio', name: 'Pistachio Filling', description: 'Pistachio paste rolled into every layer.', price: 6, color: '#8DAE4A' },
+    { id: 'chocolate', he: { name: 'מילוי שוקולד', description: 'ספירלת שוקולד ואגוזי לוז.', short: 'שוקולד' }, short: 'Chocolate', name: 'Chocolate Filling', description: 'Dark chocolate hazelnut swirl.', price: 4, color: '#3A1C10' },
+    { id: 'lotus', he: { name: 'מילוי לוטוס', description: 'ממרח לוטוס ופירורים בפנים.', short: 'לוטוס' }, short: 'Lotus', name: 'Lotus Filling', description: 'Biscoff spread & crumbs inside.', price: 5, color: '#AF6E34' },
+    { id: 'vanilla-cream', he: { name: 'קרם וניל', description: 'קרם פטיסייר וניל.', short: 'קרם וניל' }, short: 'Vanilla Cream', name: 'Vanilla Cream', description: 'Vanilla bean pastry cream.', price: 4, color: '#F3E6C4' },
+    { id: 'caramel', he: { name: 'מילוי קרמל', description: 'ריבת חלב רכה.', short: 'קרמל' }, short: 'Caramel', name: 'Caramel Filling', description: 'Soft dulce de leche caramel.', price: 4, color: '#C27628' },
   ],
 
   extras: [
-    { id: 'warm', name: 'Served Warm', description: 'We warm it right before it leaves.', price: 0 },
-    { id: 'candle', name: 'Birthday Candle', description: 'A little candle on top.', price: 2 },
-    { id: 'sauce-cup', name: 'Extra Sauce Cup', description: 'A side cup of your first sauce.', price: 4 },
-    { id: 'gift', name: 'Gift Ribbon & Sticker', description: 'Ribbon-tied box with a gift seal.', price: 4 },
+    { id: 'warm', he: { name: 'מוגש חם', description: 'מחממים רגע לפני שהוא יוצא.', short: 'מוגש חם' }, short: 'Served Warm', name: 'Served Warm', description: 'We warm it right before it leaves.', price: 0 },
+    { id: 'candle', he: { name: 'נר יום הולדת', description: 'נר קטן על השבלול.', short: 'נר' }, short: 'Candle', name: 'Birthday Candle', description: 'A little candle on top.', price: 2 },
+    { id: 'sauce-cup', he: { name: 'כוסית רוטב נוספת', description: 'כוסית בצד מהרוטב הראשון שלכם.', short: 'כוסית רוטב' }, short: 'Sauce Cup', name: 'Extra Sauce Cup', description: 'A side cup of your first sauce.', price: 4 },
+    { id: 'gift', he: { name: 'סרט ומדבקת מתנה', description: 'קופסה קשורה בסרט עם חותמת מתנה.', short: 'סרט מתנה' }, short: 'Gift Ribbon', name: 'Gift Ribbon & Sticker', description: 'Ribbon-tied box with a gift seal.', price: 4 },
   ],
 
   limits: {
@@ -319,7 +342,8 @@ export const catalog: Catalog = {
   },
 
   pricing: {
-    saucePortionVolume: 0.012,
+    // one regular portion ≈ a full zigzag over the roll at medium flow
+    saucePortionVolume: 0.018,
     sauceExtraThreshold: 1.6,
     toppingExtraThreshold: 1.6,
   },
@@ -328,9 +352,72 @@ export const catalog: Catalog = {
     deliveryFee: 15,
     freeDeliveryOver: 120,
     pickupAddress: 'ROLL LAB Bakery · 12 Cinnamon St.',
+    pickupAddressHe: 'מאפיית ROLL LAB · רחוב הקינמון 12',
     pickupSlots: ['As soon as possible', '08:00 – 10:00', '10:00 – 12:00', '12:00 – 14:00', '14:00 – 16:00', '16:00 – 18:00'],
     deliveryCities: [],
   },
+
+  /** Chef's picks — one tap puts the whole roll on the counter (customers can still edit it). */
+  presets: [
+    {
+      id: 'pistachio-dream',
+      name: 'The Pistachio Dream',
+      description: 'Pistachio dough & filling, white chocolate zigzag, chopped pistachios.',
+      he: { name: 'חלום הפיסטוק', description: 'בצק ומילוי פיסטוק, זיגזג שוקולד לבן ופיסטוק קצוץ.' },
+      baseId: 'pistachio',
+      fillingId: 'pistachio',
+      sauces: [{ sauceId: 'white-chocolate', pattern: 'zigzag', flow: 'medium' }],
+      toppings: [{ toppingId: 'chopped-pistachio', portions: 1 }],
+      extras: [],
+    },
+    {
+      id: 'lotus-lover',
+      name: 'Lotus Lover',
+      description: 'Classic roll with Lotus filling, a Lotus swirl and crushed biscuits.',
+      he: { name: 'מכורים ללוטוס', description: 'שבלול קלאסי עם מילוי לוטוס, ספירלת לוטוס ופירורי ביסקוויט.' },
+      baseId: 'classic',
+      fillingId: 'lotus',
+      sauces: [{ sauceId: 'lotus', pattern: 'spiral', flow: 'medium' }],
+      toppings: [{ toppingId: 'lotus-crumbs', portions: 1 }],
+      extras: [],
+    },
+    {
+      id: 'classic-glazed',
+      name: 'Classic Glazed',
+      description: 'The original: cinnamon swirl under a thick vanilla glaze, served warm.',
+      he: { name: 'הקלאסי המזוגג', description: 'המקורי: ספירלת קינמון מתחת לזיגוג וניל עבה, מוגש חם.' },
+      baseId: 'classic',
+      fillingId: null,
+      sauces: [{ sauceId: 'vanilla-glaze', pattern: 'glaze', flow: 'thick' }],
+      toppings: [],
+      extras: ['warm'],
+    },
+    {
+      id: 'triple-chocolate',
+      name: 'Triple Chocolate',
+      description: 'Chocolate dough & filling, dark and white chocolate zigzags, chocolate chips.',
+      he: { name: 'שלושה שוקולדים', description: 'בצק ומילוי שוקולד, זיגזג מריר ולבן ושוקולד צ׳יפס.' },
+      baseId: 'chocolate',
+      fillingId: 'chocolate',
+      sauces: [
+        { sauceId: 'dark-chocolate', pattern: 'zigzag', flow: 'medium' },
+        { sauceId: 'white-chocolate', pattern: 'zigzag', flow: 'thin', angle: 90 },
+      ],
+      toppings: [{ toppingId: 'chocolate-chips', portions: 1 }],
+      extras: [],
+    },
+    {
+      id: 'birthday-party',
+      name: 'Birthday Party',
+      description: 'Vanilla roll, strawberry zigzag, rainbow sprinkles and a candle.',
+      he: { name: 'מסיבת יום הולדת', description: 'שבלול וניל, זיגזג תות, סוכריות צבעוניות ונר.' },
+      baseId: 'vanilla',
+      fillingId: 'vanilla-cream',
+      sauces: [{ sauceId: 'strawberry', pattern: 'zigzag', flow: 'medium' }],
+      toppings: [{ toppingId: 'sprinkles', portions: 1 }],
+      extras: ['candle'],
+    },
+  ],
 }
 
 export function findBase(id: string) {

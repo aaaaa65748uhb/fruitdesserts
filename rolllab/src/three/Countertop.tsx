@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import { tileTexture, woodTexture } from './textures'
 import { interaction } from './interaction'
+import { runtime } from './runtime'
 
 /** Light-oak butcher-block counter with a tiled back wall. */
 export function Countertop() {
   const { wood, tiles } = useMemo(() => {
-    const w = woodTexture().clone()
+    const w = woodTexture(runtime.quality === 'low' ? 1024 : 2048).clone()
     w.needsUpdate = true
     w.repeat.set(4.2, 4.2)
     const t = tileTexture().clone()

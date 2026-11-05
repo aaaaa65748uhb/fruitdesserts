@@ -8,6 +8,7 @@ import { runtime } from './runtime'
 import type { CounterLayout } from './layout'
 import { damp } from '../lib/noise'
 import { BOX } from './Packaging3D'
+import { useLang } from '../i18n'
 
 /**
  * Camera choreography. The overview pose is *computed*: we search for the
@@ -110,6 +111,8 @@ export function CameraRig({ safe }: { safe: SafeArea }) {
   )
 
   const tall = size.width / size.height < 1.05
+  // Hebrew is right-to-left: the intro copy and review panel switch sides, so does the roll
+  const side = useLang((s) => s.lang) === 'he' ? -1 : 1
 
   useFrame((state, dt) => {
     const d = Math.min(dt, 0.05)
@@ -144,8 +147,8 @@ export function CameraRig({ safe }: { safe: SafeArea }) {
           p = new THREE.Vector3(box.x + Math.sin(t * 0.25) * 0.5, 4.6, box.z + 5.4)
           l = new THREE.Vector3(box.x, 0.2, box.z - 0.9)
         } else {
-          p = new THREE.Vector3(box.x + 0.7 + Math.sin(t * 0.25) * 0.5, 2.9, box.z + 4.6)
-          l = new THREE.Vector3(box.x - 1.55, 0.55, box.z)
+          p = new THREE.Vector3(box.x + side * 0.7 + Math.sin(t * 0.25) * 0.5, 2.9, box.z + 4.6)
+          l = new THREE.Vector3(box.x - side * 1.55, 0.55, box.z)
         }
         speed = 1.6
       } else if (screen === 'review' || screen === 'checkout') {
@@ -153,8 +156,8 @@ export function CameraRig({ safe }: { safe: SafeArea }) {
           p = new THREE.Vector3(roll.x, roll.y + 4.2, roll.z + 4.2)
           l = new THREE.Vector3(roll.x, roll.y - 0.9, roll.z + 1.0)
         } else {
-          p = new THREE.Vector3(roll.x + 1.3, roll.y + 2.7, roll.z + 3.6)
-          l = new THREE.Vector3(roll.x + 1.25, roll.y - 0.1, roll.z)
+          p = new THREE.Vector3(roll.x + side * 1.3, roll.y + 2.7, roll.z + 3.6)
+          l = new THREE.Vector3(roll.x + side * 1.25, roll.y - 0.1, roll.z)
         }
       } else if (packPhase === 'closing' || packPhase === 'sealed') {
         p = new THREE.Vector3(box.x, 4.6, box.z + 5.4)

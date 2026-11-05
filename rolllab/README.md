@@ -45,7 +45,8 @@ The build uses relative paths, so it also works from a sub-folder.
 
 ## How customers use it
 
-1. **Intro** — "BUILD YOUR DREAM ROLL" → **Start creating**. The box lid opens and a roll drops in.
+1. **Intro** — "BUILD YOUR DREAM ROLL" → **Start creating** (or tap one of the chef's picks
+   to start from a ready-made roll). The box lid opens and a roll drops in.
 2. **Counter** (main screen)
    - **Dough**: pick one of five bases in the bottom bar (price shown on each).
    - **Sauces**: click (or drag) a squeeze bottle to pick it up, move it over the roll,
@@ -64,6 +65,10 @@ The build uses relative paths, so it also works from a sub-folder.
    - **Undo**, **Reset**, the live **total** and a tap-to-open **receipt** with the full
      price breakdown (and −/+/× controls) are in the bottom bar.
    - Press **Esc**, right-click, or **Put back** to return what you're holding.
+   - **Chef's picks** (top bar) — five signature rolls (Pistachio Dream, Lotus Lover, Classic
+     Glazed, Triple Chocolate, Birthday Party). One tap pours the sauces in, rains the toppings
+     down and shows the real price; the customer can then change anything, and Undo brings back
+     their previous roll.
 3. **Review** — see the finished roll turning, name it, check every line and price,
    then **Box it**: the lid closes, a "MADE BY YOU" seal (and ribbon, if chosen) is
    applied, the box slides into the cart and a fresh box arrives.
@@ -73,6 +78,14 @@ The build uses relative paths, so it also works from a sub-folder.
 
 Sounds are synthesized in the browser (no audio files) and can be muted with the
 speaker button. The cart and the roll in progress survive a page refresh.
+
+### Hebrew / English
+
+The whole site — screens, messages, product names, and the labels printed on the 3D
+bottles, trays and cards — is available in **Hebrew (right-to-left)** and **English**.
+Browsers set to Hebrew open in Hebrew automatically; the **EN / עברית** button switches at
+any time and the choice is remembered. Texts live in `src/i18n/strings.ts`; Hebrew product
+names are the `he: { name, description }` fields in `src/config/catalog.ts`.
 
 ---
 
@@ -93,7 +106,11 @@ In the same file:
   item's `extraCharge` is added (shown as a separate "Extra …" line).
 - each topping's `portion` (pieces in a regular portion) and `maxPieces`.
 - `fulfillment` — delivery fee (₪15), free-delivery threshold (₪120), pickup address
-  and pickup time slots.
+  (English and Hebrew) and pickup time slots.
+- `presets` — the chef's picks: dough, filling, sauces (pattern + flow), toppings, extras.
+  Their price on the menu is calculated by the same pricing engine.
+- `pricing.saucePortionVolume` — one regular sauce portion is about one full zigzag over
+  the roll at medium flow.
 - colours of each dough, sauce, topping and filling (used to paint the 3D models).
 
 Brand name, palette and the optional WhatsApp order number are in **`src/config/brand.ts`**.
@@ -168,7 +185,10 @@ src/
     interaction.ts         InteractionEngine: pick up, pour, sprinkle, spin, put back
     InteractionController.tsx  pointer/keyboard wiring + tooltip tracking
     textures.ts            all canvas-painted textures and printed labels
-  ui/                      intro, dock & tool controls, receipt, review, cart, checkout
+  i18n/                    English + Hebrew texts, language detection, product-name helpers
+  three/presets.ts         chef's picks: pours each pick with the real pattern paths
+  three/patterns.ts        zigzag / swirl pour paths shared by customers and presets
+  ui/                      intro, dock & tool controls, chef's picks, receipt, review, cart, checkout
   checkout/                order payload + payment provider integration point
   lib/                     audio (Web Audio), noise, formatting, validation (+ tests)
 server-examples/           Stripe Checkout serverless example
@@ -188,8 +208,9 @@ or `?quality=high`.
 - The reference screenshot mentioned in the brief wasn't available to us, so the counter
   composition follows the written description (angled top-down counter, central open box,
   trays left/right, bottles at the back, controls at the bottom).
-- Automated checks: `npm test` covers pricing, cart totals, checkout validation and the
-  3D geometry (roll shape, surface orientation, sauce mesh orientation in every pour
-  direction). The full flow (pour, zigzag, sprinkle, filling, extras, dough swap, undo,
+- Automated checks: `npm test` (42 tests) covers pricing, cart totals, checkout validation,
+  the 3D geometry (roll shape, surface orientation, sauce mesh orientation in every pour
+  direction), complete Hebrew coverage of every product and message, and every chef's pick
+  (valid ingredients, within limits, no hidden surcharges). The full flow (pour, zigzag, sprinkle, filling, extras, dough swap, undo,
   reset, receipt, review, box it, cart quantities, checkout validation, payment
   placeholder, touch on phones) was driven end-to-end in headless Chromium.

@@ -7,6 +7,7 @@ import { ReviewScreen } from './ui/ReviewScreen'
 import { CartDrawer } from './ui/Cart'
 import { Checkout } from './ui/Checkout'
 import { Toast, Tooltip } from './ui/Toast'
+import { useLang, useT } from './i18n'
 
 function webglAvailable() {
   try {
@@ -19,17 +20,25 @@ function webglAvailable() {
 
 export function App() {
   const screen = useUI((s) => s.screen)
+  const lang = useLang((s) => s.lang)
+  const t = useT()
   const [gl] = useState(webglAvailable)
 
   useEffect(() => {
     document.body.dataset.screen = screen
   }, [screen])
 
+  useEffect(() => {
+    document.documentElement.lang = lang
+    document.documentElement.dir = t.dir
+    document.title = t.docTitle
+  }, [lang, t])
+
   if (!gl) {
     return (
       <div className="rl-fallback">
         <h1>ROLL LAB</h1>
-        <p>Our 3D counter needs WebGL, which isn’t available in this browser. Please try a recent version of Chrome, Safari, Firefox or Edge.</p>
+        <p>{t.noWebgl}</p>
       </div>
     )
   }

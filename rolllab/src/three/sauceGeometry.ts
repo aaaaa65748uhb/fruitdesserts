@@ -96,9 +96,11 @@ export function buildStrokeGeometry(points: number[]): THREE.BufferGeometry | nu
     prevS.copy(_s)
     _u.crossVectors(_s, _t).normalize()
     const p = samples[i]
-    const rw = p.r * 1.45
-    const rh = p.r * 0.82
-    frames.push({ cx: p.x, cy: p.y + rh * 0.3, cz: p.z, rw, rh, s: _s.clone(), u: _u.clone(), t: _t.clone() })
+    // poured sauce spreads: wider than tall, with a gentle hand-poured wobble in width
+    const wobble = 1 + 0.08 * Math.sin(i * 0.21 + p.x * 9) + 0.05 * Math.sin(i * 0.77 + p.z * 13)
+    const rw = p.r * 1.7 * wobble
+    const rh = p.r * 0.62
+    frames.push({ cx: p.x, cy: p.y + rh * 0.25, cz: p.z, rw, rh, s: _s.clone(), u: _u.clone(), t: _t.clone() })
   }
 
   const writeRing = (f: (typeof frames)[number], scale: number, along: number, capNormalBlend: number, dir: number) => {
@@ -186,7 +188,7 @@ export function strokeVolume(points: number[]) {
   for (let i = 4; i < points.length; i += 4) {
     const d = Math.hypot(points[i] - points[i - 4], points[i + 2] - points[i - 2])
     const r = (points[i + 3] + points[i - 1]) / 2
-    v += Math.PI * r * 1.45 * r * 0.82 * d
+    v += Math.PI * r * 1.7 * r * 0.62 * d
   }
   if (points.length >= 4) v += (4 / 3) * Math.PI * points[3] ** 3
   return v

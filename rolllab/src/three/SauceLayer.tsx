@@ -41,6 +41,8 @@ export function SauceLayer() {
   )
 }
 
+const REVEAL_MS = 1000
+
 function CommittedStroke({ stroke }: { stroke: SauceStroke }) {
   const geometry = useMemo(() => {
     if (stroke.kind === 'pool' && stroke.pool) return buildPoolGeometry(stroke.pool)
@@ -48,9 +50,38 @@ function CommittedStroke({ stroke }: { stroke: SauceStroke }) {
   }, [stroke.kind, stroke.points, stroke.pool])
   useEffect(() => () => geometry?.dispose(), [geometry])
   const mat = sauceMaterial(stroke.sauceId)
+  const mesh = useRef<THREE.Mesh>(null)
+  const pivot = useRef<THREE.Group>(null)
+  const revealing = useRef(!!stroke.bornAt && Date.now() - stroke.bornAt < REVEAL_MS)
+
+  // Chef's picks pour in: a line grows along its path, a glaze spreads from its centre.
+  useFrame(() => {
+    if (!revealing.current || !geometry || !mesh.current) return
+    const t = (Date.now() - (stroke.bornAt ?? 0)) / REVEAL_MS
+    const k = Math.max(0, Math.min(1, t))
+    mesh.current.visible = t > 0
+    if (stroke.kind === 'pool' && pivot.current) {
+      const e = 1 - Math.pow(1 - k, 3)
+      pivot.current.scale.set(Math.max(0.001, e), 1, Math.max(0.001, e))
+    } else {
+      const total = geometry.index?.count ?? 0
+      geometry.setDrawRange(0, Math.floor((total / 3) * k) * 3)
+    }
+    if (k >= 1) {
+      revealing.current = false
+      geometry.setDrawRange(0, Infinity)
+    }
+  })
+
+  const px = stroke.pool?.x ?? 0
+  const pz = stroke.pool?.z ?? 0
   return (
     <group>
-      {geometry && <mesh geometry={geometry} material={mat} castShadow />}
+      {geometry && (
+        <group ref={pivot} position={[px, 0, pz]}>
+          <mesh ref={mesh} position={[-px, 0, -pz]} geometry={geometry} material={mat} castShadow visible={!revealing.current} />
+        </group>
+      )}
       {stroke.drips.map((d, i) => (
         <Drip key={i} drip={d} sauceId={stroke.sauceId} />
       ))}
@@ -110,6 +141,8 @@ function Drip({ drip, sauceId }: { drip: SauceDrip; sauceId: string }) {
   useFrame(() => {
     if (!built || done.current || !mesh.current || !bulb.current) return
     const age = (Date.now() - drip.bornAt) / 1000
+    mesh.current.visible = bulb.current.visible = age >= 0
+    if (age < 0) return
     // sauce runs down quickly, then slows
     const p = Math.min(1, 1 - Math.pow(1 - Math.min(1, age / 1.8), 2.4))
     const rings = built.path.length

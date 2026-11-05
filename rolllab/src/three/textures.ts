@@ -8,8 +8,8 @@ import { createRng } from '../lib/noise'
  * there is nothing to license.
  */
 
-export const DISPLAY_FONT = '"Fraunces Variable", Georgia, serif'
-export const UI_FONT = '"DM Sans Variable", system-ui, sans-serif'
+export const DISPLAY_FONT = '"Fraunces Variable", "Suez One Hebrew", Georgia, serif'
+export const UI_FONT = '"DM Sans Variable", "Rubik Hebrew", system-ui, sans-serif'
 
 function makeCanvas(w: number, h: number) {
   const c = document.createElement('canvas')
@@ -49,20 +49,21 @@ function once<T>(key: string, make: () => T): T {
 
 /* ---------------- Countertop: light oak butcher block ---------------- */
 
-export function woodTexture() {
-  return once('wood', () => {
-    const W = 2048
-    const H = 2048
+export function woodTexture(size = 2048) {
+  return once(`wood:${size}`, () => {
+    const W = size
+    const H = size
     const { c, ctx } = makeCanvas(W, H)
     const rng = createRng(42)
+    const k = W / 2048
     const rows = 12
     const rh = H / rows
     for (let r = 0; r < rows; r++) {
       const y0 = r * rh
       // staggered butcher-block joints
-      let x = -rng() * 600
+      let x = -rng() * 600 * k
       while (x < W) {
-        const len = 500 + rng() * 900
+        const len = (500 + rng() * 900) * k
         const hue = 30 + rng() * 6
         const sat = 38 + rng() * 14
         const lig = 67 + rng() * 9
@@ -73,18 +74,18 @@ export function woodTexture() {
         ctx.rect(x, y0, len, rh)
         ctx.clip()
         // long grain
-        for (let k = 0; k < 70; k++) {
+        for (let g = 0; g < 70; g++) {
           const gy = y0 + rng() * rh
-          const amp = 1 + rng() * 4
-          const f = 0.002 + rng() * 0.006
+          const amp = (1 + rng() * 4) * k
+          const f = (0.002 + rng() * 0.006) / k
           const ph = rng() * 10
           const dark = rng() < 0.7
           ctx.strokeStyle = dark
             ? `rgba(${110 + rng() * 30},${70 + rng() * 20},${35 + rng() * 15},${0.05 + rng() * 0.13})`
             : `rgba(255,240,215,${0.05 + rng() * 0.12})`
-          ctx.lineWidth = 0.6 + rng() * 2.4
+          ctx.lineWidth = (0.6 + rng() * 2.4) * Math.max(0.6, k)
           ctx.beginPath()
-          for (let px = x; px <= x + len; px += 16) {
+          for (let px = x; px <= x + len; px += 16 * k) {
             const py = gy + Math.sin(px * f + ph) * amp + Math.sin(px * f * 3.3 + ph * 2) * amp * 0.3
             if (px === x) ctx.moveTo(px, py)
             else ctx.lineTo(px, py)
@@ -95,18 +96,18 @@ export function woodTexture() {
         if (rng() < 0.45) {
           const cx = x + len * (0.3 + rng() * 0.4)
           const cy = y0 + rh * (0.3 + rng() * 0.4)
-          for (let k = 0; k < 7; k++) {
+          for (let g = 0; g < 7; g++) {
             ctx.strokeStyle = `rgba(120,78,40,${0.07 + rng() * 0.06})`
             ctx.lineWidth = 1 + rng() * 1.5
             ctx.beginPath()
-            ctx.ellipse(cx, cy, 40 + k * 26 + rng() * 10, 6 + k * 4, 0, Math.PI * 0.05, Math.PI * 0.95)
+            ctx.ellipse(cx, cy, (40 + g * 26 + rng() * 10) * k, (6 + g * 4) * k, 0, Math.PI * 0.05, Math.PI * 0.95)
             ctx.stroke()
           }
         }
         // small pores
-        for (let k = 0; k < 160; k++) {
+        for (let g = 0; g < 160; g++) {
           ctx.fillStyle = `rgba(90,55,25,${0.08 + rng() * 0.12})`
-          ctx.fillRect(x + rng() * len, y0 + rng() * rh, 2 + rng() * 5, 1)
+          ctx.fillRect(x + rng() * len, y0 + rng() * rh, (2 + rng() * 5) * k, 1)
         }
         ctx.restore()
         // joint
@@ -414,11 +415,13 @@ export interface LabelSpec {
   price: string
   accent: string
   kicker?: string
+  /** Right-to-left layout (Hebrew). */
+  rtl?: boolean
 }
 
 /** Wrap-around squeeze-bottle label. */
 export function bottleLabelTexture(spec: LabelSpec) {
-  return once(`bottle:${spec.title}`, () => {
+  return once(`bottle:${spec.title}:${spec.rtl ? 'r' : 'l'}`, () => {
     const W = 512
     const H = 320
     const { c, ctx } = makeCanvas(W, H)
@@ -434,6 +437,7 @@ export function bottleLabelTexture(spec: LabelSpec) {
     ctx.font = `800 30px ${UI_FONT}`
     spaced(ctx, 'ROLL LAB', W / 2, 29, 8)
     ctx.fillStyle = P.ink
+    if (spec.rtl) ctx.direction = 'rtl'
     const words = spec.title.split(' ')
     ctx.font = `800 70px ${DISPLAY_FONT}`
     if (words.length > 1 && ctx.measureText(spec.title).width > W * 0.84) {
@@ -451,38 +455,42 @@ export function bottleLabelTexture(spec: LabelSpec) {
   })
 }
 
-/** Small printed card placed in front of trays / ramekins. */
+/** Small printed card placed in front of trays / ramekins (mirrors for Hebrew). */
 export function cardLabelTexture(spec: LabelSpec) {
-  return once(`card:${spec.title}:${spec.kicker ?? ''}`, () => {
+  return once(`card:${spec.title}:${spec.kicker ?? ''}:${spec.price}:${spec.rtl ? 'r' : 'l'}`, () => {
     const W = 512
     const H = 208
     const { c, ctx } = makeCanvas(W, H)
     const P = brand.palette
+    const rtl = !!spec.rtl
     ctx.fillStyle = '#FCF7EE'
     ctx.beginPath()
     ctx.roundRect(0, 0, W, H, 26)
     ctx.fill()
     ctx.fillStyle = spec.accent
     ctx.beginPath()
-    ctx.roundRect(22, 26, 18, H - 52, 9)
+    ctx.roundRect(rtl ? W - 40 : 22, 26, 18, H - 52, 9)
     ctx.fill()
-    ctx.textAlign = 'left'
     ctx.textBaseline = 'middle'
+    ctx.direction = rtl ? 'rtl' : 'ltr'
+    const textX = rtl ? W - 62 : 62
+    ctx.textAlign = rtl ? 'right' : 'left'
     ctx.fillStyle = P.cinnamon
-    ctx.font = `700 26px ${UI_FONT}`
-    ctx.fillText((spec.kicker ?? 'TOPPING').toUpperCase(), 64, 52)
+    ctx.font = `700 28px ${UI_FONT}`
+    ctx.fillText((spec.kicker ?? '').toUpperCase(), textX, 50)
     ctx.fillStyle = P.ink
-    let size = 56
+    let size = 64
     ctx.font = `800 ${size}px ${UI_FONT}`
-    while (ctx.measureText(spec.title).width > W - 200 && size > 34) {
+    while (ctx.measureText(spec.title).width > W - 210 && size > 36) {
       size -= 2
       ctx.font = `800 ${size}px ${UI_FONT}`
     }
-    ctx.fillText(spec.title, 64, 116)
-    ctx.textAlign = 'right'
+    ctx.fillText(spec.title, textX, 122)
+    ctx.direction = 'ltr'
+    ctx.textAlign = rtl ? 'left' : 'right'
     ctx.fillStyle = P.cinnamonDeep
-    ctx.font = `800 60px ${DISPLAY_FONT}`
-    ctx.fillText(spec.price, W - 30, 120)
+    ctx.font = `800 68px ${DISPLAY_FONT}`
+    ctx.fillText(spec.price, rtl ? 26 : W - 26, 124)
     grain(ctx, W, H, 5, 12)
     return toTexture(c)
   })

@@ -2,6 +2,7 @@ import { catalog } from '../config/catalog'
 import { summarizeDesign } from '../engine/customization'
 import { computeCartTotals } from '../engine/pricing'
 import type { CartItem, CheckoutForm, OrderPayload } from '../types'
+import { currentLang, tr } from '../i18n'
 
 export function orderReference() {
   const d = new Date()
@@ -10,7 +11,16 @@ export function orderReference() {
 }
 
 export function rollTitle(item: CartItem, index: number) {
-  return item.design.name.trim() || `Roll #${index + 1}`
+  return item.design.name.trim() || tr().rollN(index + 1)
+}
+
+/** The display text of a pickup slot (the first slot means "as soon as possible"). */
+export function slotLabel(slot: string) {
+  return slot === catalog.fulfillment.pickupSlots[0] ? tr().asap : slot
+}
+
+export function pickupAddress() {
+  return currentLang() === 'he' && catalog.fulfillment.pickupAddressHe ? catalog.fulfillment.pickupAddressHe : catalog.fulfillment.pickupAddress
 }
 
 /** Builds the payload that would be sent to the bakery / payment provider. */
@@ -24,7 +34,7 @@ export function buildOrder(items: CartItem[], form: CheckoutForm): OrderPayload 
     fulfillment:
       form.method === 'delivery'
         ? { method: 'delivery', address: [form.street.trim(), form.apartment.trim(), form.city.trim()].filter(Boolean).join(', ') }
-        : { method: 'pickup', pickupSlot: form.pickupSlot },
+        : { method: 'pickup', pickupSlot: slotLabel(form.pickupSlot) },
     notes: form.notes.trim(),
     lines: items.map((it, i) => ({
       name: rollTitle(it, i),
@@ -40,22 +50,23 @@ export function buildOrder(items: CartItem[], form: CheckoutForm): OrderPayload 
   }
 }
 
-/** Plain-text version of the order (copy / WhatsApp). */
+/** Plain-text version of the order (copy / WhatsApp), in the customer's language. */
 export function orderText(o: OrderPayload) {
+  const t = tr()
   const cur = catalog.currency.symbol
   const lines = [
-    `ROLL LAB order ${o.reference}`,
+    t.orderTitle(o.reference),
     '',
     ...o.lines.map((l) => `• ${l.quantity}× ${l.name} — ${cur}${l.lineTotal}\n   ${l.summary}`),
     '',
-    `Subtotal: ${cur}${o.subtotal}`,
-    o.deliveryFee ? `Delivery: ${cur}${o.deliveryFee}` : null,
-    `Total: ${cur}${o.total}`,
+    `${t.oSubtotal}: ${cur}${o.subtotal}`,
+    o.deliveryFee ? `${t.oDelivery}: ${cur}${o.deliveryFee}` : null,
+    `${t.oTotal}: ${cur}${o.total}`,
     '',
-    `Name: ${o.customer.name}`,
-    `Phone: ${o.customer.phone}`,
-    o.fulfillment.method === 'delivery' ? `Delivery to: ${o.fulfillment.address}` : `Pickup: ${o.fulfillment.pickupSlot}`,
-    o.notes ? `Notes: ${o.notes}` : null,
+    `${t.oName}: ${o.customer.name}`,
+    `${t.oPhone}: ${o.customer.phone}`,
+    o.fulfillment.method === 'delivery' ? `${t.oDeliverTo}: ${o.fulfillment.address}` : `${t.oPickup}: ${o.fulfillment.pickupSlot}`,
+    o.notes ? `${t.oNotes}: ${o.notes}` : null,
   ]
   return lines.filter((l) => l !== null).join('\n')
 }

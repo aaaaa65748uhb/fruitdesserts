@@ -1,4 +1,5 @@
 import type { OrderPayload } from '../types'
+import { tr } from '../i18n'
 
 /**
  * PAYMENT INTEGRATION POINT
@@ -53,12 +54,12 @@ function httpProvider(endpoint: string): PaymentProvider {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(order),
         })
-        if (!res.ok) return { status: 'error', message: `The payment service answered ${res.status}. Please try again.` }
+        if (!res.ok) return { status: 'error', message: tr().payServiceStatus(res.status) }
         const data = (await res.json()) as { url?: string }
-        if (!data.url) return { status: 'error', message: 'The payment service did not return a payment page.' }
+        if (!data.url) return { status: 'error', message: tr().payNoPage }
         return { status: 'redirect', url: data.url }
       } catch {
-        return { status: 'error', message: 'We couldn’t reach the payment service. Check your connection and try again.' }
+        return { status: 'error', message: tr().payUnreachable }
       }
     },
   }

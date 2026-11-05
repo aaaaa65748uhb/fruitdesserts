@@ -8,7 +8,8 @@ import { useUI } from '../store/uiStore'
 import { money } from '../lib/format'
 import { sfx } from '../lib/audio'
 import { validateCheckout, type FormErrors } from '../lib/validation'
-import { buildOrder, orderText, rollTitle } from '../checkout/order'
+import { buildOrder, orderText, pickupAddress, rollTitle, slotLabel } from '../checkout/order'
+import { useT } from '../i18n'
 import { paymentProvider } from '../checkout/paymentProvider'
 import type { CheckoutForm, OrderPayload } from '../types'
 import { Icon } from './icons'
@@ -17,6 +18,7 @@ import { TopBar } from './UIControls'
 type Stage = { kind: 'form' } | { kind: 'not_configured'; order: OrderPayload } | { kind: 'error'; message: string }
 
 export function Checkout() {
+  const t = useT()
   const items = useCart((s) => s.items)
   const form = useCart((s) => s.form)
   const update = useCart((s) => s.updateForm)
@@ -32,7 +34,10 @@ export function Checkout() {
     sfx.tap()
   }
 
-  const err = (k: keyof CheckoutForm) => (touched[k] || errors[k] ? liveErrors[k] : undefined)
+  const err = (k: keyof CheckoutForm) => {
+    const key = touched[k] || errors[k] ? liveErrors[k] : undefined
+    return key ? t.errors[key] : undefined
+  }
   const blur = (k: keyof CheckoutForm) => () => setTouched((t) => ({ ...t, [k]: true }))
 
   const submit = async (e: React.FormEvent) => {
@@ -68,14 +73,14 @@ export function Checkout() {
       <form className="checkout-inner" onSubmit={submit} noValidate>
         <section className="card">
           <button type="button" className="link-btn" onClick={back} style={{ padding: 0, marginBottom: 12 }}>
-            ← Back to the counter
+            {t.back}
           </button>
-          <p className="kicker">Step 4 · Checkout</p>
-          <h2>Almost yours</h2>
+          <p className="kicker">{t.step4}</p>
+          <h2>{t.almostYours}</h2>
 
           <div className="form-grid">
             <label className="field">
-              <span className="field-label">Full name</span>
+              <span className="field-label">{t.fullName}</span>
               <input
                 className={`input${err('name') ? ' err' : ''}`}
                 autoComplete="name"
@@ -87,10 +92,11 @@ export function Checkout() {
               {err('name') && <span className="err-msg">{err('name')}</span>}
             </label>
             <label className="field">
-              <span className="field-label">Phone</span>
+              <span className="field-label">{t.phone}</span>
               <input
                 className={`input${err('phone') ? ' err' : ''}`}
                 type="tel"
+                dir="ltr"
                 inputMode="tel"
                 autoComplete="tel"
                 placeholder="050-123-4567"
@@ -103,17 +109,15 @@ export function Checkout() {
             </label>
 
             <div className="field full">
-              <span className="field-label">How would you like it?</span>
-              <div className="segmented" role="radiogroup" aria-label="Delivery or pickup">
+              <span className="field-label">{t.howGet}</span>
+              <div className="segmented" role="radiogroup" aria-label={t.howGet}>
                 <button type="button" role="radio" aria-checked={form.method === 'pickup'} className={`seg${form.method === 'pickup' ? ' on' : ''}`} onClick={() => update({ method: 'pickup' })}>
-                  <b>Pickup</b>
-                  <span>Free · {catalog.fulfillment.pickupAddress}</span>
+                  <b>{t.pickup}</b>
+                  <span>{t.pickupSub(pickupAddress())}</span>
                 </button>
                 <button type="button" role="radio" aria-checked={form.method === 'delivery'} className={`seg${form.method === 'delivery' ? ' on' : ''}`} onClick={() => update({ method: 'delivery' })}>
-                  <b>Delivery</b>
-                  <span>
-                    {money(catalog.fulfillment.deliveryFee)} · free over {money(catalog.fulfillment.freeDeliveryOver)}
-                  </span>
+                  <b>{t.delivery}</b>
+                  <span>{t.deliverySub(money(catalog.fulfillment.deliveryFee), money(catalog.fulfillment.freeDeliveryOver))}</span>
                 </button>
               </div>
             </div>
@@ -121,7 +125,7 @@ export function Checkout() {
             {form.method === 'delivery' ? (
               <>
                 <label className="field full">
-                  <span className="field-label">Street &amp; number</span>
+                  <span className="field-label">{t.street}</span>
                   <input
                     className={`input${err('street') ? ' err' : ''}`}
                     autoComplete="street-address"
@@ -133,7 +137,7 @@ export function Checkout() {
                   {err('street') && <span className="err-msg">{err('street')}</span>}
                 </label>
                 <label className="field">
-                  <span className="field-label">City</span>
+                  <span className="field-label">{t.city}</span>
                   <input
                     className={`input${err('city') ? ' err' : ''}`}
                     autoComplete="address-level2"
@@ -145,27 +149,29 @@ export function Checkout() {
                   {err('city') && <span className="err-msg">{err('city')}</span>}
                 </label>
                 <label className="field">
-                  <span className="field-label">Floor / apartment (optional)</span>
+                  <span className="field-label">{t.apartment}</span>
                   <input className="input" value={form.apartment} onChange={(e) => update({ apartment: e.target.value })} />
                 </label>
               </>
             ) : (
               <label className="field full">
-                <span className="field-label">Pickup time</span>
+                <span className="field-label">{t.pickupTime}</span>
                 <select className="select" value={form.pickupSlot} onChange={(e) => update({ pickupSlot: e.target.value })}>
                   {catalog.fulfillment.pickupSlots.map((s) => (
-                    <option key={s}>{s}</option>
+                    <option key={s} value={s}>
+                      {slotLabel(s)}
+                    </option>
                   ))}
                 </select>
               </label>
             )}
 
             <label className="field full">
-              <span className="field-label">Order notes (optional)</span>
+              <span className="field-label">{t.notes}</span>
               <textarea
                 className={`textarea${err('notes') ? ' err' : ''}`}
                 maxLength={400}
-                placeholder="Allergies, a birthday message, gate code…"
+                placeholder={t.notesPlaceholder}
                 value={form.notes}
                 onChange={(e) => update({ notes: e.target.value })}
                 onBlur={blur('notes')}
@@ -176,8 +182,8 @@ export function Checkout() {
         </section>
 
         <aside className="card">
-          <h3 style={{ fontFamily: 'var(--display)', fontSize: 24, margin: '0 0 8px' }}>Order summary</h3>
-          {items.length === 0 && <p className="empty-note">Your cart is empty — build a roll first.</p>}
+          <h3 style={{ fontFamily: 'var(--display)', fontSize: 24, margin: '0 0 8px' }}>{t.summary}</h3>
+          {items.length === 0 && <p className="empty-note">{t.emptyCartNote}</p>}
           {items.map((it, i) => (
             <div className="summary-item" key={it.id}>
               {it.thumbnail ? <img src={it.thumbnail} alt="" /> : <div className="ph" />}
@@ -192,26 +198,23 @@ export function Checkout() {
           ))}
           <div style={{ display: 'grid', gap: 6, marginTop: 12 }}>
             <div className="kv">
-              <span>Subtotal</span>
+              <span>{t.subtotal}</span>
               <b>{money(totals.subtotal)}</b>
             </div>
             <div className="kv">
-              <span>{form.method === 'delivery' ? 'Delivery' : 'Pickup'}</span>
-              <b>{totals.deliveryFee ? money(totals.deliveryFee) : 'Free'}</b>
+              <span>{form.method === 'delivery' ? t.delivery : t.pickup}</span>
+              <b>{totals.deliveryFee ? money(totals.deliveryFee) : t.free}</b>
             </div>
           </div>
           <div className="summary-total">
-            <span>Total</span>
+            <span>{t.total}</span>
             <span className="v">{money(totals.total)}</span>
           </div>
 
           {!paymentProvider.configured && (
             <div className="pay-placeholder" style={{ marginTop: 16 }}>
-              <span className="tag">Payment not connected</span>
-              <div>
-                Online payment isn’t connected on this site yet, so <b>no card will be charged</b>. Continuing prepares your order
-                details{brand.orderWhatsApp ? ' and lets you send them to the bakery' : ''}.
-              </div>
+              <span className="tag">{t.payNotConnected}</span>
+              <div>{t.payNotConnectedBody(!!brand.orderWhatsApp)}</div>
             </div>
           )}
           {stage.kind === 'error' && (
@@ -220,7 +223,7 @@ export function Checkout() {
             </p>
           )}
           <button className="btn primary big" type="submit" disabled={busy || items.length === 0} style={{ width: '100%', marginTop: 16 }}>
-            {busy ? 'Preparing…' : paymentProvider.configured ? `Pay ${money(totals.total)}` : 'Continue'}
+            {busy ? t.preparing : paymentProvider.configured ? t.pay(money(totals.total)) : t.continue}
             {!busy && <Icon.ArrowRight width={20} height={20} />}
           </button>
         </aside>
@@ -230,6 +233,7 @@ export function Checkout() {
 }
 
 function NotConfigured({ order, onBack }: { order: OrderPayload; onBack: () => void }) {
+  const t = useT()
   const [copied, setCopied] = useState(false)
   const text = orderText(order)
   const copy = async () => {
@@ -255,33 +259,33 @@ function NotConfigured({ order, onBack }: { order: OrderPayload; onBack: () => v
       <div className="result">
         <div className="card">
           <div className="pay-placeholder">
-            <span className="tag">Checkout integration placeholder</span>
+            <span className="tag">{t.placeholderTag}</span>
             <div>
-              <b>Your order has not been placed and no payment was taken.</b> This site doesn’t have a payment provider connected
-              yet. Your order details are ready below{brand.orderWhatsApp ? ' — you can send them straight to the bakery on WhatsApp' : ''}.
+              <b>{t.placeholderBody(!!brand.orderWhatsApp).split('. ')[0]}.</b>{' '}
+              {t.placeholderBody(!!brand.orderWhatsApp).split('. ').slice(1).join('. ')}
             </div>
           </div>
           <p className="ref" style={{ marginTop: 18 }}>
-            Order draft {order.reference}
+            {t.orderDraft(order.reference)}
           </p>
           <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'var(--ui)', fontSize: 14, lineHeight: 1.5, background: 'var(--paper-2)', border: '1.5px solid var(--line)', borderRadius: 14, padding: 14 }}>
             {text}
           </pre>
           <div className="btns">
             <button className="btn ghost" onClick={onBack}>
-              ← Back to checkout
+              {t.backToCheckout}
             </button>
             <button className="btn" onClick={copy}>
               {copied ? (
                 <>
-                  <Icon.Check width={16} height={16} /> Copied
+                  <Icon.Check width={16} height={16} /> {t.copied}
                 </>
               ) : (
-                'Copy order details'
+                t.copyOrder
               )}
             </button>
             <button className="btn" onClick={download}>
-              Download order (.json)
+              {t.downloadOrder}
             </button>
             {brand.orderWhatsApp && (
               <a
@@ -290,7 +294,7 @@ function NotConfigured({ order, onBack }: { order: OrderPayload; onBack: () => v
                 target="_blank"
                 rel="noreferrer"
               >
-                Send via WhatsApp
+                {t.sendWhatsApp}
               </a>
             )}
           </div>

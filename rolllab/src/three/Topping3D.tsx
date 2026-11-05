@@ -7,7 +7,7 @@ import type { ToppingOption, ToppingPiece } from '../types'
 import { restLift, toppingGeometry, tumble } from './toppingGeometries'
 import { toppingMaterial } from './materials'
 import { rollSurface } from './surface'
-import { useRuntime } from './runtime'
+import { runtime, useRuntime } from './runtime'
 import { createRng, gaussian, type Rng } from '../lib/noise'
 
 /**
@@ -192,7 +192,8 @@ export function TrayHeapPieces({
   scale?: number
 }) {
   const ref = useRef<THREE.InstancedMesh>(null)
-  const count = Math.round(TRAY_COUNTS[topping.shape] * scale)
+  // phones and low-power devices get lighter heaps (the bed underneath keeps them looking full)
+  const count = Math.round(TRAY_COUNTS[topping.shape] * scale * (runtime.quality === 'low' ? 0.55 : 1))
   const geometry = toppingGeometry(topping.shape)
   const material = toppingMaterial(topping.id)
 

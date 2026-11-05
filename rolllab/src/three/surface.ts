@@ -184,8 +184,8 @@ export class RollSurface {
       const p = s.points
       for (let i = 0; i < p.length; i += 4) {
         const r = p[i + 3]
-        const rw = r * 1.45
-        stamp(p[i], p[i + 2], rw, (d) => r * 1.15 * Math.sqrt(Math.max(0, 1 - (d / rw) ** 2)))
+        const rw = r * 1.7
+        stamp(p[i], p[i + 2], rw, (d) => r * 0.8 * Math.sqrt(Math.max(0, 1 - (d / rw) ** 2)))
       }
     }
     for (const k of touched) {

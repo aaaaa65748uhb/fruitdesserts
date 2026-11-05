@@ -63,7 +63,7 @@ describe('sauce geometry', () => {
     const g = buildStrokeGeometry(pts)!
     const s = faceStats(g, (m, n) => {
       const t = Math.max(0, Math.min(29 * 0.02, m.x * dx + m.z * dz))
-      return n.dot(m.clone().sub(new THREE.Vector3(dx * t, 0.6 + 0.02 * 0.82 * 0.3, dz * t)).normalize())
+      return n.dot(m.clone().sub(new THREE.Vector3(dx * t, 0.6 + 0.02 * 0.62 * 0.25, dz * t)).normalize())
     })
     expect(s.bad / (s.good + s.bad)).toBeLessThan(0.08)
   })
