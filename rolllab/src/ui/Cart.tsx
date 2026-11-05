@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { catalog } from '../config/catalog'
 import { cloneDesign, isDesignEmpty, summarizeDesign } from '../engine/customization'
 import { computeCartTotals } from '../engine/pricing'
@@ -17,6 +17,7 @@ export function CartDrawer() {
   const items = useCart((s) => s.items)
   const method = useCart((s) => s.form.method)
   const totals = computeCartTotals(items, method)
+  const [confirmEdit, setConfirmEdit] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -35,14 +36,16 @@ export function CartDrawer() {
     sfx.tap()
   }
 
-  const edit = (id: string) => {
+  const edit = (id: string, confirmed = false) => {
     const item = useCart.getState().items.find((i) => i.id === id)
     if (!item) return
     const b = useBuilder.getState()
-    if (!b.editingCartItemId && !isDesignEmpty(b.design)) {
-      const ok = window.confirm('Replace the roll that’s on the counter with this one? (The counter roll isn’t in your cart yet.)')
-      if (!ok) return
+    if (!confirmed && !b.editingCartItemId && !isDesignEmpty(b.design)) {
+      // the roll on the counter isn't boxed yet — ask inline before replacing it
+      setConfirmEdit(id)
+      return
     }
+    setConfirmEdit(null)
     useTool.getState().putBack()
     b.loadDesign(cloneDesign(item.design), item.id)
     const ui = useUI.getState()
@@ -107,6 +110,19 @@ export function CartDrawer() {
                         Remove
                       </button>
                     </div>
+                    {confirmEdit === it.id && (
+                      <div className="note" role="alert" style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                        <span>The roll on your counter isn’t boxed yet. Replace it with this one?</span>
+                        <span style={{ display: 'flex', gap: 8 }}>
+                          <button className="btn small primary" onClick={() => edit(it.id, true)}>
+                            Replace counter roll
+                          </button>
+                          <button className="btn small ghost" onClick={() => setConfirmEdit(null)}>
+                            Keep it
+                          </button>
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

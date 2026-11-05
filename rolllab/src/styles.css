@@ -265,9 +265,9 @@ button {
 
 .topbar {
   position: fixed;
-  top: 14px;
-  left: 18px;
-  right: 18px;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  left: calc(18px + env(safe-area-inset-left, 0px));
+  right: calc(18px + env(safe-area-inset-right, 0px));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1335,9 +1335,9 @@ button {
     --dock-h: 150px;
   }
   .topbar {
-    top: 10px;
-    left: 10px;
-    right: 10px;
+    top: calc(10px + env(safe-area-inset-top, 0px));
+    left: calc(10px + env(safe-area-inset-left, 0px));
+    right: calc(10px + env(safe-area-inset-right, 0px));
   }
   .logo {
     font-size: 20px;
